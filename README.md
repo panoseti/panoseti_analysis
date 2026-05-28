@@ -273,5 +273,3 @@ nextflow run . -profile docker --input_obs_dir obs_TEST.pffd --outdir results_sm
   Increase `process.time` in `conf/hpc_slurm.config` or switch to `--slurm_queue shared`.
 - **Tower run stuck at `SUBMITTED`**: check that the Expanse compute environment is healthy
   and the queue has available slots. Use `tw runs view ... download --type log`.
-
->>>>>>> zarr-seqera/pypff-update

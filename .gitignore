@@ -225,7 +225,12 @@ __pycache__/
 # Nextflow
 .nextflow/
 .nextflow.log*
+.nextflow*
 work/
+null/
+.lineage/
+testing/
+data/
 
 # Pipeline outputs
 results/
