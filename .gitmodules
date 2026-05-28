@@ -1,0 +1,3 @@
+[submodule "pypff"]
+	path = pypff
+	url = git@github.com:panoseti/pypff.git
