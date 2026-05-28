@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""Image-mode calibration: block-median + temporal-median subtraction + ADC→PE scaling."""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Annotated
+
+import typer
+from panoseti_zarr_pipeline.calibrate_img import calibrate_img
+
+app = typer.Typer(help=__doc__, add_completion=False)
+
+
+@app.command()
+def main(
+    l0_store: Annotated[Path, typer.Argument(help="Input L0 .zarr store path")],
+    l1_store: Annotated[Path, typer.Argument(help="Output L1 .zarr store path")],
+    stride: Annotated[int, typer.Option("--stride", help="Frame stride for block median estimation")] = 200,
+    block: Annotated[int, typer.Option("--block", help="Spatial block size for median (pixels)")] = 8,
+    adc_to_pe: Annotated[float, typer.Option("--adc-to-pe", help="ADC counts per photoelectron")] = 1.5,
+    codec: Annotated[str, typer.Option(help="Zarr codec")] = "zstd",
+    level: Annotated[int, typer.Option(help="Compression level")] = 5,
+) -> None:
+    typer.echo(f"Calibrating img store: {l0_store.name}")
+    calibrate_img(
+        l0_store, l1_store,
+        frame_stride=stride,
+        block_size=block,
+        adc_to_pe=adc_to_pe,
+        codec=codec,
+        level=level,
+    )
+    typer.echo(f"Done → {l1_store}")
+
+
+if __name__ == "__main__":
+    app()

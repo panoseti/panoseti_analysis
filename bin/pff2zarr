@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""
+Convert a .pffd observation directory to L0 Zarr v3 stores.
+
+Writes one .zarr per (data_product, module) pair under <out_dir>/L0/ and
+emits manifest.tsv to <out_dir>/manifest.tsv for Nextflow channel fan-out.
+
+manifest.tsv columns: product  store  kind
+  kind is 'ph' for ph256/ph1024, 'img' for img8/img16.
+"""
+from __future__ import annotations
+
+import sys
+import time
+from pathlib import Path
+from typing import Annotated
+
+import typer
+from pypff.io2 import PanosetiRun
+from pypff.zarr import convert_run, PanosetiZarrRun
+
+app = typer.Typer(help=__doc__, add_completion=False)
+
+
+@app.command()
+def main(
+    obs_dir: Annotated[Path, typer.Argument(help="Input .pffd observation directory")],
+    out_dir: Annotated[Path, typer.Argument(help="Output directory (L0/ and manifest.tsv written here)")],
+    codec: Annotated[str, typer.Option(help="Zarr codec")] = "zstd",
+    level: Annotated[int, typer.Option(help="Compression level")] = 5,
+    time_chunk: Annotated[int, typer.Option(help="Time chunk size (0=auto)")] = 0,
+) -> None:
+    l0_dir = out_dir / "L0"
+    l0_dir.mkdir(parents=True, exist_ok=True)
+
+    typer.echo(f"Scanning {obs_dir} …")
+    run = PanosetiRun(obs_dir)
+    products = run.list_products()
+    if not products:
+        typer.echo("No data products found.", err=True)
+        raise typer.Exit(1)
+    for p in products:
+        seq = run.get_product(p)
+        typer.echo(f"  {p}: {len(seq):,} frames in {len(seq.file_paths)} file(s)")
+
+    t0 = time.monotonic()
+    convert_run(
+        run,
+        l0_dir,
+        codec=codec,
+        level=level,
+        time_chunk=time_chunk or None,
+    )
+    typer.echo(f"Conversion done in {time.monotonic() - t0:.1f}s → {l0_dir}")
+
+    # Enumerate just-written stores and emit manifest.tsv with absolute paths
+    # so Nextflow can stage them correctly into downstream process work dirs.
+    zrun = PanosetiZarrRun(l0_dir)
+    manifest = out_dir / "manifest.tsv"
+    rows: list[str] = ["product\tstore\tkind"]
+    for name in zrun.list_products():
+        store = zrun.get_product(name)
+        dp: str = store.data_product
+        kind = "ph" if dp.startswith("ph") else "img"
+        rows.append(f"{name}\t{store.path.resolve()}\t{kind}")
+    manifest.write_text("\n".join(rows) + "\n")
+    typer.echo(f"Manifest written: {manifest}")
+    for row in rows[1:]:
+        typer.echo(f"  {row}")
+
+
+if __name__ == "__main__":
+    app()
