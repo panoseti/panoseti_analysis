@@ -72,6 +72,37 @@ def test_cloud_detector_determinism(synthetic_l1_dataset: xr.Dataset, dummy_mode
     np.testing.assert_array_equal(out_1["feature_raw_fft"].values, out_2["feature_raw_fft"].values)
 
 
+@pytest.fixture
+def multi_window_l1_dataset() -> xr.Dataset:
+    """120-second dataset producing 2 windows at cadence=60s."""
+    n_frames = 120
+    t0_ns = 1700000000000000000
+    t_arr = np.arange(t0_ns, t0_ns + n_frames * 1_000_000_000, 1_000_000_000, dtype=np.int64)
+    np.random.seed(99)
+    img_data = np.random.randn(n_frames, 32, 32).astype(np.float32)
+    return xr.Dataset(
+        {
+            "median_subtracted": (["T", "H", "W"], img_data),
+            "unix_t_ns": (["T"], t_arr),
+        }
+    )
+
+
+def test_batch_fft_numerics(multi_window_l1_dataset: xr.Dataset, dummy_model: CloudDetection) -> None:
+    """Batched FFT must produce exactly the same values across two runs (regression guard)."""
+    torch.use_deterministic_algorithms(True)
+    params = CloudInferParams(cadence_s=60.0)
+    out1 = predict_cloud_score(multi_window_l1_dataset, dummy_model, params)
+    out2 = predict_cloud_score(multi_window_l1_dataset, dummy_model, params)
+    np.testing.assert_array_equal(
+        out1["feature_raw_fft"].values,
+        out2["feature_raw_fft"].values,
+        err_msg="FFT output is not deterministic!",
+    )
+    np.testing.assert_array_equal(out1["feature_deriv_fft"].values, out2["feature_deriv_fft"].values)
+    assert out1.sizes["T_l2"] == 2, f"Expected 2 windows, got {out1.sizes['T_l2']}"
+
+
 @pytest.mark.skipif(not CHECKPOINT_PATH.exists(), reason="checkpoint not present in repo")
 def test_checkpoint_loads_cleanly() -> None:
     """Verify pretrained state_dict loads with no missing/unexpected keys."""

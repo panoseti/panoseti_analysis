@@ -125,53 +125,32 @@ def predict_cloud_score(
 
     target_times = np.arange(t_start, t_end + 1, cadence_ns)
 
-    features_fft = []
-    features_deriv_fft = []
-    t_centers = []
-
     # Pre-compute 2D Hann window
     hann_1d = np.hanning(32)
     hann_2d = np.outer(hann_1d, hann_1d)
+    hann_3d = hann_2d[np.newaxis, :, :]  # (1, H, W) for broadcasting over batch
 
-    def apply_fft(data: np.ndarray) -> np.ndarray:
-        d = data * hann_2d
-        d = np.abs(np.fft.fftn(d))
-        d = np.fft.fftshift(d)
+    def batch_apply_fft(batch: np.ndarray) -> np.ndarray:
+        """batch: (N, H, W) float32 → (N, H, W) float32 log-magnitude FFT."""
+        windowed = batch * hann_3d
+        mag = np.abs(np.fft.fftn(windowed, axes=(-2, -1)))
+        shifted = np.fft.fftshift(mag, axes=(-2, -1))
         with np.errstate(divide="ignore"):
-            d = np.log(d)
-        return d
+            return np.log(shifted).astype(np.float32)
 
-    for t in target_times:
-        # Find index for current time t
-        idx_curr = np.searchsorted(unix_t_ns, t)
-        idx_curr = min(idx_curr, len(unix_t_ns) - 1)
+    # Vectorised index computation for all windows
+    n_ts = len(unix_t_ns)
+    idx_curr_arr = np.searchsorted(unix_t_ns, target_times).clip(0, n_ts - 1)
+    t_prev_arr = np.maximum(t_start, target_times - window_ns)
+    idx_prev_arr = np.searchsorted(unix_t_ns, t_prev_arr).clip(0, n_ts - 1)
 
-        # Find index for t - 60s
-        t_prev = max(t_start, t - window_ns)
-        idx_prev = np.searchsorted(unix_t_ns, t_prev)
-        idx_prev = min(idx_prev, len(unix_t_ns) - 1)
+    # Filter out degenerate windows (end <= start; can't happen with clip, but keep guard)
+    valid = (idx_curr_arr + 1) <= n_ts  # always true after clip; kept for clarity
+    idx_curr_arr = idx_curr_arr[valid]
+    idx_prev_arr = idx_prev_arr[valid]
+    t_centers = target_times[valid]
 
-        # Stack 10 frames (1ms) at idx_curr and idx_prev
-        end_curr = min(idx_curr + n_stack, len(unix_t_ns))
-        end_prev = min(idx_prev + n_stack, len(unix_t_ns))
-
-        if end_curr <= idx_curr:
-            continue
-
-        curr_img = np.sum(img[idx_curr:end_curr], axis=0)
-
-        prev_img = np.sum(img[idx_prev:end_prev], axis=0) if end_prev > idx_prev else curr_img
-
-        diff_img = curr_img - prev_img
-
-        fft_mag = apply_fft(curr_img)
-        deriv_fft_mag = apply_fft(diff_img)
-
-        features_fft.append(fft_mag)
-        features_deriv_fft.append(deriv_fft_mag)
-        t_centers.append(t)
-
-    if not t_centers:
+    if len(t_centers) == 0:
         return xr.Dataset({
             "cloud_score": (["T_l2"], np.array([], dtype=np.float32)),
             "cloud_label": (["T_l2"], np.array([], dtype=np.uint8)),
@@ -180,10 +159,24 @@ def predict_cloud_score(
             "unix_t_ns": (["T_l2"], np.array([], dtype=np.int64)),
         })
 
-    X = np.stack([
-        np.array(features_deriv_fft, dtype=np.float32),
-        np.array(features_fft, dtype=np.float32)
-    ], axis=1)
+    # Stack n_stack frames for each window index; shape (N, H, W)
+    def stack_windows(indices: np.ndarray) -> np.ndarray:
+        n = len(indices)
+        h, w = img.shape[1], img.shape[2]
+        out = np.zeros((n, h, w), dtype=np.float64)
+        for i, idx in enumerate(indices):
+            end = min(idx + n_stack, n_ts)
+            out[i] = img[idx:end].sum(axis=0)
+        return out.astype(np.float32)
+
+    curr_imgs = stack_windows(idx_curr_arr)   # (N, H, W)
+    prev_imgs = stack_windows(idx_prev_arr)   # (N, H, W)
+    diff_imgs = curr_imgs - prev_imgs         # (N, H, W)
+
+    features_fft_arr = batch_apply_fft(curr_imgs)    # (N, H, W)
+    features_deriv_fft_arr = batch_apply_fft(diff_imgs)  # (N, H, W)
+
+    X = np.stack([features_deriv_fft_arr, features_fft_arr], axis=1)  # (N, 2, H, W)
 
     device = next(model.parameters()).device
     tensor_x = torch.from_numpy(X).to(device)
@@ -198,11 +191,11 @@ def predict_cloud_score(
 
     ds_out = xr.Dataset(
         data_vars={
-            "cloud_score": (["T_l2"], cloud_score),
+            "cloud_score": (["T_l2"], cloud_score.astype(np.float32)),
             "cloud_label": (["T_l2"], cloud_label),
-            "feature_raw_fft": (["T_l2", "H", "W"], np.array(features_fft, dtype=np.float32)),
-            "feature_deriv_fft": (["T_l2", "H", "W"], np.array(features_deriv_fft, dtype=np.float32)),
-            "unix_t_ns": (["T_l2"], np.array(t_centers, dtype=np.int64)),
+            "feature_raw_fft": (["T_l2", "H", "W"], features_fft_arr),
+            "feature_deriv_fft": (["T_l2", "H", "W"], features_deriv_fft_arr),
+            "unix_t_ns": (["T_l2"], t_centers.astype(np.int64)),
         }
     )
 
