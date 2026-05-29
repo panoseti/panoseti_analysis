@@ -22,7 +22,7 @@ Constants live in `src/panoseti_analysis/config/versions.py`.
 <run>/
   L0/   <run>.dp_<p>.module_<m>.zarr/ …   hk.<hashset>.zarr/   manifest.json   .panoseti-meta/
   L1/   <run>.dp_<p>.module_<m>.zarr/ …                        manifest.json   .panoseti-meta/
-  L2+/  (reserved)
+  L2/   <run>.cloud.module_<m>.zarr/ …                         manifest.json   .panoseti-meta/
 ```
 
 - **One store per `(data_product, module)`** — the smallest unit with a coherent shared time
@@ -48,6 +48,11 @@ Constants live in `src/panoseti_analysis/config/versions.py`.
 L1 carries forward all L0 header/timing arrays (incl. `pkt_num`). `unix_t_ns` is
 monotonic-non-decreasing (§4). Time-like dims are rechunked uniformly on write (≤16384
 frames/chunk) so the final chunk is never larger than the first (a Zarr v3 requirement).
+
+**L2 (Derived Products):**
+- **Cloud Detector** (`cloud`): One store per `(model, module)`. Time dimension `T_l2`.
+  Arrays: `cloud_score (T_l2,) float32`, `cloud_label (T_l2,) uint8`, `unix_t_ns (T_l2,) int64`.
+  Feature arrays: `feature_raw_fft (T_l2, H, W) float32`, `feature_deriv_fft (T_l2, H, W) float32`.
 
 ## §3 Root attributes
 
@@ -111,7 +116,8 @@ retained in `.panoseti-meta/`.
 ```
 
 L0 manifest = pypff store enumeration augmented with `n_frames`/`time_range`/`checksum`. L1
-manifest adds `source_store` + `calibration_params` lineage. Built by `pa-manifest`: the
+manifest adds `source_store` + `calibration_params` lineage. L2 manifest adds `model` (name, version, checksum)
+and `inference_params`. Built by `pa-manifest`: the
 adapter does the I/O (reads store attrs, computes checksums); the pure `build_level_manifest`
 kernel merges/validates. Manifests are grouped by `run_id` so a multi-run samplesheet yields
 one manifest per run per level.

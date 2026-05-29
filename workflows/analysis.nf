@@ -22,6 +22,8 @@ workflow ANALYSIS {
     ch_hk_stores   = channel.empty()
     ch_l0_manifest = channel.empty()
     ch_l1_manifest = channel.empty()
+    ch_l2_stores   = channel.empty()
+    ch_l2_manifest = channel.empty()
 
     if ('ingest' in steps) {
         INGEST(ch_samplesheet)
@@ -36,7 +38,9 @@ workflow ANALYSIS {
         RECONSTRUCT(ch_l1_stores)   // STUB
     }
     if ('ml' in steps) {
-        ML(ch_l1_stores)            // STUB
+        ML(ch_l1_stores)
+        ch_l2_stores   = ML.out.l2_stores
+        ch_l2_manifest = ML.out.l2_manifest
     }
 
     emit:
@@ -45,4 +49,6 @@ workflow ANALYSIS {
     hk_stores   = ch_hk_stores
     l0_manifest = ch_l0_manifest
     l1_manifest = ch_l1_manifest
+    l2_stores   = ch_l2_stores
+    l2_manifest = ch_l2_manifest
 }
