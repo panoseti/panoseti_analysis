@@ -1,5 +1,9 @@
 # PANOSETI Analysis Documentation Guide
 
+> **Governance source of truth:** [`CLAUDE.md`](CLAUDE.md) — three-layer architecture rules,
+> layer boundary enforcement, toolchain requirements, storage conventions, and Ray principles.
+> GEMINI.md is a documentation routing table only; CLAUDE.md governs.
+
 Welcome to the `panoseti_analysis` documentation. Use the routing table below to quickly find the resources you need for developing, maintaining, or using the pipeline.
 
 ## Routing Table
