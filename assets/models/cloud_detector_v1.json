@@ -1,17 +1,10 @@
 {
-  "model_name": "cloud_detector",
-  "model_version": "1.0",
-  "checksum": "sha256:abbc3d38052a6c2c4a2bad5ea46b03f1aeed3df154f72190e929070d964e53ce",
-  "input_spec": {
-    "cadence_s": 60.0,
-    "features": [
-      "raw-derivative-fft.-60",
-      "raw-fft"
-    ],
-    "input_shape": [
-      2,
-      32,
-      32
-    ]
-  }
+    "model_name": "cloud_detector",
+    "model_version": "1.0",
+    "checksum": "sha256:abbc3d38052a6c2c4a2bad5ea46b03f1aeed3df154f72190e929070d964e53ce",
+    "input_spec": {
+        "cadence_s": 60.0,
+        "features": ["raw-derivative-fft.-60", "raw-fft"],
+        "input_shape": [2, 32, 32]
+    }
 }

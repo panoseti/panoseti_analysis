@@ -64,6 +64,5 @@ template:
     - gpu
     - rocrate
     - nf_core_configs
-    - codespaces
     - citations
   is_nfcore: false

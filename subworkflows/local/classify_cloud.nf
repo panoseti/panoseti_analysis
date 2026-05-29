@@ -14,8 +14,8 @@ workflow CLASSIFY_CLOUD {
     use_ray       // boolean value from params
 
     main:
-    ch_l2_stores   = channel.empty()
-    ch_l2_lineage  = channel.empty()
+    ch_l2_stores    = channel.empty()
+    ch_l2_lineage   = channel.empty()
     ch_l2_quicklook = channel.empty()
 
     if (use_ray) {
@@ -27,25 +27,24 @@ workflow CLASSIFY_CLOUD {
 
         CLASSIFY_CLOUD_RAY(ch_grouped, model_file, model_json)
 
-        // Flatten the Ray outputs back into per-module meta streams if needed, 
+        // Flatten the Ray outputs back into per-module meta streams if needed,
         // but for now we just emit them. The manifest builder will handle lineage arrays.
-        ch_l2_stores = CLASSIFY_CLOUD_RAY.out.stores.flatten().map { store -> 
+        ch_l2_stores    = CLASSIFY_CLOUD_RAY.out.stores.flatMap().map { store ->
             tuple([run_id: store.name.split('\\.')[0], level: 'L2', kind: 'cloud'], store)
         }
-        ch_l2_lineage = CLASSIFY_CLOUD_RAY.out.lineage
-        ch_l2_quicklook = CLASSIFY_CLOUD_RAY.out.quicklook.flatten().map { quicklook ->
+        ch_l2_lineage   = CLASSIFY_CLOUD_RAY.out.lineage
+        ch_l2_quicklook = CLASSIFY_CLOUD_RAY.out.quicklook.flatMap().map { quicklook ->
             tuple([run_id: quicklook.name.split('\\.')[0], level: 'L2', kind: 'cloud'], quicklook)
         }
     } else {
         CLASSIFY_CLOUD_CPU(ch_l1_stores, model_file, model_json)
-        ch_l2_stores = CLASSIFY_CLOUD_CPU.out.store
-        ch_l2_lineage = CLASSIFY_CLOUD_CPU.out.lineage
+        ch_l2_stores    = CLASSIFY_CLOUD_CPU.out.store
+        ch_l2_lineage   = CLASSIFY_CLOUD_CPU.out.lineage
         ch_l2_quicklook = CLASSIFY_CLOUD_CPU.out.quicklook
     }
 
     emit:
-    stores  = ch_l2_stores
-    lineage = ch_l2_lineage
+    stores    = ch_l2_stores
+    lineage   = ch_l2_lineage
     quicklook = ch_l2_quicklook
 }
-

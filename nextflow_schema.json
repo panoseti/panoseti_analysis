@@ -111,18 +111,47 @@
                     "description": "Comma-separated pipeline steps to run (ingest,reconstruct,ml).",
                     "pattern": "^((ingest|reconstruct|ml)(,(ingest|reconstruct|ml))*)?$"
                 },
-                "codec": { "type": "string", "default": "zstd", "enum": ["zstd", "none"], "description": "Zarr compression codec." },
+                "codec": {
+                    "type": "string",
+                    "default": "zstd",
+                    "enum": ["zstd", "none"],
+                    "description": "Zarr compression codec."
+                },
                 "level": { "type": "integer", "default": 5, "description": "Compression level." },
-                "time_chunk": { "type": "integer", "default": 0, "description": "Time chunk size; 0 = auto-sized by pypff." },
+                "time_chunk": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Time chunk size; 0 = auto-sized by pypff."
+                },
                 "ph_sigma": { "type": "number", "default": 5.0, "description": "n-sigma pulse-height threshold." },
-                "ph_offset": { "type": "integer", "default": 800, "description": "Baseline offset added before pedestal estimation." },
-                "ph_stride": { "type": "integer", "default": 200, "description": "Frame stride for pedestal sampling." },
-                "img_stride": { "type": "integer", "default": 200, "description": "Frame stride for block-median sampling." },
+                "ph_offset": {
+                    "type": "integer",
+                    "default": 800,
+                    "description": "Baseline offset added before pedestal estimation."
+                },
+                "ph_stride": {
+                    "type": "integer",
+                    "default": 200,
+                    "description": "Frame stride for pedestal sampling."
+                },
+                "img_stride": {
+                    "type": "integer",
+                    "default": 200,
+                    "description": "Frame stride for block-median sampling."
+                },
                 "img_block": { "type": "integer", "default": 8, "description": "Spatial block size (pixels)." },
                 "img_adc_to_pe": { "type": "number", "default": 1.5, "description": "ADC counts per photoelectron." },
-                "container": { "type": "string", "description": "Container image for hpc_slurm/docker profiles." },
+                "use_ray": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run ML inference distributed via Ray cluster."
+                },
                 "slurm_account": { "type": "string", "description": "SLURM account (hpc_slurm profile)." },
-                "slurm_queue": { "type": "string", "default": "shared", "description": "SLURM queue/partition (hpc_slurm profile)." }
+                "slurm_queue": {
+                    "type": "string",
+                    "default": "shared",
+                    "description": "SLURM queue/partition (hpc_slurm profile)."
+                }
             }
         }
     },

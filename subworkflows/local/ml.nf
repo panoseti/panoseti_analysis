@@ -17,7 +17,7 @@ workflow ML {
     // Hardcode the model paths for Chunk 2, but these could be params
     model_file = file("${projectDir}/assets/models/cloud_detector_v1.pt")
     model_json = file("${projectDir}/assets/models/cloud_detector_v1.json")
-    
+
     use_ray = params.use_ray ?: false
 
     CLASSIFY_CLOUD(ch_img_stores, model_file, model_json, use_ray)
@@ -29,14 +29,14 @@ workflow ML {
                 // 'it' might be [meta, lineage_file] from CPU or [run_id, lineage_file] from Ray
                 def run_id = it[0] instanceof Map ? it[0].run_id : it[0]
                 def lineage_file = it[1]
-                tuple(run_id, lineage_file) 
+                tuple(run_id, lineage_file)
             }
             .groupTuple()
             .map { run_id, lineages -> tuple(run_id, lineages, 'L2') }
     )
 
     emit:
-    l2_stores   = CLASSIFY_CLOUD.out.stores
-    l2_manifest = BUILD_MANIFEST_L2.out.manifest.map { _level, m -> m }
+    l2_stores     = CLASSIFY_CLOUD.out.stores
+    l2_manifest   = BUILD_MANIFEST_L2.out.manifest.map { _level, m -> m }
     l2_quicklooks = CLASSIFY_CLOUD.out.quicklook
 }

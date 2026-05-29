@@ -22,10 +22,10 @@ obs_2024-07-25T04_34_46Z,/expanse/lustre/scratch/$USER/panoseti/inputs/obs_2024-
 obs_2024-07-26T05_10_00Z,/expanse/lustre/scratch/$USER/panoseti/inputs/obs_2024-07-26T05_10_00Z.pffd
 ```
 
-| Column | Description |
-|---|---|
-| `run_id` | Unique run identifier (becomes `meta.id`/`meta.run_id`; scopes the per-run manifest). |
-| `obs_dir` | Path to an existing `.pffd` observation directory. |
+| Column    | Description                                                                           |
+| --------- | ------------------------------------------------------------------------------------- |
+| `run_id`  | Unique run identifier (becomes `meta.id`/`meta.run_id`; scopes the per-run manifest). |
+| `obs_dir` | Path to an existing `.pffd` observation directory.                                    |
 
 ```bash
 nextflow run . -profile laptop --input samplesheet.csv --outdir <OUTDIR>
@@ -55,11 +55,11 @@ Use `-resume` to reuse cached tasks. Outputs are published level-major under `--
 
 ## Profiles
 
-| Profile | Executor | Container | Use |
-|---|---|---|---|
-| `laptop` | local | none (uses uv `.venv`) | development / smoke tests |
-| `docker` | local | Docker | reproducible local runs |
-| `hpc_slurm` | SLURM | Apptainer | SDSC Expanse / any SLURM cluster |
+| Profile     | Executor | Container              | Use                              |
+| ----------- | -------- | ---------------------- | -------------------------------- |
+| `laptop`    | local    | none (uses uv `.venv`) | development / smoke tests        |
+| `docker`    | local    | Docker                 | reproducible local runs          |
+| `hpc_slurm` | SLURM    | Apptainer              | SDSC Expanse / any SLURM cluster |
 
 Combine with `test` for the bundled dataset, e.g. `-profile test,laptop`.
 
@@ -78,11 +78,11 @@ Build the container per [`../containers/README.md`](../containers/README.md) and
 
 ## Key parameters
 
-| Param | Default | Description |
-|---|---|---|
-| `--steps` | `ingest` | Comma-separated steps (`ingest,reconstruct,ml`). |
-| `--codec` / `--level` | `zstd` / `5` | Zarr compression. |
-| `--ph_sigma` / `--ph_offset` / `--ph_stride` | `5.0` / `800` / `200` | Pulse-height calibration. |
-| `--img_stride` / `--img_block` / `--img_adc_to_pe` | `200` / `8` / `1.5` | Movie-mode calibration. |
+| Param                                              | Default               | Description                                      |
+| -------------------------------------------------- | --------------------- | ------------------------------------------------ |
+| `--steps`                                          | `ingest`              | Comma-separated steps (`ingest,reconstruct,ml`). |
+| `--codec` / `--level`                              | `zstd` / `5`          | Zarr compression.                                |
+| `--ph_sigma` / `--ph_offset` / `--ph_stride`       | `5.0` / `800` / `200` | Pulse-height calibration.                        |
+| `--img_stride` / `--img_block` / `--img_adc_to_pe` | `200` / `8` / `1.5`   | Movie-mode calibration.                          |
 
 Full list: `nextflow run . --help`.

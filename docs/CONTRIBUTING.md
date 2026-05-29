@@ -31,10 +31,6 @@ To contribute code to any nf-core pipeline:
 
 If you are not used to this workflow with Git, see the [GitHub documentation](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests) or [Git resources](https://try.github.io/) for more information.
 
-
-
-
-
 ### Testing
 
 Once you have made your changes, run the pipeline with nf-test to test them locally.

@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive          # pypff submodule (see note below)
+          submodules: recursive # pypff submodule (see note below)
       - uses: astral-sh/setup-uv@v5
       - run: uv sync
       - name: Ruff

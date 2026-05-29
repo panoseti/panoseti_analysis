@@ -7,9 +7,9 @@ Storage conventions for `panoseti_analysis`. Complements pypff's L0 array spec
 
 Two independent version namespaces, both stored as Zarr root attributes:
 
-| Key | Owner | Governs |
-|---|---|---|
-| `panoseti_pff_zarr_version` | pypff | L0 array layout (`images`, `unix_t_ns`, header arrays) |
+| Key                                 | Owner     | Governs                                                          |
+| ----------------------------------- | --------- | ---------------------------------------------------------------- |
+| `panoseti_pff_zarr_version`         | pypff     | L0 array layout (`images`, `unix_t_ns`, header arrays)           |
 | `panoseti_analysis_storage_version` | this repo | level structure, manifest schema, HK store, `timestamp_qc`, PACK |
 
 `panoseti_analysis_storage_version = "1.0"`. No backward-compat constraints yet — **bump
@@ -40,16 +40,17 @@ Constants live in `src/panoseti_analysis/config/versions.py`.
 
 **L1 (calibrated):**
 
-| Product family | Required arrays |
-|---|---|
+| Product family        | Required arrays                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------- |
 | ph (`ph256`,`ph1024`) | `pedestal_subtracted` float32 `(T,H,W)`; `hot_pixel_mask`,`dead_pixel_mask` uint8 `(H,W)` |
-| img (`img8`,`img16`) | `median_subtracted` float32 `(T,H,W)`; `hot_pixel_mask`,`dead_pixel_mask` uint8 `(H,W)` |
+| img (`img8`,`img16`)  | `median_subtracted` float32 `(T,H,W)`; `hot_pixel_mask`,`dead_pixel_mask` uint8 `(H,W)`   |
 
 L1 carries forward all L0 header/timing arrays (incl. `pkt_num`). `unix_t_ns` is
 monotonic-non-decreasing (§4). Time-like dims are rechunked uniformly on write (≤16384
 frames/chunk) so the final chunk is never larger than the first (a Zarr v3 requirement).
 
 **L2 (Derived Products):**
+
 - **Cloud Detector** (`cloud`): One store per `(model, module)`. Time dimension `T_l2`.
   Arrays: `cloud_score (T_l2,) float32`, `cloud_label (T_l2,) uint8`, `unix_t_ns (T_l2,) int64`.
   Feature arrays: `feature_raw_fft (T_l2, H, W) float32`, `feature_deriv_fft (T_l2, H, W) float32`.
@@ -65,12 +66,21 @@ plus pypff's `data_product`/`module`/`bytes_per_pixel`/`total_frames`/`frame_con
 ## §4 `timestamp_qc` schema
 
 ```json
-{ "status": "clean|repaired|flagged|suspect", "monotonic": true, "n_frames": 0,
-  "n_nonmonotonic": 0, "n_duplicates": 0, "max_gap_ns": 0, "n_gaps_over_threshold": 0,
-  "gap_threshold_ns": 0, "t_start_ns": 0, "t_end_ns": 0 }
+{
+  "status": "clean|repaired|flagged|suspect",
+  "monotonic": true,
+  "n_frames": 0,
+  "n_nonmonotonic": 0,
+  "n_duplicates": 0,
+  "max_gap_ns": 0,
+  "n_gaps_over_threshold": 0,
+  "gap_threshold_ns": 0,
+  "t_start_ns": 0,
+  "t_end_ns": 0
+}
 ```
 
-- **L0** is a faithful native-order PFF mirror; it only *records* QC (status ∈ clean/flagged/
+- **L0** is a faithful native-order PFF mirror; it only _records_ QC (status ∈ clean/flagged/
   suspect — never "repaired").
 - **L1+ guarantees monotonic-non-decreasing `unix_t_ns`** — a downstream contract the
   coincidence-finder's binary search depends on. L0→L1 stable-sorts by `unix_t_ns` to repair
