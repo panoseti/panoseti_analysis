@@ -27,14 +27,19 @@ workflow CLASSIFY_CLOUD {
 
         CLASSIFY_CLOUD_RAY(ch_grouped, model_file, model_json)
 
-        // Flatten the Ray outputs back into per-module meta streams if needed,
-        // but for now we just emit them. The manifest builder will handle lineage arrays.
+        // Flatten Ray outputs back to per-module streams.
+        // Store names are <run_id>.cloud.module_<m>.zarr; parse only the well-defined suffix.
+        // Quicklook names are <run_id>.cloud.module_<m>.quicklook.png.
         ch_l2_stores    = CLASSIFY_CLOUD_RAY.out.stores.flatMap().map { store ->
-            tuple([run_id: store.name.split('\\.')[0], level: 'L2', kind: 'cloud'], store)
+            def parts = store.name.tokenize('.')
+            def run_id = parts[0..-4].join('.')
+            tuple([run_id: run_id, level: 'L2', kind: 'cloud'], store)
         }
         ch_l2_lineage   = CLASSIFY_CLOUD_RAY.out.lineage
         ch_l2_quicklook = CLASSIFY_CLOUD_RAY.out.quicklook.flatMap().map { quicklook ->
-            tuple([run_id: quicklook.name.split('\\.')[0], level: 'L2', kind: 'cloud'], quicklook)
+            def parts = quicklook.name.tokenize('.')
+            def run_id = parts[0..-5].join('.')
+            tuple([run_id: run_id, level: 'L2', kind: 'cloud'], quicklook)
         }
     } else {
         CLASSIFY_CLOUD_CPU(ch_l1_stores, model_file, model_json)
