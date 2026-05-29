@@ -44,6 +44,18 @@ def _compressors(codec: str, level: int) -> list[Any]:
     raise ValueError(f"unsupported codec {codec!r} (expected 'zstd' or 'none')")
 
 
+def stamp_history(store: str | Path, history: list[ProcessingStep]) -> None:
+    """Stamp processing_history into root attrs of an existing Zarr v3 store in-place.
+
+    Used when the store was written by an external writer (pypff) rather than write_store.
+    """
+    import zarr
+    root = zarr.open_group(str(store), mode="r+", zarr_format=3)
+    attrs = dict(root.attrs)
+    attrs["processing_history"] = [s.model_dump() for s in history]
+    root.attrs.update(attrs)
+
+
 def write_store(
     ds: xr.Dataset,
     out_path: str | Path,

@@ -9,8 +9,11 @@ import xarray as xr
 
 from panoseti_analysis.adapters._common import write_lineage_json
 from panoseti_analysis.algorithms.cloud_detector import predict_cloud_score
-from panoseti_analysis.config.models import CloudInferParams, StoreLineage
+from panoseti_analysis.config.models import CloudInferParams, ProcessingStep, StoreLineage
+from panoseti_analysis.config.versions import PANOSETI_ANALYSIS_STORAGE_VERSION
+from panoseti_analysis.io.checksum import checksum_store
 from panoseti_analysis.io.models import load_classifier
+from panoseti_analysis.io.provenance import append_step, capture_software, now_utc, read_history
 from panoseti_analysis.io.quicklook import generate_cloud_quicklook
 from panoseti_analysis.io.stores import write_store
 
@@ -35,6 +38,11 @@ def run_classify(
     # 2. Load Data
     ds_l1 = xr.open_zarr(l1_store)
 
+    l1_history = read_history(dict(ds_l1.attrs))
+    l1_input_cksum = l1_history[-1].output_checksum if l1_history else None
+    started_at = now_utc()
+    software = capture_software()
+
     # 3. Predict
     params = CloudInferParams(cadence_s=cadence_s, threshold=threshold)
     ds_l2 = predict_cloud_score(ds_l1, model, params)
@@ -44,7 +52,23 @@ def run_classify(
     ds_l2.attrs.update(ds_l1.attrs)
     ds_l2.attrs["data_level"] = "L2"
 
-    write_store(ds_l2, l2_store, codec=codec, level=level)
+    classify_step = ProcessingStep(
+        step_name="classify_cloud",
+        step_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
+        params={
+            "cadence_s": cadence_s,
+            "threshold": threshold,
+            "model_checksum": bundle.checksum,
+        },
+        input_checksums=[l1_input_cksum] if l1_input_cksum else [],
+        timestamp_utc=started_at,
+        software=software,
+    )
+    new_history = append_step(l1_history, classify_step)
+
+    write_store(ds_l2, l2_store, codec=codec, level=level, processing_history=new_history)
+
+    l2_checksum = checksum_store(l2_store)
 
     # 5. Write Lineage
     record = StoreLineage(
@@ -58,6 +82,8 @@ def run_classify(
         model=bundle.model_dump(),
         inference_params=params.model_dump(),
         time_range=None,  # We could extract this if needed
+        checksum=l2_checksum,
+        processing_history=new_history,
     )
     if lineage_out is not None:
         write_lineage_json(record, lineage_out)
