@@ -36,6 +36,7 @@ pa-manifest = "panoseti_analysis.adapters.manifest:app"
 pa-pack = "panoseti_analysis.adapters.pack:app"
 pa-classify-cloud = "panoseti_analysis.adapters.nextflow.classify_cloud:app"
 pa-ray-classify-cloud = "panoseti_analysis.adapters.ray.classify_cloud:app"
+pa-features-cloud = "panoseti_analysis.adapters.features:app"
 
 # ── uv workspace ──────────────────────────────────────────────────────────────
 # The repo root is both the workspace root and the `panoseti_analysis` package.
@@ -104,4 +105,6 @@ filterwarnings = [
     "ignore:Consolidated metadata is currently not part in the Zarr format 3:zarr.errors.ZarrUserWarning",
     # Ray internal warning about GPU env var override behaviour changing in a future Ray release.
     "ignore:.*Ray will no longer override accelerator visible devices:FutureWarning",
+    # Fixed-length UTF32 string arrays (split/module vars) have no finalised Zarr V3 dtype spec yet.
+    "ignore:The data type.*FixedLengthUTF32.*does not have a Zarr V3 specification:zarr.errors.UnstableSpecificationWarning",
 ]
