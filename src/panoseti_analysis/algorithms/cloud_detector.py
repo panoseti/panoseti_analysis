@@ -136,7 +136,10 @@ def predict_cloud_score(
         mag = np.abs(np.fft.fftn(windowed, axes=(-2, -1)))
         shifted = np.fft.fftshift(mag, axes=(-2, -1))
         with np.errstate(divide="ignore"):
-            return np.log(shifted).astype(np.float32)
+            log_mag = np.log(shifted)
+        # Real PANOSETI images (photon noise) never produce zero FFT magnitudes.
+        # nan_to_num is a no-op for real data; it guards synthetic/pathological inputs.
+        return np.nan_to_num(log_mag, neginf=0.0).astype(np.float32)
 
     # Vectorised index computation for all windows
     n_ts = len(unix_t_ns)

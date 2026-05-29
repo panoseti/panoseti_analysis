@@ -9,7 +9,8 @@ scikit-image as a dependency, while preserving the intent of the reference.
 """
 import numpy as np
 import pytest
-from scipy.fftpack import fftn as scipy_fftn, fftshift as scipy_fftshift
+from scipy.fftpack import fftn as scipy_fftn
+from scipy.fftpack import fftshift as scipy_fftshift
 from scipy.signal.windows import hann as scipy_hann
 
 
@@ -76,10 +77,15 @@ def test_apply_fft_parity_on_nonzero(rng_image: np.ndarray) -> None:
 
 
 def test_log_zero_behavior() -> None:
-    """Confirm new kernel preserves -inf for log(0) inputs (matching original)."""
+    """Both reference and new_apply_fft produce -inf for zero input (matching original math).
+
+    Note: predict_cloud_score clips -inf to 0.0 before the model as a safety guard —
+    real PANOSETI images (photon noise) never produce zero FFT magnitudes, so this
+    nan_to_num call is a no-op for any real data.
+    """
     zero_data = np.zeros((32, 32), dtype=np.float32)
     ref = reference_apply_fft(zero_data)
     new = new_apply_fft(zero_data)
     assert np.any(np.isneginf(ref)), "Reference should have -inf for zero input"
-    assert np.any(np.isneginf(new)), "New kernel should have -inf for zero input (not 0.0)"
+    assert np.any(np.isneginf(new)), "new_apply_fft should also produce -inf (parity with reference)"
     np.testing.assert_array_equal(np.isneginf(ref), np.isneginf(new))
