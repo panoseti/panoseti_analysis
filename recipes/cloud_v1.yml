@@ -1,0 +1,21 @@
+name: cloud_v1
+# Cloud detector retrain — science params (not compute params; those go in profiles)
+feature_cadence_s: 60.0
+threshold: 0.5
+split:
+  test_prop: 0.15
+  val_prop: 0.10
+  boundary_prop: 0.20
+  seed: 35
+hyperparams:
+  lr: 0.001
+  batch_size: 128
+  epochs: 50
+  weight_decay: 0.00001
+  gamma: 0.9
+scaling:
+  num_workers: 2
+  accelerator_type: "A6000"
+model_out_dir: "models/cloud_v1"
+cloud_model_pt: null # filled at inference time pointing to BeeGFS bundle
+cloud_model_json: null
