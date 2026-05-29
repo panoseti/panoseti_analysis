@@ -79,3 +79,4 @@ register_level(
     "L1",
     "Science-calibrated (pedestal/median subtracted); unix_t_ns guaranteed monotonic.",
 )
+register_level("L2", "Derived science products (e.g. cloud detector, event reconstruction).")

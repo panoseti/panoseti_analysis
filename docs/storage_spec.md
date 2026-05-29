@@ -7,9 +7,9 @@ Storage conventions for `panoseti_analysis`. Complements pypff's L0 array spec
 
 Two independent version namespaces, both stored as Zarr root attributes:
 
-| Key | Owner | Governs |
-|---|---|---|
-| `panoseti_pff_zarr_version` | pypff | L0 array layout (`images`, `unix_t_ns`, header arrays) |
+| Key                                 | Owner     | Governs                                                          |
+| ----------------------------------- | --------- | ---------------------------------------------------------------- |
+| `panoseti_pff_zarr_version`         | pypff     | L0 array layout (`images`, `unix_t_ns`, header arrays)           |
 | `panoseti_analysis_storage_version` | this repo | level structure, manifest schema, HK store, `timestamp_qc`, PACK |
 
 `panoseti_analysis_storage_version = "1.0"`. No backward-compat constraints yet — **bump
@@ -22,7 +22,7 @@ Constants live in `src/panoseti_analysis/config/versions.py`.
 <run>/
   L0/   <run>.dp_<p>.module_<m>.zarr/ …   hk.<hashset>.zarr/   manifest.json   .panoseti-meta/
   L1/   <run>.dp_<p>.module_<m>.zarr/ …                        manifest.json   .panoseti-meta/
-  L2+/  (reserved)
+  L2/   <run>.cloud.module_<m>.zarr/ …                         manifest.json   .panoseti-meta/
 ```
 
 - **One store per `(data_product, module)`** — the smallest unit with a coherent shared time
@@ -40,14 +40,37 @@ Constants live in `src/panoseti_analysis/config/versions.py`.
 
 **L1 (calibrated):**
 
-| Product family | Required arrays |
-|---|---|
+| Product family        | Required arrays                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------- |
 | ph (`ph256`,`ph1024`) | `pedestal_subtracted` float32 `(T,H,W)`; `hot_pixel_mask`,`dead_pixel_mask` uint8 `(H,W)` |
-| img (`img8`,`img16`) | `median_subtracted` float32 `(T,H,W)`; `hot_pixel_mask`,`dead_pixel_mask` uint8 `(H,W)` |
+| img (`img8`,`img16`)  | `median_subtracted` float32 `(T,H,W)`; `hot_pixel_mask`,`dead_pixel_mask` uint8 `(H,W)`   |
 
 L1 carries forward all L0 header/timing arrays (incl. `pkt_num`). `unix_t_ns` is
 monotonic-non-decreasing (§4). Time-like dims are rechunked uniformly on write (≤16384
 frames/chunk) so the final chunk is never larger than the first (a Zarr v3 requirement).
+
+**L2 (Derived Products):**
+
+- **Cloud Detector** (`cloud`): One store per `(model, module)`. Time dimension `T_l2`
+  (window-centers, monotonic-non-decreasing `int64`). Arrays:
+
+  | Array               | Dtype   | Dims           | Notes                               |
+  | ------------------- | ------- | -------------- | ----------------------------------- |
+  | `cloud_score`       | float32 | `(T_l2,)`      | P(not-clear); range 0.0–1.0         |
+  | `cloud_label`       | uint8   | `(T_l2,)`      | 0=clear, 1=cloudy (≥ threshold)     |
+  | `feature_raw_fft`   | float32 | `(T_l2, H, W)` | log-magnitude FFT of stacked frame  |
+  | `feature_deriv_fft` | float32 | `(T_l2, H, W)` | log-magnitude FFT of 60 s diff      |
+  | `unix_t_ns`         | int64   | `(T_l2,)`      | Window-center timestamps; monotonic |
+
+  Root attrs (in addition to inherited L1 attrs):
+  - `data_level = "L2"`
+  - `panoseti_analysis_storage_version` (from `config/versions.py`)
+  - `inference_params = {"cadence_s": float, "threshold": float}`
+  - `model = {"model_name": str, "model_version": str, "checksum": "sha256:<hex>"}`
+
+  L2 manifest lineage entry per store: `StoreLineage` (see `config/models.py`) with fields
+  `dp`, `module`, `level="L2"`, `kind="cloud"`, `store`, `n_frames`, `source_store`,
+  `model`, `inference_params`.
 
 ## §3 Root attributes
 
@@ -60,12 +83,21 @@ plus pypff's `data_product`/`module`/`bytes_per_pixel`/`total_frames`/`frame_con
 ## §4 `timestamp_qc` schema
 
 ```json
-{ "status": "clean|repaired|flagged|suspect", "monotonic": true, "n_frames": 0,
-  "n_nonmonotonic": 0, "n_duplicates": 0, "max_gap_ns": 0, "n_gaps_over_threshold": 0,
-  "gap_threshold_ns": 0, "t_start_ns": 0, "t_end_ns": 0 }
+{
+  "status": "clean|repaired|flagged|suspect",
+  "monotonic": true,
+  "n_frames": 0,
+  "n_nonmonotonic": 0,
+  "n_duplicates": 0,
+  "max_gap_ns": 0,
+  "n_gaps_over_threshold": 0,
+  "gap_threshold_ns": 0,
+  "t_start_ns": 0,
+  "t_end_ns": 0
+}
 ```
 
-- **L0** is a faithful native-order PFF mirror; it only *records* QC (status ∈ clean/flagged/
+- **L0** is a faithful native-order PFF mirror; it only _records_ QC (status ∈ clean/flagged/
   suspect — never "repaired").
 - **L1+ guarantees monotonic-non-decreasing `unix_t_ns`** — a downstream contract the
   coincidence-finder's binary search depends on. L0→L1 stable-sorts by `unix_t_ns` to repair
@@ -111,7 +143,8 @@ retained in `.panoseti-meta/`.
 ```
 
 L0 manifest = pypff store enumeration augmented with `n_frames`/`time_range`/`checksum`. L1
-manifest adds `source_store` + `calibration_params` lineage. Built by `pa-manifest`: the
+manifest adds `source_store` + `calibration_params` lineage. L2 manifest adds `model` (name, version, checksum)
+and `inference_params`. Built by `pa-manifest`: the
 adapter does the I/O (reads store attrs, computes checksums); the pure `build_level_manifest`
 kernel merges/validates. Manifests are grouped by `run_id` so a multi-run samplesheet yields
 one manifest per run per level.

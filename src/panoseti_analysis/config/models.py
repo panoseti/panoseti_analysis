@@ -36,6 +36,23 @@ class ImgCalibParams(_Base):
     adc_to_pe: float = 1.5
 
 
+# ── ML parameters (Layer A kernel inputs/configs) ─────────────────────────────
+class ClassifierBundle(_Base):
+    """Metadata describing an ML model checkpoint and its input expectations."""
+
+    model_name: str
+    model_version: str
+    checksum: str
+    input_spec: dict[str, Any]
+
+
+class CloudInferParams(_Base):
+    """Inference parameters for the cloud detector."""
+
+    cadence_s: float = 60.0
+    threshold: float = 0.5
+
+
 # ── timestamp QC ──────────────────────────────────────────────────────────────
 class TimestampQCStatus(StrEnum):
     CLEAN = "clean"          # already monotonic non-decreasing, no gaps over threshold
@@ -66,7 +83,7 @@ class StoreLineage(_Base):
     dp: str
     module: str
     level: str
-    kind: str  # "ph" | "img" | "hk"
+    kind: str  # "ph" | "img" | "hk" | "cloud"
     store: str  # store filename (not a full path)
     n_frames: int
     time_range: tuple[int, int] | None = None  # (t_start_ns, t_end_ns)
@@ -76,6 +93,9 @@ class StoreLineage(_Base):
     timestamp_qc: TimestampQC | None = None
     hashset: str | None = None  # set for HK stores (kind == "hk")
     cadence_ns: int | None = None  # sampling cadence (img); None/0 for event-based ph
+    # L2+ fields
+    model: dict[str, Any] | None = None
+    inference_params: dict[str, Any] | None = None
 
 
 class Manifest(_Base):

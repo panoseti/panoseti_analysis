@@ -23,3 +23,12 @@ def checksum_store(store: str | Path, *, chunk_bytes: int = 1 << 20) -> str:
             while chunk := fh.read(chunk_bytes):
                 h.update(chunk)
     return f"sha256:{h.hexdigest()}"
+
+
+def compute_sha256(path: str | Path, *, chunk_bytes: int = 1 << 20) -> str:
+    """Return the SHA-256 hex digest of a single file."""
+    h = hashlib.sha256()
+    with Path(path).open("rb") as fh:
+        while chunk := fh.read(chunk_bytes):
+            h.update(chunk)
+    return h.hexdigest()

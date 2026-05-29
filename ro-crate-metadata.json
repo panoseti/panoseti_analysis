@@ -1,0 +1,289 @@
+{
+    "@context": [
+        "https://w3id.org/ro/crate/1.2/context",
+        {
+            "GithubService": "https://w3id.org/ro/terms/test#GithubService",
+            "JenkinsService": "https://w3id.org/ro/terms/test#JenkinsService",
+            "PlanemoEngine": "https://w3id.org/ro/terms/test#PlanemoEngine",
+            "TestDefinition": "https://w3id.org/ro/terms/test#TestDefinition",
+            "TestInstance": "https://w3id.org/ro/terms/test#TestInstance",
+            "TestService": "https://w3id.org/ro/terms/test#TestService",
+            "TestSuite": "https://w3id.org/ro/terms/test#TestSuite",
+            "TravisService": "https://w3id.org/ro/terms/test#TravisService",
+            "definition": "https://w3id.org/ro/terms/test#definition",
+            "engineVersion": "https://w3id.org/ro/terms/test#engineVersion",
+            "instance": "https://w3id.org/ro/terms/test#instance",
+            "resource": "https://w3id.org/ro/terms/test#resource",
+            "runsOn": "https://w3id.org/ro/terms/test#runsOn"
+        }
+    ],
+    "@graph": [
+        {
+            "@id": "./",
+            "@type": "Dataset",
+            "creativeWorkStatus": "Stable",
+            "datePublished": "2026-05-29T08:06:02+00:00",
+            "description": "# panoseti-analysis\n\nPANOSETI data-reduction monorepo: PFF \u2192 Zarr ingest/calibration pipelines for HPC\n(and, later, real-time and ML). Built on a strict three-layer architecture with an\n**nf-core**-templated Nextflow pipeline (branding off, PANOSETI namespace).\n\n> Orientation for contributors and Claude Code: see [`CLAUDE.md`](CLAUDE.md).\n> Storage conventions: see [`docs/storage_spec.md`](docs/storage_spec.md).\n\n## Layout\n\n```\nsrc/panoseti_analysis/\n  algorithms/   Layer A \u2014 pure kernels (xarray/numpy/pydantic; no I/O, no frameworks)\n  adapters/     Layer B \u2014 thin Typer CLIs (pa-convert, pa-calibrate, pa-hk, pa-manifest, pa-pack)\n  io/           filesystem boundary (open/write/checksum/pack; wraps pypff)\n  config/       versions, data_level registry, Pydantic models\nbin/            pa-* shims (on $PATH inside Nextflow processes)\nmain.nf, workflows/, subworkflows/local/, modules/local/, conf/   Layer C \u2014 Nextflow\npypff/          git submodule (PFF reader + PFF\u2192Zarr v3 converter) \u2014 do not edit here\ntests/          Layer A unit tests + io/adapter tests + boundary lint + e2e data\ndocs/           storage_spec.md + nf-core docs\n```\n\n## Quick start\n\n```bash\nuv sync                                              # workspace venv (incl. pypff submodule)\nuv run pytest                                        # 57 tests: kernels, io, adapters\nuv run ruff check src tests && uv run mypy src/panoseti_analysis\n\n# Ingest pipeline on bundled test data (PFF -> L0 -> L1, level-major output):\nnextflow run . -profile test,laptop --outdir results_smoke\nls results_smoke/L0 results_smoke/L1                 # per-(dp,module) .zarr + manifest.json\n```\n\n## Pipeline\n\n```\n.pffd \u2500\u2500pa-convert\u2500\u2500\u25b6 L0/ (per-(dp,module) Zarr + lineage)\n                          \u2502  fan-out by (dp,module)\n              \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n        pa-calibrate ph         pa-calibrate img      pa-hk \u2500\u2500\u25b6 hk.<hashset>.zarr\n     (pedestal + n-\u03c3)        (block+temporal median)\n              \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n                          \u25bc\n                       L1/ (calibrated Zarr) + manifest.json (lineage)\n```\n\nL0 mirrors native PFF order; **L1 guarantees monotonic `unix_t_ns`** (stable-sorted,\nframes never dropped). Profiles: `laptop` (no container), `docker`, `hpc_slurm`\n(SLURM + Apptainer, e.g. SDSC Expanse). Select steps with `--steps ingest`\n(`reconstruct`/`ml` are stubs). Input is a `run_id,obs_dir` samplesheet (`--input`) or\nthe single-run convenience `--input_obs_dir`.\n\n## License\n\nMIT \u00a9 2026 PANOSETI.\n",
+            "hasPart": [
+                {
+                    "@id": "main.nf"
+                },
+                {
+                    "@id": "assets/"
+                },
+                {
+                    "@id": "conf/"
+                },
+                {
+                    "@id": "docs/"
+                },
+                {
+                    "@id": "docs/images/"
+                },
+                {
+                    "@id": "workflows/"
+                },
+                {
+                    "@id": "subworkflows/"
+                },
+                {
+                    "@id": "nextflow.config"
+                },
+                {
+                    "@id": "README.md"
+                },
+                {
+                    "@id": "nextflow_schema.json"
+                },
+                {
+                    "@id": "CHANGELOG.md"
+                },
+                {
+                    "@id": "LICENSE"
+                },
+                {
+                    "@id": "CODE_OF_CONDUCT.md"
+                },
+                {
+                    "@id": "CITATIONS.md"
+                },
+                {
+                    "@id": "modules.json"
+                },
+                {
+                    "@id": "docs/usage.md"
+                },
+                {
+                    "@id": "docs/output.md"
+                },
+                {
+                    "@id": ".nf-core.yml"
+                },
+                {
+                    "@id": ".pre-commit-config.yaml"
+                },
+                {
+                    "@id": ".prettierignore"
+                }
+            ],
+            "isBasedOn": "https://github.com/nf-core/pipeline-template",
+            "license": "MIT",
+            "mainEntity": {
+                "@id": "main.nf"
+            },
+            "mentions": [
+                {
+                    "@id": "#440838b4-cf6c-4be1-8216-e327cb12c025"
+                }
+            ],
+            "name": "panoseti/analysis"
+        },
+        {
+            "@id": "ro-crate-metadata.json",
+            "@type": "CreativeWork",
+            "about": {
+                "@id": "./"
+            },
+            "conformsTo": [
+                {
+                    "@id": "https://w3id.org/ro/crate/1.2"
+                },
+                {
+                    "@id": "https://w3id.org/workflowhub/workflow-ro-crate/1.0"
+                }
+            ]
+        },
+        {
+            "@id": "main.nf",
+            "@type": ["File", "SoftwareSourceCode", "ComputationalWorkflow"],
+            "contributor": [
+                {
+                    "@id": "https://orcid.org/0009-0004-6021-4753"
+                }
+            ],
+            "dateCreated": "",
+            "dateModified": "2026-05-29T01:06:02Z",
+            "dct:conformsTo": "https://bioschemas.org/profiles/ComputationalWorkflow/1.0-RELEASE/",
+            "keywords": ["panoseti", "nextflow", "astronomy"],
+            "license": ["MIT"],
+            "name": ["panoseti/analysis"],
+            "programmingLanguage": {
+                "@id": "https://w3id.org/workflowhub/workflow-ro-crate#nextflow"
+            },
+            "sdPublisher": {
+                "@id": "https://github.com/panoseti"
+            },
+            "url": ["https://github.com/panoseti/panoseti-analysis"],
+            "version": ["0.1.0"]
+        },
+        {
+            "@id": "https://w3id.org/workflowhub/workflow-ro-crate#nextflow",
+            "@type": "ComputerLanguage",
+            "identifier": {
+                "@id": "https://www.nextflow.io/"
+            },
+            "name": "Nextflow",
+            "url": {
+                "@id": "https://www.nextflow.io/"
+            },
+            "version": "!>=25.10.4"
+        },
+        {
+            "@id": "#440838b4-cf6c-4be1-8216-e327cb12c025",
+            "@type": "TestSuite",
+            "instance": [
+                {
+                    "@id": "#3641257d-8b91-4db5-b5da-35dc187e193b"
+                }
+            ],
+            "mainEntity": {
+                "@id": "main.nf"
+            },
+            "name": "Test suite for panoseti/analysis"
+        },
+        {
+            "@id": "#3641257d-8b91-4db5-b5da-35dc187e193b",
+            "@type": "TestInstance",
+            "name": "GitHub Actions workflow for testing panoseti/analysis",
+            "resource": "repos/panoseti/panoseti-analysis/actions/workflows/panoseti-ci.yml",
+            "runsOn": {
+                "@id": "https://w3id.org/ro/terms/test#GithubService"
+            },
+            "url": "https://api.github.com"
+        },
+        {
+            "@id": "https://w3id.org/ro/terms/test#GithubService",
+            "@type": "TestService",
+            "name": "Github Actions",
+            "url": {
+                "@id": "https://github.com"
+            }
+        },
+        {
+            "@id": "assets/",
+            "@type": "Dataset",
+            "description": "Additional files"
+        },
+        {
+            "@id": "conf/",
+            "@type": "Dataset",
+            "description": "Configuration files"
+        },
+        {
+            "@id": "docs/",
+            "@type": "Dataset",
+            "description": "Markdown files for documenting the pipeline"
+        },
+        {
+            "@id": "docs/images/",
+            "@type": "Dataset",
+            "description": "Images for the documentation files"
+        },
+        {
+            "@id": "workflows/",
+            "@type": "Dataset",
+            "description": "Main pipeline workflows to be executed in main.nf"
+        },
+        {
+            "@id": "subworkflows/",
+            "@type": "Dataset",
+            "description": "Smaller subworkflows"
+        },
+        {
+            "@id": "nextflow.config",
+            "@type": "File",
+            "description": "Main Nextflow configuration file"
+        },
+        {
+            "@id": "README.md",
+            "@type": "File",
+            "description": "Basic pipeline usage information"
+        },
+        {
+            "@id": "nextflow_schema.json",
+            "@type": "File",
+            "description": "JSON schema for pipeline parameter specification"
+        },
+        {
+            "@id": "CHANGELOG.md",
+            "@type": "File",
+            "description": "Information on changes made to the pipeline"
+        },
+        {
+            "@id": "LICENSE",
+            "@type": "File",
+            "description": "The license - should be MIT"
+        },
+        {
+            "@id": "CODE_OF_CONDUCT.md",
+            "@type": "File",
+            "description": "The project code of conduct"
+        },
+        {
+            "@id": "CITATIONS.md",
+            "@type": "File",
+            "description": "Citations needed when using the pipeline"
+        },
+        {
+            "@id": "modules.json",
+            "@type": "File",
+            "description": "Version information for nf-core/modules used by this pipeline"
+        },
+        {
+            "@id": "docs/usage.md",
+            "@type": "File",
+            "description": "Usage documentation"
+        },
+        {
+            "@id": "docs/output.md",
+            "@type": "File",
+            "description": "Output documentation"
+        },
+        {
+            "@id": ".nf-core.yml",
+            "@type": "File",
+            "description": "nf-core template configuration file, controlling template features and linting rules"
+        },
+        {
+            "@id": ".pre-commit-config.yaml",
+            "@type": "File",
+            "description": "Configuration file for pre-commit hooks"
+        },
+        {
+            "@id": ".prettierignore",
+            "@type": "File",
+            "description": "Ignore file for prettier"
+        },
+        {
+            "@id": "https://github.com/panoseti",
+            "@type": "Organization",
+            "name": "PANOSETI",
+            "url": "https://github.com/panoseti"
+        },
+        {
+            "@id": "https://orcid.org/0009-0004-6021-4753",
+            "@type": "Person",
+            "name": "Nicolas Rault-Wang"
+        }
+    ]
+}

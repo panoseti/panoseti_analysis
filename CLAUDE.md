@@ -24,15 +24,21 @@ data-product families across many ns-synchronized telescope **modules**:
 
 ## Three-layer architecture (strict)
 
-| Layer | Location | Rule |
-|---|---|---|
-| **A — pure kernels** | `src/panoseti_analysis/algorithms/` | `xarray`/`numpy`/`pydantic` in & out. **No** I/O, **no** framework imports (`ray\|nextflow\|grpc\|slurm\|typer\|zarr\|pypff`), **no** `.open_zarr`/`.to_zarr`. CI lint (`tests/algorithms/test_layer_boundary.py`) enforces this. |
-| **B — adapters** | `src/panoseti_analysis/adapters/` + `bin/pa-*` | Thin Typer CLIs: read paths → open via `io/` → call **one** kernel → write via `io/` → emit `*.lineage.json`. The **only** code Nextflow invokes. |
-| **C — orchestration** | `main.nf`, `workflows/`, `subworkflows/local/`, `modules/local/` | Nextflow. Calls only Layer B CLIs (on `$PATH`), never imports kernels. |
+| Layer                 | Location                                                         | Rule                                                                                                                                                                                                                              |
+| --------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A — pure kernels**  | `src/panoseti_analysis/algorithms/`                              | `xarray`/`numpy`/`pydantic` in & out. **No** I/O, **no** framework imports (`ray\|nextflow\|grpc\|slurm\|typer\|zarr\|pypff`), **no** `.open_zarr`/`.to_zarr`. CI lint (`tests/algorithms/test_layer_boundary.py`) enforces this. |
+| **B — adapters**      | `src/panoseti_analysis/adapters/` + `bin/pa-*`                   | Thin Typer CLIs: read paths → open via `io/` → call **one** kernel → write via `io/` → emit `*.lineage.json`. The **only** code Nextflow invokes.                                                                                 |
+| **C — orchestration** | `main.nf`, `workflows/`, `subworkflows/local/`, `modules/local/` | Nextflow. Calls only Layer B CLIs (on `$PATH`), never imports kernels.                                                                                                                                                            |
 
 Supporting: `io/` (filesystem boundary: open/write/checksum/pack/pff/quicklook),
-`config/` (versions, `data_level` registry, Pydantic models). A Ray or gRPC adapter is a
-future *sibling* of Layer B — same kernel call, different transport — so Layer A never changes.
+`config/` (versions, `data_level` registry, Pydantic models). The `ray` adapter is a
+sibling of Layer B — same kernel call, different transport — so Layer A never changes.
+
+### Ray Integration Principle
+
+**Ray is a payload, not a substrate.** The default execution model is Nextflow-process-with-typer-CLI.
+Ray is opt-in per process via a `gpu_ray` label. Processes that don't need distributed memory/GPUs stay non-Ray.
+Ray clusters are transient: brought up per-process using `ray symmetric-run` inside Apptainer, and torn down when the Nextflow task completes.
 
 ## Toolchain
 
@@ -41,6 +47,7 @@ future *sibling* of Layer B — same kernel call, different transport — so Lay
 - **Nextflow ≥26.04**, strict DSL2 (`nextflow.enable.strict = true`), nf-core 4.0.2 template
   (branding off), publishing via the **`output {}` block** (no `publishDir`).
 - Build **Docker** images, run as **Apptainer** on Expanse.
+  `containers/ingest.Dockerfile` is for CPU tasks; `containers/ml.Dockerfile` brings Ray + PyTorch + CUDA for ML/Ray workloads.
 
 ## How to run
 
@@ -54,9 +61,10 @@ nextflow run . -profile test,laptop --outdir results_smoke
 # Real run (samplesheet of run_id,obs_dir) or single-run convenience:
 nextflow run . -profile laptop --input samplesheet.csv --outdir <OUT>
 nextflow run . -profile laptop --input_obs_dir /path/obs.pffd --outdir <OUT>
-# Choose steps (ingest implemented; reconstruct/ml are stubs):
-nextflow run . -profile laptop --steps ingest --input_obs_dir … --outdir …
+# Choose steps (ingest implemented; reconstruct is stub; ml runs cloud classification):
+nextflow run . -profile laptop --steps ingest,ml --input_obs_dir … --outdir …
 # HPC: -profile hpc_slurm  (SLURM + Apptainer; --slurm_account/--slurm_queue)
+# To use Ray for ML workloads: add --use_ray true
 ```
 
 CLIs (also on `$PATH` inside Nextflow): `pa-convert`, `pa-calibrate`, `pa-hk`,
