@@ -230,7 +230,7 @@ work/
 null/
 .lineage/
 testing/
-data/
+/data/
 
 # Pipeline outputs
 results/
