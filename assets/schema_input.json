@@ -1,0 +1,25 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/panoseti/analysis/main/assets/schema_input.json",
+    "title": "panoseti/analysis pipeline - params.input schema",
+    "description": "Samplesheet of PANOSETI observation runs to ingest",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "run_id": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "run_id must be provided and cannot contain spaces",
+                "meta": ["id", "run_id"]
+            },
+            "obs_dir": {
+                "type": "string",
+                "format": "directory-path",
+                "exists": true,
+                "errorMessage": "obs_dir must be an existing .pffd observation directory"
+            }
+        },
+        "required": ["run_id", "obs_dir"]
+    }
+}

@@ -216,3 +216,38 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Python
+*.pyc
+__pycache__/
+*.egg-info/
+.venv/
+
+# Nextflow
+.nextflow/
+.nextflow.log*
+.nextflow*
+work/
+null/
+.lineage/
+testing/
+/data/
+
+# Pipeline outputs
+results/
+results_*/
+L0/
+L0_zarr/
+L1/
+L1_zarr/
+*.zarr/
+
+# Logs and reports
+logs/
+*.html
+trace.txt
+
+# pytest
+.pytest_cache/
+
+# macOS
+.DS_Store

@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+"""Nextflow $PATH shim for the pa-calibrate adapter."""
+from panoseti_analysis.adapters.calibrate import app
+
+app()
