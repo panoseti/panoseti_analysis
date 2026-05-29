@@ -112,7 +112,7 @@ def test_ray_vs_cli_equivalence(
         level=5
     )
 
-    l2_store_ray, record_ray = ray.get(future)
+    l2_store_ray, _record_ray = ray.get(future)
 
     # 3. Compare outputs
     ds_cli = xr.open_zarr(l2_store_cli)

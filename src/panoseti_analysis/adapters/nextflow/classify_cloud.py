@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
 
 import typer
@@ -12,8 +11,8 @@ from panoseti_analysis.adapters._common import write_lineage_json
 from panoseti_analysis.algorithms.cloud_detector import predict_cloud_score
 from panoseti_analysis.config.models import CloudInferParams, StoreLineage
 from panoseti_analysis.io.models import load_classifier
-from panoseti_analysis.io.stores import write_store
 from panoseti_analysis.io.quicklook import generate_cloud_quicklook
+from panoseti_analysis.io.stores import write_store
 
 app = typer.Typer(add_completion=False, help="Run cloud detector inference on one L1 store (CPU).")
 
@@ -32,21 +31,21 @@ def run_classify(
     """Load L1, run inference, write L2 + lineage."""
     # 1. Load Model
     model, bundle = load_classifier(model_path)
-    
+
     # 2. Load Data
     ds_l1 = xr.open_zarr(l1_store)
-    
+
     # 3. Predict
     params = CloudInferParams(cadence_s=cadence_s, threshold=threshold)
     ds_l2 = predict_cloud_score(ds_l1, model, params)
-    
+
     # 4. Write Store
     # Inherit attributes and update them
     ds_l2.attrs.update(ds_l1.attrs)
     ds_l2.attrs["data_level"] = "L2"
-    
+
     write_store(ds_l2, l2_store, codec=codec, level=level)
-    
+
     # 5. Write Lineage
     record = StoreLineage(
         dp=str(ds_l1.attrs.get("data_product", "?")),
@@ -54,7 +53,7 @@ def run_classify(
         level="L2",
         kind="cloud",
         store=l2_store.name,
-        n_frames=int(ds_l2.sizes["T_l2"] if "T_l2" in ds_l2.sizes else 0),
+        n_frames=int(ds_l2.sizes.get("T_l2", 0)),
         source_store=l1_store.name,
         model=bundle.model_dump(),
         inference_params=params.model_dump(),
@@ -62,11 +61,11 @@ def run_classify(
     )
     if lineage_out is not None:
         write_lineage_json(record, lineage_out)
-        
+
     # 6. Write Quicklook
     if quicklook_out is not None:
         generate_cloud_quicklook(ds_l2, quicklook_out)
-        
+
     return record
 
 

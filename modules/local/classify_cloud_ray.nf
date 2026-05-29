@@ -12,21 +12,47 @@ process CLASSIFY_CLOUD_RAY {
     path("*.png")                           , emit: quicklook
 
     script:
-    """
-    export RAY_TMPDIR=\$TMPDIR
+    def stores_arg = l1_stores instanceof List
+        ? l1_stores.collect { it.toString() }.join(' ')
+        : l1_stores.toString()
 
-    # Write the list of stores to a file to avoid ARG_MAX issues
-    for store in ${l1_stores.join(' ')}; do
-        echo "\$store" >> stores.list
-    done
+    if (params.ray_launcher == "standalone") {
+        """
+        export RAY_TMPDIR=\${TMPDIR:-/tmp}
+        for store in ${stores_arg}; do
+            echo "\$store" >> stores.list
+        done
 
-    srun --nodes=\$SLURM_NNODES --ntasks-per-node=1 \\
-         ray symmetric-run \\
-         -- pa-ray-classify-cloud \\
+        pa-ray-classify-cloud \\
             stores.list \\
             . \\
             ${model_file} \\
             --lineage-out lineage.json \\
             --quicklook-dir .
-    """
+        """
+    } else {
+        // Default: SLURM + ray symmetric-run (Expanse / any SLURM cluster)
+        """
+        export RAY_TMPDIR=\${TMPDIR:-/tmp}
+        for store in ${stores_arg}; do
+            echo "\$store" >> stores.list
+        done
+
+        NUM_NODES=\${SLURM_JOB_NUM_NODES:-1}
+        NUM_CPUS=\${SLURM_CPUS_PER_TASK:-4}
+        NUM_GPUS=\${SLURM_GPUS_PER_NODE:-0}
+
+        srun --nodes=\$NUM_NODES --ntasks-per-node=1 \\
+             ray symmetric-run \\
+             --min-nodes \$NUM_NODES \\
+             --num-cpus \$NUM_CPUS \\
+             --num-gpus \$NUM_GPUS \\
+             -- pa-ray-classify-cloud \\
+                stores.list \\
+                . \\
+                ${model_file} \\
+                --lineage-out lineage.json \\
+                --quicklook-dir .
+        """
+    }
 }

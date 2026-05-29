@@ -4,7 +4,6 @@ Pure Layer A module: takes xarray/numpy/pydantic, returns xarray.
 No Ray or Nextflow dependencies.
 """
 
-from typing import Any
 import numpy as np
 import torch
 import torch.nn as nn
@@ -161,10 +160,7 @@ def predict_cloud_score(
 
         curr_img = np.sum(img[idx_curr:end_curr], axis=0)
 
-        if end_prev > idx_prev:
-            prev_img = np.sum(img[idx_prev:end_prev], axis=0)
-        else:
-            prev_img = curr_img # Fallback if no prev data
+        prev_img = np.sum(img[idx_prev:end_prev], axis=0) if end_prev > idx_prev else curr_img
 
         diff_img = curr_img - prev_img
 

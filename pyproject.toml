@@ -92,3 +92,9 @@ warn_required_dynamic_aliases = true
 [[tool.mypy.overrides]]
 module = ["zarr.*", "numcodecs.*"]
 follow_imports = "skip"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests that start external processes (e.g. real Ray cluster); deselect with -m 'not slow'",
+]

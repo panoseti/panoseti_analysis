@@ -2,21 +2,19 @@
 
 from __future__ import annotations
 
-import json
+import os
 from pathlib import Path
-from typing import List
 
 import ray
+import torch
 import typer
 import xarray as xr
-import torch
 
-from panoseti_analysis.adapters._common import write_lineage_json
 from panoseti_analysis.algorithms.cloud_detector import predict_cloud_score
 from panoseti_analysis.config.models import CloudInferParams, StoreLineage
 from panoseti_analysis.io.models import load_classifier
-from panoseti_analysis.io.stores import write_store
 from panoseti_analysis.io.quicklook import generate_cloud_quicklook
+from panoseti_analysis.io.stores import write_store
 
 app = typer.Typer(add_completion=False, help="Run cloud detector inference via Ray.")
 
@@ -53,7 +51,7 @@ def process_store(
         level="L2",
         kind="cloud",
         store=l2_store_name,
-        n_frames=int(ds_l2.sizes["T_l2"] if "T_l2" in ds_l2.sizes else 0),
+        n_frames=int(ds_l2.sizes.get("T_l2", 0)),
         source_store=l1_store.name,
         model=bundle_dict,
         inference_params=params.model_dump(),
@@ -78,7 +76,7 @@ def main(
     codec: str = typer.Option("zstd"),
     level: int = typer.Option(5),
 ) -> None:
-    ray.init()
+    ray.init(address=os.environ.get("RAY_ADDRESS", "auto"), ignore_reinit_error=True)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     if quicklook_dir is not None:
