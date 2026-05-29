@@ -13,10 +13,15 @@ change jumps cleanly to ``"2.0"`` rather than contorting ``1.x``.
 from __future__ import annotations
 
 #: Version of the panoseti_analysis storage conventions (level structure, manifest, HK, QC).
-PANOSETI_ANALYSIS_STORAGE_VERSION = "1.0"
+#: Bumped to 2.0: ProcessingStep/processing_history added to StoreLineage (breaking schema change).
+PANOSETI_ANALYSIS_STORAGE_VERSION = "2.0"
 
 #: Version of the per-run/per-level manifest.json schema.
-MANIFEST_SCHEMA_VERSION = "1.0"
+#: Bumped to 2.0: StoreLineage gains processing_history (new field with default=[]).
+MANIFEST_SCHEMA_VERSION = "2.0"
+
+#: Version of the ProcessingStep / TrainingProvenance provenance record format.
+PROVENANCE_SCHEMA_VERSION = "1.0"
 
 # ── canonical root-attribute key names ────────────────────────────────────────
 STORAGE_VERSION_KEY = "panoseti_analysis_storage_version"
