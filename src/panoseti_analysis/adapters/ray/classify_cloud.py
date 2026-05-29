@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 import ray
 import torch
@@ -24,7 +25,7 @@ def process_store(
     l1_store: Path,
     out_dir: Path,
     model: torch.nn.Module,
-    bundle_dict: dict,
+    bundle_dict: dict[str, Any],
     params: CloudInferParams,
     codec: str,
     level: int,
