@@ -44,6 +44,7 @@ workflow PANOSETI_ANALYSIS {
     l1_manifest = ANALYSIS.out.l1_manifest
     l2_stores   = ANALYSIS.out.l2_stores.map   { _meta, s -> s }
     l2_manifest = ANALYSIS.out.l2_manifest
+    l2_quicklooks = ANALYSIS.out.l2_quicklooks.map { _meta, s -> s }
 }
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -91,6 +92,7 @@ workflow {
     l1_manifest = PANOSETI_ANALYSIS.out.l1_manifest
     l2_stores   = PANOSETI_ANALYSIS.out.l2_stores
     l2_manifest = PANOSETI_ANALYSIS.out.l2_manifest
+    l2_quicklooks = PANOSETI_ANALYSIS.out.l2_quicklooks
 }
 
 // ── Level-major publishing (output {} block; no publishDir) ───────────────────
@@ -103,6 +105,7 @@ output {
     l1_manifest { path 'L1' }
     l2_stores   { path 'L2' }
     l2_manifest { path 'L2' }
+    l2_quicklooks { path 'L2_quicklooks' }
 }
 
 /*

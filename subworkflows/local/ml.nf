@@ -38,4 +38,5 @@ workflow ML {
     emit:
     l2_stores   = CLASSIFY_CLOUD.out.stores
     l2_manifest = BUILD_MANIFEST_L2.out.manifest.map { _level, m -> m }
+    l2_quicklooks = CLASSIFY_CLOUD.out.quicklook
 }

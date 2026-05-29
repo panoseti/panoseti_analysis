@@ -51,6 +51,8 @@ dev = [
     "pytest>=7.0.0",
     "ruff",
     "mypy",
+    "jupyter>=1.1.1",
+    "ipykernel>=7.2.0",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -13,6 +13,7 @@ from panoseti_analysis.algorithms.cloud_detector import predict_cloud_score
 from panoseti_analysis.config.models import CloudInferParams, StoreLineage
 from panoseti_analysis.io.models import load_classifier
 from panoseti_analysis.io.stores import write_store
+from panoseti_analysis.io.quicklook import generate_cloud_quicklook
 
 app = typer.Typer(add_completion=False, help="Run cloud detector inference on one L1 store (CPU).")
 
@@ -24,6 +25,7 @@ def run_classify(
     cadence_s: float = 60.0,
     threshold: float = 0.5,
     lineage_out: Path | None = None,
+    quicklook_out: Path | None = None,
     codec: str = "zstd",
     level: int = 5,
 ) -> StoreLineage:
@@ -60,6 +62,11 @@ def run_classify(
     )
     if lineage_out is not None:
         write_lineage_json(record, lineage_out)
+        
+    # 6. Write Quicklook
+    if quicklook_out is not None:
+        generate_cloud_quicklook(ds_l2, quicklook_out)
+        
     return record
 
 
@@ -71,12 +78,13 @@ def main(
     cadence_s: float = typer.Option(60.0),
     threshold: float = typer.Option(0.5),
     lineage_out: Path | None = typer.Option(None),
+    quicklook_out: Path | None = typer.Option(None),
     codec: str = typer.Option("zstd"),
     level: int = typer.Option(5),
 ) -> None:
     run_classify(
         l1_store, l2_store, model_path, cadence_s=cadence_s, threshold=threshold,
-        lineage_out=lineage_out, codec=codec, level=level
+        lineage_out=lineage_out, quicklook_out=quicklook_out, codec=codec, level=level
     )
 
 

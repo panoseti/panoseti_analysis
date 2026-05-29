@@ -16,6 +16,7 @@ from panoseti_analysis.algorithms.cloud_detector import predict_cloud_score
 from panoseti_analysis.config.models import CloudInferParams, StoreLineage
 from panoseti_analysis.io.models import load_classifier
 from panoseti_analysis.io.stores import write_store
+from panoseti_analysis.io.quicklook import generate_cloud_quicklook
 
 app = typer.Typer(add_completion=False, help="Run cloud detector inference via Ray.")
 
@@ -29,6 +30,7 @@ def process_store(
     params: CloudInferParams,
     codec: str,
     level: int,
+    quicklook_dir: Path | None = None,
 ) -> tuple[Path, StoreLineage]:
     """Remote task to process one store."""
     ds_l1 = xr.open_zarr(l1_store)
@@ -57,6 +59,10 @@ def process_store(
         inference_params=params.model_dump(),
     )
     
+    if quicklook_dir is not None:
+        quicklook_out = quicklook_dir / f"{run_id}.cloud.module_{module}.quicklook.png"
+        generate_cloud_quicklook(ds_l2, quicklook_out)
+    
     return l2_store, record
 
 
@@ -68,44 +74,36 @@ def main(
     cadence_s: float = typer.Option(60.0),
     threshold: float = typer.Option(0.5),
     lineage_out: Path | None = typer.Option(None),
+    quicklook_dir: Path | None = typer.Option(None),
     codec: str = typer.Option("zstd"),
     level: int = typer.Option(5),
 ) -> None:
-    # 1. Connect to existing Ray cluster spun up by symmetric-run
-    # If it's not running, Ray will raise an error or start a local one if we do ray.init()
-    # But usually we want ray.init(address="auto")
-    # For now, ray.init() handles auto-connecting if symmetric-run set RAY_ADDRESS
     ray.init()
     
     out_dir.mkdir(parents=True, exist_ok=True)
+    if quicklook_dir is not None:
+        quicklook_dir.mkdir(parents=True, exist_ok=True)
     
-    # 2. Parse stores
     with stores_list_file.open() as f:
         l1_stores = [Path(line.strip()) for line in f if line.strip()]
         
-    # 3. Load model (once per Ray job, then put in object store)
     model, bundle = load_classifier(model_path)
     model_ref = ray.put(model)
     bundle_dict = bundle.model_dump()
     params = CloudInferParams(cadence_s=cadence_s, threshold=threshold)
     
-    # 4. Dispatch tasks
     futures = [
-        process_store.remote(s, out_dir, model_ref, bundle_dict, params, codec, level)
+        process_store.remote(s, out_dir, model_ref, bundle_dict, params, codec, level, quicklook_dir)
         for s in l1_stores
     ]
     
-    # 5. Collect results
     results = ray.get(futures)
     
-    # 6. Aggregate lineage
     records = [r for _, r in results]
     if lineage_out is not None:
-        # Instead of full manifest, write an array of StoreLineage JSON
-        # The manifest builder will merge these.
         with lineage_out.open("w") as f:
             for r in records:
-                f.write(r.model_dump_json() + "\\n")
+                f.write(r.model_dump_json() + "\n")
 
 
 if __name__ == "__main__":

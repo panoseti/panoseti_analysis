@@ -16,6 +16,7 @@ workflow CLASSIFY_CLOUD {
     main:
     ch_l2_stores   = channel.empty()
     ch_l2_lineage  = channel.empty()
+    ch_l2_quicklook = channel.empty()
 
     if (use_ray) {
         // Group L1 stores by run_id so each Ray cluster invocation
@@ -32,13 +33,19 @@ workflow CLASSIFY_CLOUD {
             tuple([run_id: store.name.split('\\.')[0], level: 'L2', kind: 'cloud'], store)
         }
         ch_l2_lineage = CLASSIFY_CLOUD_RAY.out.lineage
+        ch_l2_quicklook = CLASSIFY_CLOUD_RAY.out.quicklook.flatten().map { quicklook ->
+            tuple([run_id: quicklook.name.split('\\.')[0], level: 'L2', kind: 'cloud'], quicklook)
+        }
     } else {
         CLASSIFY_CLOUD_CPU(ch_l1_stores, model_file, model_json)
         ch_l2_stores = CLASSIFY_CLOUD_CPU.out.store
         ch_l2_lineage = CLASSIFY_CLOUD_CPU.out.lineage
+        ch_l2_quicklook = CLASSIFY_CLOUD_CPU.out.quicklook
     }
 
     emit:
     stores  = ch_l2_stores
     lineage = ch_l2_lineage
+    quicklook = ch_l2_quicklook
 }
+

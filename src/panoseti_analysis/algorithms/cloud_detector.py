@@ -92,15 +92,6 @@ class CloudDetection(nn.Module):
         return out
 
 
-def _scale_data(data: np.ndarray) -> np.ndarray:
-    """Scale data by inverse square root of magnitude."""
-    with np.errstate(divide='ignore', invalid='ignore'):
-        div = 1.0 / np.sqrt(np.abs(data))
-        div = np.nan_to_num(div, nan=1.0, posinf=1.0, neginf=1.0)
-        scaled_data = data * div
-    return scaled_data
-
-
 def predict_cloud_score(
     ds: xr.Dataset, 
     model: torch.nn.Module, 
@@ -122,58 +113,71 @@ def predict_cloud_score(
     img = ds["median_subtracted"].values  # (T, H, W)
     unix_t_ns = ds["unix_t_ns"].values
     
-    # We require 60 second cadence windows for inference.
-    # Convert cadence_s to nanoseconds
-    window_ns = int(params.cadence_s * 1e9)
-    
-    # Very basic windowing: chunk by window_ns
     if len(unix_t_ns) == 0:
         return xr.Dataset()
 
     t_start = unix_t_ns[0]
     t_end = unix_t_ns[-1]
     
-    windows_start = np.arange(t_start, t_end + window_ns, window_ns)
+    # We step by cadence_ns. The integration window lookback is 60s for the derivative.
+    cadence_ns = int(params.cadence_s * 1e9)
+    window_ns = 60_000_000_000
+    n_stack = 10 # 10 frames of 100us = 1ms stacked integration
+    
+    target_times = np.arange(t_start, t_end + 1, cadence_ns)
     
     features_fft = []
     features_deriv_fft = []
     t_centers = []
     
-    # Calculate features per window
-    # Wait, the model uses 'raw-derivative-fft.-60' and 'raw-fft'
-    for w_start in windows_start[:-1]:
-        w_end = w_start + window_ns
-        mask = (unix_t_ns >= w_start) & (unix_t_ns < w_end)
-        if not np.any(mask):
+    # Pre-compute 2D Hann window
+    hann_1d = np.hanning(32)
+    hann_2d = np.outer(hann_1d, hann_1d)
+    
+    def apply_fft(data: np.ndarray) -> np.ndarray:
+        d = data * hann_2d
+        d = np.abs(np.fft.fftn(d))
+        d = np.fft.fftshift(d)
+        with np.errstate(divide='ignore'):
+            d = np.log(d)
+        # Handle log(0)
+        d = np.nan_to_num(d, neginf=0.0)
+        return d
+    
+    for t in target_times:
+        # Find index for current time t
+        idx_curr = np.searchsorted(unix_t_ns, t)
+        idx_curr = min(idx_curr, len(unix_t_ns) - 1)
+        
+        # Find index for t - 60s
+        t_prev = max(t_start, t - window_ns)
+        idx_prev = np.searchsorted(unix_t_ns, t_prev)
+        idx_prev = min(idx_prev, len(unix_t_ns) - 1)
+        
+        # Stack 10 frames (1ms) at idx_curr and idx_prev
+        end_curr = min(idx_curr + n_stack, len(unix_t_ns))
+        end_prev = min(idx_prev + n_stack, len(unix_t_ns))
+        
+        if end_curr <= idx_curr:
             continue
             
-        w_data = img[mask]
+        curr_img = np.sum(img[idx_curr:end_curr], axis=0)
         
-        # 'raw-fft': mean FFT of the window.
-        w_mean = np.mean(w_data, axis=0) # 32x32
-        fft = np.fft.fft2(w_mean)
-        fft_mag = np.abs(np.fft.fftshift(fft))
-        
-        # 'raw-derivative.-60' - wait, the model specifically used raw-derivative-fft.-60
-        # which means FFT of the -60 derivative.
-        # Let's approximate the time derivative as diffs
-        if len(w_data) > 1:
-            diffs = np.diff(w_data, axis=0)
-            diff_mean = np.mean(diffs, axis=0)
-            deriv_fft = np.fft.fft2(diff_mean)
-            deriv_fft_mag = np.abs(np.fft.fftshift(deriv_fft))
+        if end_prev > idx_prev:
+            prev_img = np.sum(img[idx_prev:end_prev], axis=0)
         else:
-            deriv_fft_mag = np.zeros((32, 32))
+            prev_img = curr_img # Fallback if no prev data
             
-        # Scale derivative FFT as per loader
-        deriv_fft_mag = _scale_data(deriv_fft_mag)
+        diff_img = curr_img - prev_img
+        
+        fft_mag = apply_fft(curr_img)
+        deriv_fft_mag = apply_fft(diff_img)
         
         features_fft.append(fft_mag)
         features_deriv_fft.append(deriv_fft_mag)
-        t_centers.append(w_start + window_ns // 2)
+        t_centers.append(t)
 
     if not t_centers:
-        # Return empty dataset matching schema
         return xr.Dataset({
             "cloud_score": (["T_l2"], np.array([], dtype=np.float32)),
             "cloud_label": (["T_l2"], np.array([], dtype=np.uint8)),
@@ -182,8 +186,6 @@ def predict_cloud_score(
             "unix_t_ns": (["T_l2"], np.array([], dtype=np.int64)),
         })
 
-    # Stack features to (N, 2, 32, 32)
-    # The input shape is (2, 32, 32) where channel 0 is deriv_fft, 1 is fft.
     X = np.stack([
         np.array(features_deriv_fft, dtype=np.float32),
         np.array(features_fft, dtype=np.float32)
@@ -195,13 +197,11 @@ def predict_cloud_score(
     model.eval()
     with torch.no_grad():
         out = model(tensor_x)
-        # Assuming 2-class softmax, class 1 is "cloud"
         probs = torch.nn.functional.softmax(out, dim=1)
         cloud_score = probs[:, 1].cpu().numpy()
 
     cloud_label = (cloud_score >= params.threshold).astype(np.uint8)
 
-    # Construct output Dataset
     ds_out = xr.Dataset(
         data_vars={
             "cloud_score": (["T_l2"], cloud_score),
@@ -213,3 +213,4 @@ def predict_cloud_score(
     )
 
     return ds_out
+

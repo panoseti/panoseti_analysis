@@ -9,6 +9,7 @@ process CLASSIFY_CLOUD_RAY {
     output:
     path("*.zarr")        , emit: stores
     tuple val(run_id), path("lineage.json")  , emit: lineage
+    path("*.png")         , emit: quicklook
     
     script:
     """
@@ -25,6 +26,7 @@ process CLASSIFY_CLOUD_RAY {
             stores.list \\
             . \\
             ${model_file} \\
-            --lineage-out lineage.json
+            --lineage-out lineage.json \\
+            --quicklook-dir .
     """
 }

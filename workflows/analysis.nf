@@ -24,6 +24,7 @@ workflow ANALYSIS {
     ch_l1_manifest = channel.empty()
     ch_l2_stores   = channel.empty()
     ch_l2_manifest = channel.empty()
+    ch_l2_quicklooks = channel.empty()
 
     if ('ingest' in steps) {
         INGEST(ch_samplesheet)
@@ -41,6 +42,7 @@ workflow ANALYSIS {
         ML(ch_l1_stores)
         ch_l2_stores   = ML.out.l2_stores
         ch_l2_manifest = ML.out.l2_manifest
+        ch_l2_quicklooks = ML.out.l2_quicklooks
     }
 
     emit:
@@ -51,4 +53,5 @@ workflow ANALYSIS {
     l1_manifest = ch_l1_manifest
     l2_stores   = ch_l2_stores
     l2_manifest = ch_l2_manifest
+    l2_quicklooks = ch_l2_quicklooks
 }
