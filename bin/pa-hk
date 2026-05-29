@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+"""Nextflow $PATH shim for the pa-hk adapter."""
+from panoseti_analysis.adapters.hk import app
+
+app()

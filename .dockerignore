@@ -1,0 +1,13 @@
+.git
+**/.git
+**/__pycache__
+**/*.pyc
+.venv
+work
+.nextflow
+.nextflow.log*
+results*
+tests/data
+docs
+.github
+*.log

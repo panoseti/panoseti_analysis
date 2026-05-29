@@ -1,32 +1,87 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
-name = "panoseti-zarr-pipeline"
-version = "0.3.0"
-description = "Nextflow 26 pipeline: PanoSETI PFF → Zarr v3 conversion + calibration"
-requires-python = ">=3.11"
+name = "panoseti-analysis"
+version = "0.1.0"
+description = "PANOSETI data-reduction monorepo: PFF -> Zarr ingest/calibration pipelines (HPC + real-time)."
+readme = "README.md"
+requires-python = ">=3.14"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Nicolas Rault-Wang", email = "nraultwang@berkeley.edu" }
 ]
+keywords = ["panoseti", "pff", "zarr", "nextflow", "astronomy", "seti", "gamma-ray"]
 dependencies = [
     "pypff[zarr]",
     "typer>=0.9.0",
     "xarray>=2024.1",
     "zarr>=3.0",
-    "matplotlib>=3.7",
     "numpy>=1.26",
+    "pydantic>=2.5",
+    "matplotlib>=3.7",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["panoseti_zarr_pipeline*"]
+[project.scripts]
+pa-convert = "panoseti_analysis.adapters.convert:app"
+pa-calibrate = "panoseti_analysis.adapters.calibrate:app"
+pa-hk = "panoseti_analysis.adapters.hk:app"
+pa-manifest = "panoseti_analysis.adapters.manifest:app"
+pa-pack = "panoseti_analysis.adapters.pack:app"
+
+# ── uv workspace ──────────────────────────────────────────────────────────────
+# The repo root is both the workspace root and the `panoseti_analysis` package.
+# `pypff` is a workspace member (the in-repo git submodule), resolved locally
+# instead of from PyPI.
+[tool.uv.workspace]
+members = ["pypff"]
 
 [tool.uv.sources]
-pypff = { path = "../pypff", editable = true }
+pypff = { workspace = true }
 
 [dependency-groups]
 dev = [
     "pytest>=7.0.0",
+    "ruff",
+    "mypy",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/panoseti_analysis"]
+
+# ── lint / type-check (strict, mirrors pypff conventions) ─────────────────────
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "I", "ASYNC", "RUF", "SIM"]
+ignore = [
+    "E501",   # line length handled separately
+    "B008",   # function calls in default args (common in typer/pydantic)
+]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+python_version = "3.14"
+strict = true
+check_untyped_defs = true
+strict_equality = true
+extra_checks = true
+ignore_missing_imports = true
+warn_return_any = false
+disallow_untyped_defs = true
+warn_unreachable = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# We don't type-check zarr/numcodecs internals from here (typed, but external deps).
+# pypff now ships py.typed (PEP 561), so its public types are used directly.
+[[tool.mypy.overrides]]
+module = ["zarr.*", "numcodecs.*"]
+follow_imports = "skip"
