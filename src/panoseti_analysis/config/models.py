@@ -68,7 +68,7 @@ class ProcessingStep(_Base):
     recipe_hash: str | None = None               # content hash of the recipe ("sha256:…")
     input_checksums: list[str] = Field(default_factory=list)   # IVOA used (Entity refs)
     output_checksum: str | None = None           # IVOA wasGeneratedBy
-    timestamp_utc: str                           # IVOA Activity.startTime (ISO 8601)
+    timestamp_utc: str                           # IVOA Activity.startTime (ISO 8601); ISO 8601 format required; consumers validate
     software: dict[str, str] = Field(default_factory=dict)     # IVOA wasAssociatedWith Agent
     nextflow_lineage_id: str | None = None       # external execution ref (lid://); NF 26.04 lineage
 
@@ -87,9 +87,9 @@ class TrainingProvenance(_Base):
     params: dict[str, Any]                       # all hyperparams (lr, batch, epochs, …)
     input_checksums: list[str] = Field(default_factory=list)   # feature-cache + L1 checksums
     output_checksum: str | None = None           # checksum of the .pt weights file
-    timestamp_utc: str
+    timestamp_utc: str                                           # ISO 8601 format required; consumers validate
     software: dict[str, str] = Field(default_factory=dict)     # git_sha, ray_version, torch_version, …
-    metrics: dict[str, float] = Field(default_factory=dict)    # e.g. {"val_accuracy": 0.96}
+    metrics: dict[str, float] = Field(default_factory=dict)    # e.g. {"val_accuracy": 0.96}; numeric-only; use dict[str, Any] if non-numeric values are needed
     wandb_run_id: str | None = None
 
 
