@@ -37,6 +37,8 @@ pa-pack = "panoseti_analysis.adapters.pack:app"
 pa-classify-cloud = "panoseti_analysis.adapters.nextflow.classify_cloud:app"
 pa-ray-classify-cloud = "panoseti_analysis.adapters.ray.classify_cloud:app"
 pa-features-cloud = "panoseti_analysis.adapters.features:app"
+pa-prep-ph = "panoseti_analysis.adapters.ph_prep:app"
+pa-train-vae = "panoseti_analysis.adapters.ray.train_vae:app"
 
 # ── uv workspace ──────────────────────────────────────────────────────────────
 # The repo root is both the workspace root and the `panoseti_analysis` package.

@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+"""Nextflow $PATH shim for the pa-prep-ph adapter."""
+from panoseti_analysis.adapters.ph_prep import app
+
+app()
