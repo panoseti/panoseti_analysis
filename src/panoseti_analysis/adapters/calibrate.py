@@ -19,10 +19,13 @@ from panoseti_analysis.config.levels import infer_kind
 from panoseti_analysis.config.models import (
     ImgCalibParams,
     PhCalibParams,
+    ProcessingStep,
     StoreLineage,
     TimestampQCStatus,
 )
-from panoseti_analysis.config.versions import TIMESTAMP_QC_KEY
+from panoseti_analysis.config.versions import PANOSETI_ANALYSIS_STORAGE_VERSION, TIMESTAMP_QC_KEY
+from panoseti_analysis.io.checksum import checksum_store
+from panoseti_analysis.io.provenance import append_step, capture_software, now_utc, read_history
 from panoseti_analysis.io.stores import open_l0, write_store
 
 app = typer.Typer(add_completion=False, help="Calibrate one L0 store to L1.")
@@ -49,6 +52,11 @@ def run_calibrate(
     data_product = str(ds.attrs["data_product"])
     resolved_kind = kind or infer_kind(data_product)
 
+    l0_history = read_history(dict(ds.attrs))
+    l0_input_cksum = l0_history[-1].output_checksum if l0_history else None
+    started_at = now_utc()
+    software = capture_software()
+
     cadence_ns = infer_cadence_ns(ds)
     suspect_ns = derive_suspect_displacement_ns(cadence_ns)
     ds_sorted, qc = repair_timestamps(
@@ -70,8 +78,24 @@ def run_calibrate(
             ds_sorted, ImgCalibParams(frame_stride=img_stride, block_size=block, adc_to_pe=adc_to_pe)
         )
 
+    calib_step = ProcessingStep(
+        step_name=f"calibrate_{resolved_kind}",
+        step_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
+        params={
+            "sigma": sigma, "offset": offset,
+            "ph_stride": ph_stride, "img_stride": img_stride,
+            "block": block, "adc_to_pe": adc_to_pe,
+        },
+        input_checksums=[l0_input_cksum] if l0_input_cksum else [],
+        timestamp_utc=started_at,
+        software=software,
+    )
+    new_history = append_step(l0_history, calib_step)
+
     out.attrs[TIMESTAMP_QC_KEY] = qc.model_dump(mode="json")
-    write_store(out, l1_store, codec=codec, level=level)
+    write_store(out, l1_store, codec=codec, level=level, processing_history=new_history)
+
+    l1_checksum = checksum_store(l1_store)
 
     record = StoreLineage(
         dp=data_product,
@@ -85,6 +109,8 @@ def run_calibrate(
         calibration_params=dict(out.attrs["calibration"]),
         timestamp_qc=qc,
         cadence_ns=cadence_ns,
+        checksum=l1_checksum,
+        processing_history=new_history,
     )
     if lineage_out is not None:
         write_lineage_json(record, lineage_out)
