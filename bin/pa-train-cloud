@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+"""Nextflow $PATH shim for the pa-train-cloud adapter."""
+from panoseti_analysis.adapters.ray.train_cloud import app
+
+app()
