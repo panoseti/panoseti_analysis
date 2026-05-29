@@ -146,7 +146,7 @@
             "url": {
                 "@id": "https://www.nextflow.io/"
             },
-            "version": "!>=25.10.4"
+            "version": "!>=26.04.0"
         },
         {
             "@id": "#440838b4-cf6c-4be1-8216-e327cb12c025",

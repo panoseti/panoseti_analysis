@@ -1,0 +1,4 @@
+name: ph_calib_default
+ph_sigma: 5.0
+ph_offset: 800
+ph_stride: 200
