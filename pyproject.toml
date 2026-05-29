@@ -1,0 +1,111 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "panoseti-analysis"
+version = "0.1.0"
+description = "PANOSETI data-reduction monorepo: PFF -> Zarr ingest/calibration pipelines (HPC + real-time)."
+readme = "README.md"
+requires-python = ">=3.14"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Nicolas Rault-Wang", email = "nraultwang@berkeley.edu" }
+]
+keywords = ["panoseti", "pff", "zarr", "nextflow", "astronomy", "seti", "gamma-ray"]
+dependencies = [
+    "pypff[zarr]",
+    "typer>=0.9.0",
+    "xarray>=2024.1",
+    "zarr>=3.0",
+    "numpy>=1.26",
+    "pydantic>=2.5",
+    "matplotlib>=3.7",
+    "ray[default,train,data]>=2.55.1",
+    "torchvision>=0.27.0",
+    "torch>=2.12.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+pa-convert = "panoseti_analysis.adapters.convert:app"
+pa-calibrate = "panoseti_analysis.adapters.calibrate:app"
+pa-hk = "panoseti_analysis.adapters.hk:app"
+pa-manifest = "panoseti_analysis.adapters.manifest:app"
+pa-pack = "panoseti_analysis.adapters.pack:app"
+pa-classify-cloud = "panoseti_analysis.adapters.nextflow.classify_cloud:app"
+pa-ray-classify-cloud = "panoseti_analysis.adapters.ray.classify_cloud:app"
+pa-features-cloud = "panoseti_analysis.adapters.features:app"
+pa-train-cloud = "panoseti_analysis.adapters.ray.train_cloud:app"
+
+# ── uv workspace ──────────────────────────────────────────────────────────────
+# The repo root is both the workspace root and the `panoseti_analysis` package.
+# `pypff` is a workspace member (the in-repo git submodule), resolved locally
+# instead of from PyPI.
+[tool.uv.workspace]
+members = ["pypff"]
+
+[tool.uv.sources]
+pypff = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+    "ruff",
+    "mypy",
+    "jupyter>=1.1.1",
+    "ipykernel>=7.2.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/panoseti_analysis"]
+
+# ── lint / type-check (strict, mirrors pypff conventions) ─────────────────────
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "I", "ASYNC", "RUF", "SIM"]
+ignore = [
+    "E501",   # line length handled separately
+    "B008",   # function calls in default args (common in typer/pydantic)
+]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+python_version = "3.14"
+strict = true
+check_untyped_defs = true
+strict_equality = true
+extra_checks = true
+ignore_missing_imports = true
+warn_return_any = false
+disallow_untyped_defs = true
+warn_unreachable = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# We don't type-check zarr/numcodecs internals from here (typed, but external deps).
+# pypff now ships py.typed (PEP 561), so its public types are used directly.
+[[tool.mypy.overrides]]
+module = ["zarr.*", "numcodecs.*"]
+follow_imports = "skip"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests that start external processes (e.g. real Ray cluster); deselect with -m 'not slow'",
+]
+filterwarnings = [
+    # Zarr v3 does not include consolidated metadata in its spec; writing without it is correct.
+    "ignore:Consolidated metadata is currently not part in the Zarr format 3:zarr.errors.ZarrUserWarning",
+    # Ray internal warning about GPU env var override behaviour changing in a future Ray release.
+    "ignore:.*Ray will no longer override accelerator visible devices:FutureWarning",
+    # Fixed-length UTF32 string arrays (split/module vars) have no finalised Zarr V3 dtype spec yet.
+    "ignore:The data type.*FixedLengthUTF32.*does not have a Zarr V3 specification:zarr.errors.UnstableSpecificationWarning",
+]
