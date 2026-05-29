@@ -14,6 +14,8 @@ import numpy as np
 import xarray as xr
 from zarr.codecs import ZstdCodec
 
+from panoseti_analysis.config.models import ProcessingStep
+
 
 def open_store(store: str | Path, *, chunks: Any = "auto") -> xr.Dataset:
     """Open any panoseti_analysis/pypff Zarr v3 store (consolidated metadata never written)."""
@@ -48,12 +50,18 @@ def write_store(
     *,
     codec: str = "zstd",
     level: int = 5,
+    processing_history: list[ProcessingStep] | None = None,
 ) -> int:
     """Write a Dataset to a Zarr v3 directory store; return total bytes on disk.
 
     Idempotent (removes any existing store first). Attributes are taken from ``ds.attrs``
     — kernels stamp ``data_level`` / version / ``calibration`` / ``timestamp_qc`` before
     this is called. Compression is applied per variable.
+
+    If *processing_history* is a non-empty list, it is serialized into the Zarr root
+    attrs under the ``"processing_history"`` key (list of dicts via ``model_dump``).
+    ``None`` or ``[]`` leaves the key absent — preserving backward compat with stores
+    written before schema v2.0.  The caller's Dataset is never mutated.
     """
     out_path = Path(out_path)
     if out_path.exists():
@@ -67,6 +75,12 @@ def write_store(
     }
     if time_chunks:
         ds = ds.chunk(time_chunks)
+
+    # Stamp processing_history into a shallow-copied attrs dict without mutating ds.
+    if processing_history:
+        new_attrs = dict(ds.attrs)
+        new_attrs["processing_history"] = [s.model_dump() for s in processing_history]
+        ds = ds.assign_attrs(new_attrs)
 
     compressors = _compressors(codec, level)
     names = list(ds.data_vars) + list(ds.coords)
