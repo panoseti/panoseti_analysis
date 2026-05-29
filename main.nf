@@ -90,12 +90,13 @@ workflow {
 }
 
 // ── Level-major publishing (output {} block; no publishDir) ───────────────────
+// The path closure returns the target DIRECTORY; Nextflow places each file inside it.
 output {
-    l0_stores   { path { f -> "L0/${f.name}" } }
-    l1_stores   { path { f -> "L1/${f.name}" } }
-    hk_stores   { path { f -> "L0/${f.name}" } }
-    l0_manifest { path { f -> "L0/${f.name}" } }
-    l1_manifest { path { f -> "L1/${f.name}" } }
+    l0_stores   { path 'L0' }
+    l1_stores   { path 'L1' }
+    hk_stores   { path 'L0' }
+    l0_manifest { path 'L0' }
+    l1_manifest { path 'L1' }
 }
 
 /*

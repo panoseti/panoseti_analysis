@@ -19,7 +19,7 @@ def test_convert_obs_test_produces_two_l0_stores(tmp_path: Path) -> None:
     assert {r.kind for r in records} == {"ph", "img"}
     for rec in records:
         assert rec.level == "L0"
-        assert (tmp_path / "L0" / rec.store).is_dir()
+        assert (tmp_path / rec.store).is_dir()
         assert rec.n_frames > 0
 
     arr = json.loads(lineage.read_text())

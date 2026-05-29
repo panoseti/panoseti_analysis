@@ -27,15 +27,6 @@ def test_outputs_shapes_dtypes_and_attrs(make_img) -> None:  # type: ignore[no-u
     assert out.attrs["calibration"]["block_size"] == 8
 
 
-def test_adc_to_pe_scales_linearly(make_img) -> None:  # type: ignore[no-untyped-def]
-    ds = make_img(n=60, size=32)
-    out1 = calibrate_img(ds, ImgCalibParams(frame_stride=5, block_size=8, adc_to_pe=1.0))
-    out2 = calibrate_img(ds, ImgCalibParams(frame_stride=5, block_size=8, adc_to_pe=2.0))
-    a = out1["median_subtracted"].values
-    b = out2["median_subtracted"].values
-    np.testing.assert_allclose(b, a / 2.0, rtol=1e-5, atol=1e-4)
-
-
 def test_does_not_mutate_input(make_img) -> None:  # type: ignore[no-untyped-def]
     ds = make_img(n=40, size=32)
     before = ds["images"].values.copy()

@@ -28,12 +28,13 @@ def run_convert(
     """Convert via pypff, then enumerate the emitted L0 stores into lineage records."""
     from pypff.zarr import convert_run  # local import: keeps Layer B free of import-time pypff cost
 
-    l0_dir = Path(out_dir) / "L0"
-    l0_dir.mkdir(parents=True, exist_ok=True)
-    convert_run(read_pff_run(obs_dir), l0_dir, codec=codec, level=level, time_chunk=time_chunk or None)
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    # Stores are written flat; the level-major L0/ dir is created at publish time.
+    convert_run(read_pff_run(obs_dir), out_dir, codec=codec, level=level, time_chunk=time_chunk or None)
 
     records: list[StoreLineage] = []
-    for store_path in sorted(l0_dir.glob("*.zarr")):
+    for store_path in sorted(out_dir.glob("*.zarr")):
         ds = open_store(store_path)
         data_product = str(ds.attrs["data_product"])
         t = ds["unix_t_ns"].values

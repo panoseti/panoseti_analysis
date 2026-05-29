@@ -2,8 +2,6 @@
 // INGEST: PFF -> L0 Zarr -> L1 calibrated, per-(dp,module) fan-out + HK + manifests.
 //
 
-import groovy.json.JsonSlurper
-
 include { PFF_TO_ZARR }                          from '../../modules/local/pff_to_zarr'
 include { BUILD_HK }                             from '../../modules/local/build_hk'
 include { CALIBRATE_PH }                         from '../../modules/local/calibrate_ph'
@@ -20,12 +18,14 @@ workflow INGEST {
     PFF_TO_ZARR(ch_obs)
     BUILD_HK(ch_obs)
 
-    // Fan out per (dp, module) by reading the L0 lineage JSON array.
-    ch_l0_stores = PFF_TO_ZARR.out.l0.flatMap { meta, l0_dir, lineage ->
-        def records = new JsonSlurper().parse(lineage.toFile())
+    // Fan out per (dp, module): pair each emitted store with its lineage record by name.
+    ch_l0_stores = PFF_TO_ZARR.out.l0.flatMap { meta, stores, lineage ->
+        def stores_list = stores instanceof List ? stores : [stores]
+        def by_name = stores_list.collectEntries { [(it.name): it] }
+        def records = new groovy.json.JsonSlurper().parse(lineage.toFile())
         records.collect { rec ->
             def m = meta + [dp: rec.dp, module: rec.module, kind: rec.kind, level: 'L0', cadence_ns: rec.cadence_ns]
-            tuple(m, file("${l0_dir}/${rec.store}"))
+            tuple(m, by_name[rec.store])
         }
     }
 
@@ -40,7 +40,7 @@ workflow INGEST {
 
     // L0 manifest: one array lineage file per run.
     BUILD_MANIFEST_L0(
-        PFF_TO_ZARR.out.l0.map { meta, _l0_dir, lineage -> tuple(meta.run_id, lineage, 'L0') }
+        PFF_TO_ZARR.out.l0.map { meta, _stores, lineage -> tuple(meta.run_id, lineage, 'L0') }
     )
 
     // L1 manifest: group per-store lineage fragments by run.

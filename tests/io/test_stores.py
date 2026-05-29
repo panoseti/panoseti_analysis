@@ -42,3 +42,15 @@ def test_open_l0_requires_int64_time(l0_ph_ds: xr.Dataset, tmp_path: Path) -> No
 def test_write_store_rejects_unknown_codec(l0_ph_ds: xr.Dataset, tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="unsupported codec"):
         write_store(l0_ph_ds, tmp_path / "s.zarr", codec="lz4")
+
+
+def test_write_store_handles_nonuniform_dask_chunks(tmp_path: Path) -> None:
+    # last time-chunk (60) larger than the first (40) — invalid for Zarr unless rechunked
+    import dask.array as da
+
+    arr = da.zeros((100, 4, 4), chunks=((40, 60), 4, 4), dtype="float32")
+    ds = xr.Dataset(
+        {"images": (("time", "y", "x"), arr), "unix_t_ns": ("time", np.arange(100, dtype="int64"))}
+    )
+    write_store(ds, tmp_path / "s.zarr")  # must not raise
+    assert open_store(tmp_path / "s.zarr").sizes["time"] == 100

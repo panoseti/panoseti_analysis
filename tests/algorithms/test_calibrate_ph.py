@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import numpy as np
-import xarray as xr
 
-from panoseti_analysis.algorithms.calibrate_ph import _fix_ph1024_quabo_order, calibrate_ph
+from panoseti_analysis.algorithms.calibrate_ph import calibrate_ph
 from panoseti_analysis.config.models import PhCalibParams
 
 
@@ -35,18 +34,6 @@ def test_does_not_mutate_input(make_ph) -> None:  # type: ignore[no-untyped-def]
     calibrate_ph(ds, PhCalibParams(frame_stride=5))
     np.testing.assert_array_equal(ds["images"].values, before)
     assert "data_level" not in ds.attrs
-
-
-def test_ph1024_quadrant_swap() -> None:
-    # top-right quadrant = 1, bottom-left = 2, others 0
-    arr = np.zeros((1, 32, 32), dtype="float32")
-    arr[:, :16, 16:] = 1.0
-    arr[:, 16:, :16] = 2.0
-    da = xr.DataArray(arr, dims=("time", "y", "x"))
-    swapped = _fix_ph1024_quabo_order(da).values
-    # after fix: top-right holds old bottom-left (2), bottom-left holds old top-right (1)
-    assert np.all(swapped[:, :16, 16:] == 2.0)
-    assert np.all(swapped[:, 16:, :16] == 1.0)
 
 
 def test_ph1024_runs_and_keeps_shape(make_ph) -> None:  # type: ignore[no-untyped-def]

@@ -17,32 +17,32 @@ workflow ANALYSIS {
     main:
     def steps = (params.steps ?: 'ingest').tokenize(',')
 
-    def l0_stores   = channel.empty()
-    def l1_stores   = channel.empty()
-    def hk_stores   = channel.empty()
-    def l0_manifest = channel.empty()
-    def l1_manifest = channel.empty()
+    ch_l0_stores   = channel.empty()
+    ch_l1_stores   = channel.empty()
+    ch_hk_stores   = channel.empty()
+    ch_l0_manifest = channel.empty()
+    ch_l1_manifest = channel.empty()
 
     if ('ingest' in steps) {
         INGEST(ch_samplesheet)
-        l0_stores   = INGEST.out.l0_stores
-        l1_stores   = INGEST.out.l1_stores
-        hk_stores   = INGEST.out.hk_stores
-        l0_manifest = INGEST.out.l0_manifest
-        l1_manifest = INGEST.out.l1_manifest
+        ch_l0_stores   = INGEST.out.l0_stores
+        ch_l1_stores   = INGEST.out.l1_stores
+        ch_hk_stores   = INGEST.out.hk_stores
+        ch_l0_manifest = INGEST.out.l0_manifest
+        ch_l1_manifest = INGEST.out.l1_manifest
     }
 
     if ('reconstruct' in steps) {
-        RECONSTRUCT(l1_stores)   // STUB
+        RECONSTRUCT(ch_l1_stores)   // STUB
     }
     if ('ml' in steps) {
-        ML(l1_stores)            // STUB
+        ML(ch_l1_stores)            // STUB
     }
 
     emit:
-    l0_stores
-    l1_stores
-    hk_stores
-    l0_manifest
-    l1_manifest
+    l0_stores   = ch_l0_stores
+    l1_stores   = ch_l1_stores
+    hk_stores   = ch_hk_stores
+    l0_manifest = ch_l0_manifest
+    l1_manifest = ch_l1_manifest
 }

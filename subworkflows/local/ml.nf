@@ -10,7 +10,8 @@ workflow ML {
 
     main:
     // TODO(chunk>=2): ML training/inference stages here.
+    products = ch_features.map { meta, _store -> meta }.filter { false }
 
     emit:
-    products = channel.empty()
+    products
 }

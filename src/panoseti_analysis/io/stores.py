@@ -28,6 +28,12 @@ def open_l0(store: str | Path) -> xr.Dataset:
     return ds
 
 
+#: Time-like dimensions rechunked to a uniform size before writing.
+_TIME_DIMS = ("time", "hk_time")
+#: Uniform time chunk (frames) — keeps last chunk <= first (a Zarr v3 requirement).
+_TIME_CHUNK = 16384
+
+
 def _compressors(codec: str, level: int) -> list[Any]:
     if codec == "zstd":
         return [ZstdCodec(level=level)]
@@ -52,6 +58,15 @@ def write_store(
     out_path = Path(out_path)
     if out_path.exists():
         shutil.rmtree(out_path)
+
+    # Drop any inherited (L0) chunk encoding, then rechunk time-like dims uniformly so
+    # the final chunk is never larger than the first (a Zarr v3 write requirement).
+    ds = ds.drop_encoding()
+    time_chunks = {
+        str(d): min(int(ds.sizes[d]), _TIME_CHUNK) for d in ds.dims if d in _TIME_DIMS
+    }
+    if time_chunks:
+        ds = ds.chunk(time_chunks)
 
     compressors = _compressors(codec, level)
     names = list(ds.data_vars) + list(ds.coords)

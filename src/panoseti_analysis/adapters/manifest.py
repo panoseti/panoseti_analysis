@@ -6,6 +6,7 @@ The adapter does the I/O (reads ``*.lineage.json``, computes per-store checksums
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -31,12 +32,15 @@ def run_manifest(
     """Read lineage fragments, checksum stores (if found), build + write the manifest."""
     entries: list[StoreLineage] = []
     for lf in lineage_files:
-        entry = StoreLineage.model_validate_json(Path(lf).read_text())
-        if stores_dir is not None:
-            store_path = Path(stores_dir) / entry.store
-            if store_path.is_dir():
-                entry = entry.model_copy(update={"checksum": checksum_store(store_path)})
-        entries.append(entry)
+        data = json.loads(Path(lf).read_text())
+        items = data if isinstance(data, list) else [data]  # L0 = array; L1 = one object
+        for item in items:
+            entry = StoreLineage.model_validate(item)
+            if stores_dir is not None:
+                store_path = Path(stores_dir) / entry.store
+                if store_path.is_dir():
+                    entry = entry.model_copy(update={"checksum": checksum_store(store_path)})
+            entries.append(entry)
 
     manifest = build_level_manifest(
         run_id,

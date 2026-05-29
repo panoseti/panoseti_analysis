@@ -7,7 +7,7 @@ name = "panoseti-analysis"
 version = "0.1.0"
 description = "PANOSETI data-reduction monorepo: PFF -> Zarr ingest/calibration pipelines (HPC + real-time)."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
@@ -37,7 +37,6 @@ pa-pack = "panoseti_analysis.adapters.pack:app"
 # instead of from PyPI.
 [tool.uv.workspace]
 members = ["pypff"]
-exclude = ["zarr-seqera-v0"]
 
 [tool.uv.sources]
 pypff = { workspace = true }
@@ -54,7 +53,7 @@ packages = ["src/panoseti_analysis"]
 
 # ── lint / type-check (strict, mirrors pypff conventions) ─────────────────────
 [tool.ruff]
-target-version = "py311"
+target-version = "py314"
 line-length = 100
 
 [tool.ruff.lint]
@@ -66,7 +65,7 @@ ignore = [
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
-python_version = "3.11"
+python_version = "3.14"
 strict = true
 check_untyped_defs = true
 strict_equality = true
@@ -81,9 +80,8 @@ init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
 
-# Treat external deps as opaque: zarr 3.x uses PEP 695 syntax mypy can't parse under
-# python_version 3.11, and pypff (a submodule with its own strict mypy CI) ships no
-# py.typed. We keep OUR code 3.11-compatible and don't type-check these from here.
+# We don't type-check zarr/numcodecs internals from here (typed, but external deps).
+# pypff now ships py.typed (PEP 561), so its public types are used directly.
 [[tool.mypy.overrides]]
-module = ["zarr.*", "numcodecs.*", "pypff", "pypff.*"]
+module = ["zarr.*", "numcodecs.*"]
 follow_imports = "skip"

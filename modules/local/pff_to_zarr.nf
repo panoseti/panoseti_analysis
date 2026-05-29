@@ -6,7 +6,7 @@ process PFF_TO_ZARR {
     tuple val(meta), path(obs_dir)
 
     output:
-    tuple val(meta), path("L0"), path("l0_lineage.json"), emit: l0
+    tuple val(meta), path("*.zarr"), path("l0_lineage.json"), emit: l0
 
     script:
     """
