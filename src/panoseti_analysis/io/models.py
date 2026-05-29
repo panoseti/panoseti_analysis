@@ -9,6 +9,8 @@ from panoseti_analysis.algorithms.cloud_detector import CloudDetection
 from panoseti_analysis.config.models import ClassifierBundle, TrainingProvenance
 from panoseti_analysis.io.checksum import compute_sha256
 
+__all__ = ["load_classifier", "load_vae", "save_classifier"]
+
 
 def load_classifier(model_path: Path) -> tuple[torch.nn.Module, ClassifierBundle]:
     """Load a PyTorch model and its metadata sidecar.
@@ -90,3 +92,51 @@ def save_classifier(
     provenance_path.write_text(training_provenance.model_dump_json(indent=2))
 
     return pt_path, json_path, provenance_path
+
+
+def load_vae(
+    model_path: Path,
+    *,
+    latent_dim: int = 32,
+    hidden_dim: int = 64,
+) -> tuple[torch.nn.Module, ClassifierBundle]:
+    """Load a BetaVAE checkpoint and its ClassifierBundle sidecar.
+
+    Verifies checksum. Uses latent_dim/hidden_dim from the bundle's input_spec
+    if present, falling back to the provided defaults.
+
+    Args:
+        model_path: Path to the .pt weights file.
+        latent_dim: Fallback latent dimension if not in bundle.input_spec.
+        hidden_dim: Fallback hidden dimension if not in bundle.input_spec.
+
+    Returns:
+        (model, bundle) where model is a loaded BetaVAE instance.
+    """
+    from panoseti_analysis.algorithms.ph_vae import BetaVAE
+
+    json_path = model_path.with_suffix(".json")
+    if not json_path.exists():
+        raise FileNotFoundError(f"Missing model metadata sidecar: {json_path}")
+    with json_path.open() as f:
+        data = json.load(f)
+    bundle = ClassifierBundle(**data)
+
+    actual_sha = f"sha256:{compute_sha256(model_path)}"
+    if actual_sha != bundle.checksum:
+        raise ValueError(
+            f"Checksum mismatch for {model_path}. "
+            f"Expected {bundle.checksum}, got {actual_sha}"
+        )
+
+    ld: int | str = bundle.input_spec.get("latent_dim", latent_dim)
+    hd: int | str = bundle.input_spec.get("hidden_dim", hidden_dim)
+    if isinstance(ld, str):
+        ld = int(ld)
+    if isinstance(hd, str):
+        hd = int(hd)
+
+    state_dict = torch.load(model_path, map_location="cpu", weights_only=True)
+    model = BetaVAE(latent_dim=int(ld), hidden_dim=int(hd))
+    model.load_state_dict(state_dict)
+    return model, bundle
