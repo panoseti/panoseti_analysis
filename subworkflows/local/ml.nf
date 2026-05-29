@@ -14,9 +14,8 @@ workflow ML {
     // Only run cloud classification on img stores
     ch_img_stores = ch_l1_stores.filter { meta, _store -> meta.kind == 'img' }
 
-    // Hardcode the model paths for Chunk 2, but these could be params
-    model_file = file("${projectDir}/assets/models/cloud_detector_v1.pt")
-    model_json = file("${projectDir}/assets/models/cloud_detector_v1.json")
+    model_file = file(params.cloud_model_pt ?: "${projectDir}/assets/models/cloud_detector_v1.pt")
+    model_json = file(params.cloud_model_json ?: "${projectDir}/assets/models/cloud_detector_v1.json")
 
     use_ray = params.use_ray ?: false
 
