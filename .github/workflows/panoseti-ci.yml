@@ -1,0 +1,64 @@
+name: panoseti-ci
+
+# Authoritative CI for the PANOSETI analysis package + ingest pipeline.
+# (nf-core's own linting/nf-test workflows also live in .github/workflows/ but are
+#  advisory for this PANOSETI-namespace pipeline.)
+
+on:
+  push:
+    branches: [main, refactor]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: ruff + mypy + pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive # pypff submodule (see note below)
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - name: Ruff
+        run: uv run ruff check src tests
+      - name: Mypy (strict)
+        run: uv run mypy src/panoseti_analysis
+      - name: Pytest (kernels, io, adapters, Layer A boundary lint)
+        run: uv run pytest tests -q
+
+  pipeline:
+    name: ingest smoke + chunk-size gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Nextflow (>=26.04)
+        run: |
+          curl -s https://get.nextflow.io | bash
+          sudo mv nextflow /usr/local/bin/
+      - name: Ingest smoke (test,laptop) on bundled obs_TEST
+        run: nextflow run . -profile test,laptop --outdir results_ci
+      - name: Lustre small-file guard (L0 images chunks)
+        run: uv run python scripts/check_chunk_sizes.py results_ci/L0
+      - name: Assert level-major outputs exist
+        run: |
+          test -f results_ci/L0/manifest.json
+          test -f results_ci/L1/manifest.json
+          ls results_ci/L0/*.zarr >/dev/null
+          ls results_ci/L1/*.L1.zarr >/dev/null
+
+# NOTE: the pypff submodule URL in .gitmodules is SSH (git@github.com:panoseti/pypff).
+# For CI submodule checkout, either make pypff public + switch the URL to HTTPS, or add a
+# deploy key / SSH secret to the checkout step.

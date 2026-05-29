@@ -1,0 +1,6 @@
+name: ingest_subset
+# The label-covered run list for cloud-detection training data ingest.
+# Provide either a samplesheet path or a list of obs dirs.
+# steps: ingest   (calibration only; full archive deferred)
+steps: ingest
+# input: path to samplesheet.csv or set --input_obs_dir at CLI

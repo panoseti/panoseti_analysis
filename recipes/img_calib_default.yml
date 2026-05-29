@@ -1,0 +1,4 @@
+name: img_calib_default
+img_stride: 200
+img_block: 8
+img_adc_to_pe: 1.5
