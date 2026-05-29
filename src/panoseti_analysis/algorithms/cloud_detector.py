@@ -15,12 +15,12 @@ from panoseti_analysis.config.models import CloudInferParams
 
 class CloudDetection(nn.Module):
     """The CNN architecture trained for cloud detection."""
-    
+
     input_shape = (2, 32, 32)
 
     def __init__(self) -> None:
         super().__init__()
-        
+
         conv1_groups = 2
         conv1_nker = 28
         conv1_kernel_size = 3
@@ -80,7 +80,7 @@ class CloudDetection(nn.Module):
             nn.ReLU(),
             nn.BatchNorm1d(84),
             nn.Dropout1d(p=0.5),
-            
+
             nn.Linear(84, 2),
         )
 
@@ -93,8 +93,8 @@ class CloudDetection(nn.Module):
 
 
 def predict_cloud_score(
-    ds: xr.Dataset, 
-    model: torch.nn.Module, 
+    ds: xr.Dataset,
+    model: torch.nn.Module,
     params: CloudInferParams
 ) -> xr.Dataset:
     """Run cloud detection inference over an L1 movie-mode dataset.
@@ -103,7 +103,7 @@ def predict_cloud_score(
         ds: The L1 Dataset containing `median_subtracted` and `unix_t_ns`.
         model: The loaded CloudDetection PyTorch model.
         params: Inference parameters (cadence, thresholds).
-        
+
     Returns:
         An L2 Dataset with dimensions T_l2 and cloud_score / cloud_label.
     """
@@ -112,67 +112,65 @@ def predict_cloud_score(
 
     img = ds["median_subtracted"].values  # (T, H, W)
     unix_t_ns = ds["unix_t_ns"].values
-    
+
     if len(unix_t_ns) == 0:
         return xr.Dataset()
 
     t_start = unix_t_ns[0]
     t_end = unix_t_ns[-1]
-    
+
     # We step by cadence_ns. The integration window lookback is 60s for the derivative.
     cadence_ns = int(params.cadence_s * 1e9)
     window_ns = 60_000_000_000
     n_stack = 10 # 10 frames of 100us = 1ms stacked integration
-    
+
     target_times = np.arange(t_start, t_end + 1, cadence_ns)
-    
+
     features_fft = []
     features_deriv_fft = []
     t_centers = []
-    
+
     # Pre-compute 2D Hann window
     hann_1d = np.hanning(32)
     hann_2d = np.outer(hann_1d, hann_1d)
-    
+
     def apply_fft(data: np.ndarray) -> np.ndarray:
         d = data * hann_2d
         d = np.abs(np.fft.fftn(d))
         d = np.fft.fftshift(d)
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide="ignore"):
             d = np.log(d)
-        # Handle log(0)
-        d = np.nan_to_num(d, neginf=0.0)
         return d
-    
+
     for t in target_times:
         # Find index for current time t
         idx_curr = np.searchsorted(unix_t_ns, t)
         idx_curr = min(idx_curr, len(unix_t_ns) - 1)
-        
+
         # Find index for t - 60s
         t_prev = max(t_start, t - window_ns)
         idx_prev = np.searchsorted(unix_t_ns, t_prev)
         idx_prev = min(idx_prev, len(unix_t_ns) - 1)
-        
+
         # Stack 10 frames (1ms) at idx_curr and idx_prev
         end_curr = min(idx_curr + n_stack, len(unix_t_ns))
         end_prev = min(idx_prev + n_stack, len(unix_t_ns))
-        
+
         if end_curr <= idx_curr:
             continue
-            
+
         curr_img = np.sum(img[idx_curr:end_curr], axis=0)
-        
+
         if end_prev > idx_prev:
             prev_img = np.sum(img[idx_prev:end_prev], axis=0)
         else:
             prev_img = curr_img # Fallback if no prev data
-            
+
         diff_img = curr_img - prev_img
-        
+
         fft_mag = apply_fft(curr_img)
         deriv_fft_mag = apply_fft(diff_img)
-        
+
         features_fft.append(fft_mag)
         features_deriv_fft.append(deriv_fft_mag)
         t_centers.append(t)
@@ -213,4 +211,3 @@ def predict_cloud_score(
     )
 
     return ds_out
-
