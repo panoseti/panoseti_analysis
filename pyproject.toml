@@ -98,3 +98,9 @@ testpaths = ["tests"]
 markers = [
     "slow: marks tests that start external processes (e.g. real Ray cluster); deselect with -m 'not slow'",
 ]
+filterwarnings = [
+    # Zarr v3 does not include consolidated metadata in its spec; writing without it is correct.
+    "ignore:Consolidated metadata is currently not part in the Zarr format 3:zarr.errors.ZarrUserWarning",
+    # Ray internal warning about GPU env var override behaviour changing in a future Ray release.
+    "ignore:.*Ray will no longer override accelerator visible devices:FutureWarning",
+]

@@ -21,11 +21,11 @@ def test_validate_level_rejects_unknown() -> None:
 
 
 def test_register_level_is_idempotent_but_rejects_conflict() -> None:
-    levels.register_level("L2", "reserved", determined=False)
-    levels.register_level("L2", "reserved", determined=False)  # identical re-register: OK
-    assert levels.get_level("L2").determined is False
+    levels.register_level("LTEST", "reserved", determined=False)
+    levels.register_level("LTEST", "reserved", determined=False)  # identical re-register: OK
+    assert levels.get_level("LTEST").determined is False
     with pytest.raises(ValueError, match="different metadata"):
-        levels.register_level("L2", "something else", determined=True)
+        levels.register_level("LTEST", "something else", determined=True)
 
 
 @pytest.mark.parametrize(

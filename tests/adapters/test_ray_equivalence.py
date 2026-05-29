@@ -115,8 +115,8 @@ def test_ray_vs_cli_equivalence(
     l2_store_ray, _record_ray = ray.get(future)
 
     # 3. Compare outputs
-    ds_cli = xr.open_zarr(l2_store_cli)
-    ds_ray = xr.open_zarr(l2_store_ray)
+    ds_cli = xr.open_zarr(l2_store_cli, consolidated=False)
+    ds_ray = xr.open_zarr(l2_store_ray, consolidated=False)
 
     np.testing.assert_array_equal(ds_cli["cloud_score"].values, ds_ray["cloud_score"].values)
     np.testing.assert_array_equal(ds_cli["feature_raw_fft"].values, ds_ray["feature_raw_fft"].values)
@@ -160,7 +160,7 @@ def test_ray_vs_cli_meta_parity(
     )
     _, record_ray = ray.get(future)
 
-    ds_cli = xr.open_zarr(l2_store_cli)
+    ds_cli = xr.open_zarr(l2_store_cli, consolidated=False)
 
     assert ds_cli.attrs.get("data_product") == "img16"
     assert ds_cli.attrs.get("module") == "1"
