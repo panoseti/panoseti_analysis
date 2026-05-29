@@ -51,9 +51,26 @@ frames/chunk) so the final chunk is never larger than the first (a Zarr v3 requi
 
 **L2 (Derived Products):**
 
-- **Cloud Detector** (`cloud`): One store per `(model, module)`. Time dimension `T_l2`.
-  Arrays: `cloud_score (T_l2,) float32`, `cloud_label (T_l2,) uint8`, `unix_t_ns (T_l2,) int64`.
-  Feature arrays: `feature_raw_fft (T_l2, H, W) float32`, `feature_deriv_fft (T_l2, H, W) float32`.
+- **Cloud Detector** (`cloud`): One store per `(model, module)`. Time dimension `T_l2`
+  (window-centers, monotonic-non-decreasing `int64`). Arrays:
+
+  | Array               | Dtype   | Dims           | Notes                               |
+  | ------------------- | ------- | -------------- | ----------------------------------- |
+  | `cloud_score`       | float32 | `(T_l2,)`      | P(not-clear); range 0.0–1.0         |
+  | `cloud_label`       | uint8   | `(T_l2,)`      | 0=clear, 1=cloudy (≥ threshold)     |
+  | `feature_raw_fft`   | float32 | `(T_l2, H, W)` | log-magnitude FFT of stacked frame  |
+  | `feature_deriv_fft` | float32 | `(T_l2, H, W)` | log-magnitude FFT of 60 s diff      |
+  | `unix_t_ns`         | int64   | `(T_l2,)`      | Window-center timestamps; monotonic |
+
+  Root attrs (in addition to inherited L1 attrs):
+  - `data_level = "L2"`
+  - `panoseti_analysis_storage_version` (from `config/versions.py`)
+  - `inference_params = {"cadence_s": float, "threshold": float}`
+  - `model = {"model_name": str, "model_version": str, "checksum": "sha256:<hex>"}`
+
+  L2 manifest lineage entry per store: `StoreLineage` (see `config/models.py`) with fields
+  `dp`, `module`, `level="L2"`, `kind="cloud"`, `store`, `n_frames`, `source_store`,
+  `model`, `inference_params`.
 
 ## §3 Root attributes
 
