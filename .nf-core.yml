@@ -56,13 +56,8 @@ template:
   force: true
   outdir: /tmp/pa_nfcore
   skip_features:
-    - github_badges
     - igenomes
     - multiqc
     - fastqc
     - email
-    - gpu
-    - rocrate
-    - nf_core_configs
-    - citations
   is_nfcore: false
