@@ -1,0 +1,82 @@
+name: nf-core linting
+# Runs nf-core pipeline lint (NF structure + pre-commit / Nextflow formatting) on PRs and releases.
+# The pre-commit job (prek) is blocking — NF syntax errors should not merge.
+# The nf-core pipelines lint job is advisory (continue-on-error) because we intentionally
+# diverge from some nf-core defaults (no MultiQC, custom Ray labels, etc.).
+on:
+  pull_request:
+  release:
+    types: [published]
+
+jobs:
+  pre-commit:
+    name: pre-commit (prettier + NF lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Nextflow
+        uses: nf-core/setup-nextflow@b4ec1bc7c16a94435159de94a05253542fddf6ef # v3
+
+      - name: Run prek (pre-commit)
+        uses: j178/prek-action@6ad80277337ad479fe43bd70701c3f7f8aa74db3 # v2
+
+  nf-core:
+    name: nf-core pipelines lint (advisory)
+    runs-on: ubuntu-latest
+    # Non-blocking: we intentionally diverge from some nf-core guidelines.
+    # Failures are visible as annotations but don't block merges.
+    continue-on-error: true
+    steps:
+      - name: Check out pipeline code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Nextflow
+        uses: nf-core/setup-nextflow@b4ec1bc7c16a94435159de94a05253542fddf6ef # v3
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.14"
+          architecture: "x64"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: read .nf-core.yml
+        uses: pietrobolcato/action-read-yaml@9f13718d61111b69f30ab4ac683e67a56d254e1d # 1.1.0
+        id: read_yml
+        with:
+          config: ${{ github.workspace }}/.nf-core.yml
+
+      - name: Install dependencies
+        run: uv tool install nf-core==${{ steps.read_yml.outputs['nf_core_version'] }}
+
+      - name: Run nf-core pipelines lint
+        if: ${{ github.base_ref != 'master' && github.base_ref != 'main' }}
+        env:
+          GITHUB_COMMENTS_URL: ${{ github.event.pull_request.comments_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PR_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: nf-core -l lint_log.txt pipelines lint --dir ${GITHUB_WORKSPACE} --markdown lint_results.md
+
+      - name: Run nf-core pipelines lint --release
+        if: ${{ github.base_ref == 'master' || github.base_ref == 'main' }}
+        env:
+          GITHUB_COMMENTS_URL: ${{ github.event.pull_request.comments_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PR_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: nf-core -l lint_log.txt pipelines lint --release --dir ${GITHUB_WORKSPACE} --markdown lint_results.md
+
+      - name: Save PR number
+        if: ${{ always() }}
+        run: echo ${{ github.event.pull_request.number }} > PR_number.txt
+
+      - name: Upload linting log file artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: linting-logs
+          path: |
+            lint_log.txt
+            lint_results.md
+            PR_number.txt

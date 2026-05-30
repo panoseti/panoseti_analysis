@@ -1,0 +1,80 @@
+name: Fix linting from a comment
+# Comment `@panoseti-bot fix linting` on a PR to trigger auto-fix of NF formatting issues.
+# A separate `python-fix-linting.yml` handles ruff auto-fix for Python.
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  fix-linting:
+    # Only run if comment is on a PR with the main repo and contains the magic keywords
+    if: >
+      contains(github.event.comment.html_url, '/pull/') &&
+      contains(github.event.comment.body, '@panoseti-bot fix linting') &&
+      github.repository == 'panoseti/panoseti_analysis'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: React on comment
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: eyes
+
+      - name: Checkout Pull Request
+        run: gh pr checkout ${{ github.event.issue.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Nextflow
+        uses: nf-core/setup-nextflow@b4ec1bc7c16a94435159de94a05253542fddf6ef # v3
+
+      - name: Run prek (pre-commit auto-fix)
+        id: prek
+        uses: j178/prek-action@6ad80277337ad479fe43bd70701c3f7f8aa74db3 # v2
+        continue-on-error: true
+
+      - name: React if linting already clean
+        if: steps.prek.outcome == 'success'
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: "+1"
+
+      - name: Commit & push fixes
+        id: commit-and-push
+        if: steps.prek.outcome == 'failure'
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "panoseti-bot"
+          git config push.default upstream
+          git add .
+          git status
+          git commit -m "[automated] Fix code linting"
+          git push
+
+      - name: React if linting errors were fixed
+        if: steps.commit-and-push.outcome == 'success'
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: hooray
+
+      - name: React if linting errors were not fixed
+        if: steps.commit-and-push.outcome == 'failure'
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: confused
+
+      - name: Comment if auto-fix failed
+        if: steps.commit-and-push.outcome == 'failure'
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            @${{ github.actor }} I tried to fix the linting errors, but it didn't work. Please fix them manually.
+            See [CI log](https://github.com/panoseti/panoseti_analysis/actions/runs/${{ github.run_id }}) for more details.
