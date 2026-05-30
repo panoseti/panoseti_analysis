@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 import numpy as np
 import torch
@@ -150,7 +150,7 @@ def run_train_vae(
     storage_path = str(out_dir / "ray_results_vae")
     run_cfg = RunConfig(storage_path=storage_path)
 
-    init_ray(launcher)  # type: ignore[arg-type]
+    init_ray(cast(Literal["attach", "slurm", "standalone"], launcher))
 
     trainer = TorchTrainer(
         train_loop_per_worker=train_loop_per_worker,

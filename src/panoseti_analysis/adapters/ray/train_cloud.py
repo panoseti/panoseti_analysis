@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 import numpy as np
 import torch
@@ -56,8 +56,8 @@ def train_loop_per_worker(config: dict[str, Any]) -> None:
     gamma = float(config.get("gamma", 0.9))
     epochs = int(config.get("epochs", 50))
 
-    model = CloudDetection()
-    model = ray.train.torch.prepare_model(model)
+    raw_model = CloudDetection()
+    model: torch.nn.Module = ray.train.torch.prepare_model(raw_model)
 
     optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, weight_decay=weight_decay
@@ -186,7 +186,7 @@ def run_train_cloud(
     storage_path = str(out_dir / "ray_results")
     run_cfg = RunConfig(storage_path=storage_path)
 
-    init_ray(launcher)
+    init_ray(cast(Literal["attach", "slurm", "standalone"], launcher))
 
     trainer = TorchTrainer(
         train_loop_per_worker=train_loop_per_worker,
