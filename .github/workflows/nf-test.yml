@@ -1,11 +1,13 @@
 name: Run nf-test
-# Runs nf-test on PRs (paths that affect the pipeline) and releases.
-# NOTE: nf-test currently runs with `docker` profile, which requires the
-# `panoseti-analysis-ingest` image to be publicly published on Docker Hub.
-# Until images are published, this workflow is advisory (continue-on-error on
-# the nf-test step). The `panoseti-ci.yml` ingest smoke test (laptop profile,
-# no container) is the authoritative pipeline CI check.
-# Matrix: docker only for dev PRs; NXF_VER pinned to 26.04.0 + latest-everything.
+# Runs nf-test on PRs that touch pipeline files and on releases.
+#
+# BLOCKED until Docker images are published: nf-test with the `docker` profile
+# requires `panoseti-analysis-ingest` to be pullable from a public registry.
+# Until then this entire workflow is skipped. The authoritative pipeline CI
+# check is the `ingest smoke + chunk-size gate` job in panoseti-ci.yml, which
+# uses `-profile test,laptop` (no container).
+#
+# To re-enable: remove the `if: false` guard below and publish the image.
 on:
   pull_request:
     paths-ignore:
@@ -31,6 +33,8 @@ env:
 jobs:
   nf-test-changes:
     name: nf-test-changes
+    # Skip until Docker images are published to a public registry.
+    if: false
     runs-on: ubuntu-latest
     outputs:
       shard: ${{ steps.set-shards.outputs.shard }}
@@ -71,12 +75,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Advisory: continue-on-error until Docker images are published to a public registry.
-      # `latest-everything` is always non-blocking (forward compat probe).
       - name: Run nf-test
         id: run_nf_test
         uses: ./.github/actions/nf-test
-        continue-on-error: true
+        continue-on-error: ${{ matrix.NXF_VER == 'latest-everything' }}
         env:
           NFT_WORKDIR: ${{ env.NFT_WORKDIR }}
           NXF_VERSION: ${{ matrix.NXF_VER }}
@@ -89,6 +91,21 @@ jobs:
         if: ${{ always() }}
         run: |
           if [[ "${{ steps.run_nf_test.outcome }}" == "failure" ]]; then
-            echo "## ⚠️ nf-test advisory failure: ${{ matrix.profile }} | ${{ matrix.NXF_VER }} | Shard ${{ matrix.shard }}/${{ env.TOTAL_SHARDS }}" >> $GITHUB_STEP_SUMMARY
-            echo "::warning::nf-test with ${{ matrix.profile }}/${{ matrix.NXF_VER }} failed (advisory — does not block merge)."
+            echo "## ❌ nf-test failed: ${{ matrix.profile }} | ${{ matrix.NXF_VER }} | Shard ${{ matrix.shard }}/${{ env.TOTAL_SHARDS }}" >> $GITHUB_STEP_SUMMARY
+            if [[ "${{ matrix.NXF_VER }}" != "latest-everything" ]]; then
+              exit 1
+            fi
           fi
+
+  confirm-pass:
+    needs: [nf-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: One or more tests failed
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
+
+      - name: All tests ok
+        if: ${{ contains(needs.*.result, 'success') }}
+        run: exit 0

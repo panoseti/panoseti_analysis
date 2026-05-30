@@ -150,12 +150,12 @@ def test_train_cloud_checkpoint_round_trip(tmp_path: Path) -> None:
     pytest.importorskip("torch")
 
     import ray
+
     from panoseti_analysis.adapters.features import run_features_cloud
+    from panoseti_analysis.adapters.ray.train_cloud import run_train_cloud
     from panoseti_analysis.algorithms.cloud_detector import CloudDetection
     from panoseti_analysis.config.models import TrainingProvenance
     from panoseti_analysis.io.models import load_classifier
-
-    from panoseti_analysis.adapters.ray.train_cloud import run_train_cloud
 
     # Shut down any pre-existing Ray instance to get a clean slate
     if ray.is_initialized():

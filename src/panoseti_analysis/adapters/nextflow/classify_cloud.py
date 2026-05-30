@@ -108,8 +108,15 @@ def main(
     level: int = typer.Option(5),
 ) -> None:
     run_classify(
-        l1_store, l2_store, model_path, cadence_s=cadence_s, threshold=threshold,
-        lineage_out=lineage_out, quicklook_out=quicklook_out, codec=codec, level=level
+        l1_store,
+        l2_store,
+        model_path,
+        cadence_s=cadence_s,
+        threshold=threshold,
+        lineage_out=lineage_out,
+        quicklook_out=quicklook_out,
+        codec=codec,
+        level=level,
     )
 
 

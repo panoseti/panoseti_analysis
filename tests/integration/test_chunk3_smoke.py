@@ -11,8 +11,6 @@ The ral_only keystone test is marked skip — run it on RAL against real data:
 from __future__ import annotations
 
 import importlib
-import subprocess
-import sys
 
 import pytest
 
@@ -22,7 +20,6 @@ from panoseti_analysis.config.versions import (
     PANOSETI_ANALYSIS_STORAGE_VERSION,
     PROVENANCE_SCHEMA_VERSION,
 )
-
 
 # ── 1. Schema versions ─────────────────────────────────────────────────────────
 
