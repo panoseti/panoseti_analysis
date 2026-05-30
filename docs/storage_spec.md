@@ -12,8 +12,11 @@ Two independent version namespaces, both stored as Zarr root attributes:
 | `panoseti_pff_zarr_version`         | pypff     | L0 array layout (`images`, `unix_t_ns`, header arrays)           |
 | `panoseti_analysis_storage_version` | this repo | level structure, manifest schema, HK store, `timestamp_qc`, PACK |
 
-`panoseti_analysis_storage_version = "1.0"`. No backward-compat constraints yet — **bump
-aggressively**: an early incompatible change jumps to `"2.0"` rather than contorting `1.x`.
+`panoseti_analysis_storage_version = "2.0"` (`MANIFEST_SCHEMA_VERSION = "2.0"` in tandem).
+Bumped from 1.0 when `processing_history: list[ProcessingStep]` was added to `StoreLineage`
+(breaking change — older manifests without the field still parse, defaulting to `[]`).
+`PROVENANCE_SCHEMA_VERSION = "1.0"` governs the `ProcessingStep`/`TrainingProvenance` schema
+separately. No backward-compat constraints yet — **bump aggressively**.
 Constants live in `src/panoseti_analysis/config/versions.py`.
 
 ## §1 Directory layout (level-major)
@@ -79,6 +82,9 @@ a hardcoded enum; L0/L1 defined, L2+ open and biased toward future gammapy DL3 c
 plus pypff's `data_product`/`module`/`bytes_per_pixel`/`total_frames`/`frame_config`/
 `source_pff_files`/`run_configs`, both `panoseti_*_version` keys, and on L1:
 `calibration = {kind, …params}` and `timestamp_qc = {…}` (§4).
+All levels carry `processing_history: list[ProcessingStep]` (see `docs/provenance.md`) — an
+ordered record of every reduction step that produced this store, stamped by `io/stores.py::write_store`
+or `io/stores.py::stamp_history` (for pypff-written L0 stores).
 
 ## §4 `timestamp_qc` schema
 
@@ -131,7 +137,7 @@ retained in `.panoseti-meta/`.
 ## §7 `manifest.json` (per-run, per-level, with lineage)
 
 ```json
-{ "panoseti_analysis_storage_version": "1.0", "manifest_schema_version": "1.0",
+{ "panoseti_analysis_storage_version": "2.0", "manifest_schema_version": "2.0",
   "run_id": "obs_…", "level": "L1", "created_utc": "…", "seed_manifest_version": "1.0",
   "stores": [
     { "dp": "ph256", "module": "1", "level": "L1", "kind": "ph",
@@ -147,7 +153,7 @@ manifest adds `source_store` + `calibration_params` lineage. L2 manifest adds `m
 and `inference_params`. Built by `pa-manifest`: the
 adapter does the I/O (reads store attrs, computes checksums); the pure `build_level_manifest`
 kernel merges/validates. Manifests are grouped by `run_id` so a multi-run samplesheet yields
-one manifest per run per level.
+one manifest per run per level. Each `StoreLineage` entry echoes the store's `processing_history`; see `docs/provenance.md` for the full spec.
 
 ## §8 PACK formats (transfer)
 

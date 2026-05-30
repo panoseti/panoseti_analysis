@@ -38,6 +38,7 @@ pa-classify-cloud = "panoseti_analysis.adapters.nextflow.classify_cloud:app"
 pa-ray-classify-cloud = "panoseti_analysis.adapters.ray.classify_cloud:app"
 pa-features-cloud = "panoseti_analysis.adapters.features:app"
 pa-prep-ph = "panoseti_analysis.adapters.ph_prep:app"
+pa-train-cloud = "panoseti_analysis.adapters.ray.train_cloud:app"
 pa-train-vae = "panoseti_analysis.adapters.ray.train_vae:app"
 
 # ── uv workspace ──────────────────────────────────────────────────────────────
@@ -101,6 +102,7 @@ follow_imports = "skip"
 testpaths = ["tests"]
 markers = [
     "slow: marks tests that start external processes (e.g. real Ray cluster); deselect with -m 'not slow'",
+    "ral_only: marks tests that require the RAL cluster (skip in CI with -m 'not ral_only')",
 ]
 filterwarnings = [
     # Zarr v3 does not include consolidated metadata in its spec; writing without it is correct.
