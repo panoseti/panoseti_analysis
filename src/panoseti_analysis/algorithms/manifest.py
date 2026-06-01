@@ -35,6 +35,9 @@ def build_level_manifest(
             raise ValueError(f"duplicate store name in manifest: {entry.store!r}")
         seen.add(entry.store)
 
+    # StoreLineage objects are passed through by reference; processing_history is
+    # preserved because list(entries) is a shallow copy of the container only —
+    # each StoreLineage (and its processing_history field) is untouched.
     return Manifest(
         panoseti_analysis_storage_version=storage_version,
         manifest_schema_version=MANIFEST_SCHEMA_VERSION,

@@ -1,7 +1,7 @@
 # PANOSETI ML image — Ray + PyTorch + CUDA
 # Build context MUST be the repo root:
 #   docker build -t panoseti-analysis-ml:0.1.0 -f containers/ml.Dockerfile .
-FROM python:3.14-slim
+FROM pytorch/pytorch:2.6.0-cuda12.6-cudnn9-runtime
 
 # procps: Nextflow task metrics; git: uv may resolve VCS metadata for the submodule.
 RUN apt-get update && apt-get install -y --no-install-recommends procps git \
@@ -17,8 +17,9 @@ COPY pypff/ ./pypff/
 COPY src/ ./src/
 COPY bin/ ./bin/
 
-# Install the workspace into /app/.venv.
-RUN uv sync --no-dev --frozen && chmod +x bin/*
+# Install CPU-only torch first (already bundled in the pytorch base image);
+# install workspace without dev deps and without reinstalling torch.
+RUN uv sync --no-dev --frozen --no-install-package torch && chmod +x bin/*
 
 # pa-* resolve from bin/ shims and/or the venv console scripts.
 ENV PATH="/app/bin:/app/.venv/bin:$PATH"

@@ -1,12 +1,17 @@
 name: panoseti-ci
 
 # Authoritative CI for the PANOSETI analysis package + ingest pipeline.
-# (nf-core's own linting/nf-test workflows also live in .github/workflows/ but are
-#  advisory for this PANOSETI-namespace pipeline.)
+# See .github/workflows/linting.yml for NF/pre-commit linting and nf-test.yml for pipeline tests.
+#
+# Linting philosophy:
+#   - Ruff (style): non-blocking — annotates lines in PRs but does not block merges.
+#     Comment `@panoseti-bot fix linting` on the PR to auto-apply ruff --fix.
+#   - Mypy (types): blocking — type errors indicate correctness bugs, not style.
+#   - Pytest: blocking.
 
 on:
   push:
-    branches: [main, refactor]
+    branches: [main, develop, refactor]
   pull_request:
   workflow_dispatch:
 
@@ -15,21 +20,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  python:
-    name: ruff + mypy + pytest
+  python-lint:
+    name: ruff (annotations) + mypy (strict)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive # pypff submodule (see note below)
+          submodules: recursive
       - uses: astral-sh/setup-uv@v5
       - run: uv sync
-      - name: Ruff
-        run: uv run ruff check src tests
+
+      # Ruff: annotates PR lines but does NOT block merges.
+      # Use `@panoseti-bot fix ruff` comment or run `uv run ruff check --fix src tests` locally.
+      - name: Ruff check (annotations, non-blocking)
+        run: uv run ruff check src tests --output-format github
+        continue-on-error: true
+
+      - name: Ruff format check (annotations, non-blocking)
+        run: uv run ruff format --check src tests
+        continue-on-error: true
+
+      # Mypy: blocks merges. Type errors are correctness bugs.
       - name: Mypy (strict)
         run: uv run mypy src/panoseti_analysis
-      - name: Pytest (kernels, io, adapters, Layer A boundary lint)
-        run: uv run pytest tests -q
+
+  python-test:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - name: Pytest (kernels, io, adapters, integration smoke)
+        run: uv run pytest tests -q -m "not slow and not ral_only"
 
   pipeline:
     name: ingest smoke + chunk-size gate

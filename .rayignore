@@ -1,0 +1,37 @@
+# Exclude large directories from Ray working_dir packaging.
+# Ray reads both .gitignore and .rayignore; this file is explicit belt-and-suspenders.
+
+# Python env / caches
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Claude Code session data (can be many GB)
+.claude/
+
+# Git internals
+.git/
+
+# Nextflow run artefacts
+work/
+null/
+results/
+results_*/
+.nextflow/
+.nextflow.log*
+.lineage/
+trace.txt
+*.html
+
+# Test data and fixture stores
+tests/data/
+
+# Zarr stores anywhere
+*.zarr/
+
+# Lock files and large metadata
+uv.lock

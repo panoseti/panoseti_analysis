@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -12,8 +13,11 @@ import typer
 import xarray as xr
 
 from panoseti_analysis.algorithms.cloud_detector import predict_cloud_score
-from panoseti_analysis.config.models import CloudInferParams, StoreLineage
+from panoseti_analysis.config.models import CloudInferParams, ProcessingStep, StoreLineage
+from panoseti_analysis.config.versions import PANOSETI_ANALYSIS_STORAGE_VERSION
+from panoseti_analysis.io.checksum import checksum_store
 from panoseti_analysis.io.models import load_classifier
+from panoseti_analysis.io.provenance import append_step, capture_software, now_utc, read_history
 from panoseti_analysis.io.quicklook import generate_cloud_quicklook
 from panoseti_analysis.io.stores import write_store
 
@@ -34,6 +38,11 @@ def process_store(
     """Remote task to process one store."""
     ds_l1 = xr.open_zarr(l1_store)
 
+    l1_history = read_history(dict(ds_l1.attrs))
+    l1_input_cksum = l1_history[-1].output_checksum if l1_history else None
+    started_at = now_utc()
+    software = capture_software()
+
     ds_l2 = predict_cloud_score(ds_l1, model, params)
 
     ds_l2.attrs.update(ds_l1.attrs)
@@ -44,7 +53,23 @@ def process_store(
     l2_store_name = f"{run_id}.cloud.module_{module}.zarr"
     l2_store = out_dir / l2_store_name
 
-    write_store(ds_l2, l2_store, codec=codec, level=level)
+    classify_step = ProcessingStep(
+        step_name="classify_cloud",
+        step_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
+        params={
+            "cadence_s": params.cadence_s,
+            "threshold": params.threshold,
+            "model_checksum": bundle_dict.get("checksum"),
+        },
+        input_checksums=[l1_input_cksum] if l1_input_cksum else [],
+        timestamp_utc=started_at,
+        software=software,
+    )
+    new_history = append_step(l1_history, classify_step)
+
+    write_store(ds_l2, l2_store, codec=codec, level=level, processing_history=new_history)
+
+    l2_checksum = checksum_store(l2_store)
 
     record = StoreLineage(
         dp=str(ds_l1.attrs.get("data_product", "?")),
@@ -56,6 +81,8 @@ def process_store(
         source_store=l1_store.name,
         model=bundle_dict,
         inference_params=params.model_dump(),
+        checksum=l2_checksum,
+        processing_history=new_history,
     )
 
     if quicklook_dir is not None:
@@ -100,9 +127,9 @@ def main(
 
     records = [r for _, r in results]
     if lineage_out is not None:
-        with lineage_out.open("w") as f:
-            for r in records:
-                f.write(r.model_dump_json() + "\n")
+        Path(lineage_out).write_text(
+            json.dumps([r.model_dump(mode="json") for r in records], indent=2)
+        )
 
 
 if __name__ == "__main__":

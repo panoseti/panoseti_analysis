@@ -9,9 +9,12 @@ import typer
 
 from panoseti_analysis.adapters._common import infer_cadence_ns
 from panoseti_analysis.config.levels import infer_kind
-from panoseti_analysis.config.models import StoreLineage
+from panoseti_analysis.config.models import ProcessingStep, StoreLineage
+from panoseti_analysis.config.versions import PANOSETI_ANALYSIS_STORAGE_VERSION
+from panoseti_analysis.io.checksum import checksum_store
 from panoseti_analysis.io.pff import read_pff_run
-from panoseti_analysis.io.stores import open_store
+from panoseti_analysis.io.provenance import capture_software, now_utc
+from panoseti_analysis.io.stores import open_store, stamp_history
 
 app = typer.Typer(add_completion=False, help="Convert a .pffd run to L0 Zarr stores.")
 
@@ -33,12 +36,29 @@ def run_convert(
     # Stores are written flat; the level-major L0/ dir is created at publish time.
     convert_run(read_pff_run(obs_dir), out_dir, codec=codec, level=level, time_chunk=time_chunk or None)
 
+    started_at = now_utc()
+    software = capture_software()
+
     records: list[StoreLineage] = []
     for store_path in sorted(out_dir.glob("*.zarr")):
         ds = open_store(store_path)
         data_product = str(ds.attrs["data_product"])
         t = ds["unix_t_ns"].values
         time_range = (int(t.min()), int(t.max())) if t.size else None
+
+        # Compute checksum of the pypff-written store (before stamping provenance).
+        output_cksum = checksum_store(store_path)
+
+        step = ProcessingStep(
+            step_name="convert",
+            step_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
+            params={"codec": codec, "level": level, "time_chunk": time_chunk},
+            output_checksum=output_cksum,
+            timestamp_utc=started_at,
+            software=software,
+        )
+        stamp_history(store_path, [step])
+
         records.append(
             StoreLineage(
                 dp=data_product,
@@ -49,6 +69,8 @@ def run_convert(
                 n_frames=int(ds.sizes["time"]),
                 time_range=time_range,
                 cadence_ns=infer_cadence_ns(ds),
+                checksum=output_cksum,
+                processing_history=[step],
             )
         )
 

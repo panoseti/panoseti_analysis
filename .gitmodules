@@ -1,3 +1,7 @@
 [submodule "pypff"]
 	path = pypff
 	url = git@github.com:panoseti/pypff.git
+[submodule "grpc"]
+	path = grpc
+	url = git@github.com:panoseti/panoseti_grpc.git
+	branch = add-2-servers-dev

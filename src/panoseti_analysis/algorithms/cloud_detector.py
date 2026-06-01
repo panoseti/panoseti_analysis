@@ -91,6 +91,83 @@ class CloudDetection(nn.Module):
         return out
 
 
+def _batch_apply_fft(batch: np.ndarray, hann_3d: np.ndarray) -> np.ndarray:
+    """batch: (N, H, W) float32 → (N, H, W) float32 log-magnitude FFT."""
+    windowed = batch * hann_3d
+    mag = np.abs(np.fft.fftn(windowed, axes=(-2, -1)))
+    shifted = np.fft.fftshift(mag, axes=(-2, -1))
+    with np.errstate(divide="ignore"):
+        log_mag = np.log(shifted)
+    # Real PANOSETI images (photon noise) never produce zero FFT magnitudes.
+    # nan_to_num is a no-op for real data; it guards synthetic/pathological inputs.
+    return np.nan_to_num(log_mag, neginf=0.0).astype(np.float32)
+
+
+def _stack_windows(img: np.ndarray, indices: np.ndarray, n_stack: int, n_ts: int) -> np.ndarray:
+    """Stack n_stack frames starting at each index; shape (N, H, W)."""
+    n = len(indices)
+    h, w = img.shape[1], img.shape[2]
+    out = np.zeros((n, h, w), dtype=np.float64)
+    for i, idx in enumerate(indices):
+        end = min(idx + n_stack, n_ts)
+        out[i] = img[idx:end].sum(axis=0)
+    return out.astype(np.float32)
+
+
+def extract_cloud_features(
+    ds: xr.Dataset,
+    params: CloudInferParams,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Extract 2-channel log-FFT features for cloud detection.
+
+    Returns:
+        X: float32 array of shape (N, 2, H, W) — [deriv_fft, raw_fft] channels
+        t_centers: int64 array of shape (N,) — center timestamps in nanoseconds
+    """
+    img = ds["median_subtracted"].values  # (T, H, W)
+    unix_t_ns = ds["unix_t_ns"].values
+
+    t_start = unix_t_ns[0]
+    t_end = unix_t_ns[-1]
+
+    cadence_ns = int(params.cadence_s * 1e9)
+    window_ns = 60_000_000_000
+    n_stack = 10  # 10 frames of 100us = 1ms stacked integration
+
+    target_times = np.arange(t_start, t_end + 1, cadence_ns)
+
+    # Pre-compute 2D Hann window
+    hann_1d = np.hanning(32)
+    hann_2d = np.outer(hann_1d, hann_1d)
+    hann_3d = hann_2d[np.newaxis, :, :]  # (1, H, W) for broadcasting over batch
+
+    # Vectorised index computation for all windows
+    n_ts = len(unix_t_ns)
+    idx_curr_arr = np.searchsorted(unix_t_ns, target_times).clip(0, n_ts - 1)
+    t_prev_arr = np.maximum(t_start, target_times - window_ns)
+    idx_prev_arr = np.searchsorted(unix_t_ns, t_prev_arr).clip(0, n_ts - 1)
+
+    # Filter out degenerate windows (end <= start; can't happen with clip, but keep guard)
+    valid = (idx_curr_arr + 1) <= n_ts  # always true after clip; kept for clarity
+    idx_curr_arr = idx_curr_arr[valid]
+    idx_prev_arr = idx_prev_arr[valid]
+    t_centers = target_times[valid]
+
+    if len(t_centers) == 0:
+        return np.empty((0, 2, 32, 32), dtype=np.float32), np.array([], dtype=np.int64)
+
+    curr_imgs = _stack_windows(img, idx_curr_arr, n_stack, n_ts)   # (N, H, W)
+    prev_imgs = _stack_windows(img, idx_prev_arr, n_stack, n_ts)   # (N, H, W)
+    diff_imgs = curr_imgs - prev_imgs                               # (N, H, W)
+
+    features_fft_arr = _batch_apply_fft(curr_imgs, hann_3d)        # (N, H, W)
+    features_deriv_fft_arr = _batch_apply_fft(diff_imgs, hann_3d)  # (N, H, W)
+
+    X = np.stack([features_deriv_fft_arr, features_fft_arr], axis=1)  # (N, 2, H, W)
+
+    return X, t_centers.astype(np.int64)
+
+
 def predict_cloud_score(
     ds: xr.Dataset,
     model: torch.nn.Module,
@@ -109,49 +186,12 @@ def predict_cloud_score(
     if "median_subtracted" not in ds.data_vars:
         raise ValueError("Cloud detection requires L1 movie-mode dataset with 'median_subtracted'")
 
-    img = ds["median_subtracted"].values  # (T, H, W)
     unix_t_ns = ds["unix_t_ns"].values
 
     if len(unix_t_ns) == 0:
         return xr.Dataset()
 
-    t_start = unix_t_ns[0]
-    t_end = unix_t_ns[-1]
-
-    # We step by cadence_ns. The integration window lookback is 60s for the derivative.
-    cadence_ns = int(params.cadence_s * 1e9)
-    window_ns = 60_000_000_000
-    n_stack = 10 # 10 frames of 100us = 1ms stacked integration
-
-    target_times = np.arange(t_start, t_end + 1, cadence_ns)
-
-    # Pre-compute 2D Hann window
-    hann_1d = np.hanning(32)
-    hann_2d = np.outer(hann_1d, hann_1d)
-    hann_3d = hann_2d[np.newaxis, :, :]  # (1, H, W) for broadcasting over batch
-
-    def batch_apply_fft(batch: np.ndarray) -> np.ndarray:
-        """batch: (N, H, W) float32 → (N, H, W) float32 log-magnitude FFT."""
-        windowed = batch * hann_3d
-        mag = np.abs(np.fft.fftn(windowed, axes=(-2, -1)))
-        shifted = np.fft.fftshift(mag, axes=(-2, -1))
-        with np.errstate(divide="ignore"):
-            log_mag = np.log(shifted)
-        # Real PANOSETI images (photon noise) never produce zero FFT magnitudes.
-        # nan_to_num is a no-op for real data; it guards synthetic/pathological inputs.
-        return np.nan_to_num(log_mag, neginf=0.0).astype(np.float32)
-
-    # Vectorised index computation for all windows
-    n_ts = len(unix_t_ns)
-    idx_curr_arr = np.searchsorted(unix_t_ns, target_times).clip(0, n_ts - 1)
-    t_prev_arr = np.maximum(t_start, target_times - window_ns)
-    idx_prev_arr = np.searchsorted(unix_t_ns, t_prev_arr).clip(0, n_ts - 1)
-
-    # Filter out degenerate windows (end <= start; can't happen with clip, but keep guard)
-    valid = (idx_curr_arr + 1) <= n_ts  # always true after clip; kept for clarity
-    idx_curr_arr = idx_curr_arr[valid]
-    idx_prev_arr = idx_prev_arr[valid]
-    t_centers = target_times[valid]
+    X, t_centers = extract_cloud_features(ds, params)
 
     if len(t_centers) == 0:
         return xr.Dataset({
@@ -162,24 +202,9 @@ def predict_cloud_score(
             "unix_t_ns": (["T_l2"], np.array([], dtype=np.int64)),
         })
 
-    # Stack n_stack frames for each window index; shape (N, H, W)
-    def stack_windows(indices: np.ndarray) -> np.ndarray:
-        n = len(indices)
-        h, w = img.shape[1], img.shape[2]
-        out = np.zeros((n, h, w), dtype=np.float64)
-        for i, idx in enumerate(indices):
-            end = min(idx + n_stack, n_ts)
-            out[i] = img[idx:end].sum(axis=0)
-        return out.astype(np.float32)
-
-    curr_imgs = stack_windows(idx_curr_arr)   # (N, H, W)
-    prev_imgs = stack_windows(idx_prev_arr)   # (N, H, W)
-    diff_imgs = curr_imgs - prev_imgs         # (N, H, W)
-
-    features_fft_arr = batch_apply_fft(curr_imgs)    # (N, H, W)
-    features_deriv_fft_arr = batch_apply_fft(diff_imgs)  # (N, H, W)
-
-    X = np.stack([features_deriv_fft_arr, features_fft_arr], axis=1)  # (N, 2, H, W)
+    # X shape: (N, 2, H, W) — channel 0 = deriv_fft, channel 1 = raw_fft
+    features_deriv_fft_arr = X[:, 0, :, :]  # (N, H, W)
+    features_fft_arr = X[:, 1, :, :]        # (N, H, W)
 
     device = next(model.parameters()).device
     tensor_x = torch.from_numpy(X).to(device)

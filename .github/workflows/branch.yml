@@ -1,0 +1,36 @@
+name: nf-core branch protection
+# Triggered on PRs to `main`/`master` — rejects PRs that don't come from `develop` or a `patch` branch.
+on:
+  pull_request_target:
+    branches:
+      - main
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PRs
+        if: github.repository == 'panoseti/panoseti_analysis'
+        run: |
+          { [[ ${{github.event.pull_request.head.repo.full_name }} == panoseti/panoseti_analysis ]] && [[ $GITHUB_HEAD_REF == "develop" ]]; } || [[ $GITHUB_HEAD_REF == "patch" ]]
+
+      - name: Post PR comment
+        if: failure()
+        uses: mshick/add-pr-comment@8e4927817251f1ff60c001f04568532b38e0b4a0 # v3
+        with:
+          message: |
+            ## This PR is against the `${{github.event.pull_request.base.ref}}` branch :x:
+
+            * Do not close this PR
+            * Click _Edit_ and change the `base` to `develop`
+            * This CI test will remain failed until you push a new commit
+
+            ---
+
+            Hi @${{ github.event.pull_request.user.login }},
+
+            PRs to `${{github.event.pull_request.base.ref}}` are only allowed from the `develop` branch (or a `patch` branch for hotfixes).
+            Please re-target this PR to `develop`.
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          allow-repeats: false

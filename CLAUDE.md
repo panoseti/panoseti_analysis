@@ -38,7 +38,16 @@ sibling of Layer B — same kernel call, different transport — so Layer A neve
 
 **Ray is a payload, not a substrate.** The default execution model is Nextflow-process-with-typer-CLI.
 Ray is opt-in per process via a `gpu_ray` label. Processes that don't need distributed memory/GPUs stay non-Ray.
-Ray clusters are transient: brought up per-process using `ray symmetric-run` inside Apptainer, and torn down when the Nextflow task completes.
+
+**Three launcher modes** (`adapters/ray/launcher.py::init_ray(launcher)`):
+
+| Mode         | Cluster ownership                                 | When                                                |
+| ------------ | ------------------------------------------------- | --------------------------------------------------- |
+| `attach`     | **Persistent, user-owned** (user ran `ray start`) | RAL (default), dev                                  |
+| `slurm`      | Transient — == SLURM allocation                   | Expanse; cluster brought up via `ray symmetric-run` |
+| `standalone` | Process-local, real multi-process                 | CI / laptop                                         |
+
+**The transient-cluster invariant is SLURM-only.** On RAL the cluster outlives any job; on `standalone` it is process-local. `attach` and `slurm` both call `ray.init(address="auto")` — the difference is _who owns the cluster_.
 
 ## Toolchain
 
@@ -69,6 +78,46 @@ nextflow run . -profile laptop --steps ingest,ml --input_obs_dir … --outdir �
 
 CLIs (also on `$PATH` inside Nextflow): `pa-convert`, `pa-calibrate`, `pa-hk`,
 `pa-manifest`, `pa-pack`.
+
+## Training on RAL
+
+RAL is bare-metal, no SLURM. Head: `radiopi5` (Pi 5). GPU nodes: `a6k` (2× RTX A6000 48 GB + 1 TB SSD), `gf` (RTX 4070 + RTX 5070 + 1 TB SSD). BeeGFS at `/mnt/beegfs`. The pipeline **attaches** to the user's pre-existing cluster — it never provisions RAL.
+
+```bash
+# 1. Ingest the label-covered subset to L1 (Nextflow handles PFF → L0 → L1):
+nextflow run . -profile laptop --steps ingest -params-file recipes/ingest_subset.yml --outdir /mnt/beegfs/runs/
+
+# 2. Materialize features (runs standalone, reads L1 from BeeGFS):
+pa-features-cloud --stores /mnt/beegfs/runs/*/L1/*.zarr \
+  --out /mnt/beegfs/features/ --recipe recipes/cloud_v1.yml \
+  --label-csv /mnt/beegfs/labels/cloud_labels.csv
+
+# 3. Train cloud detector (attaches to user's running Ray cluster):
+pa-train-cloud --launcher attach --recipe recipes/cloud_v1.yml \
+  --feature-cache /mnt/beegfs/features/features.<hash>.zarr \
+  --out /mnt/beegfs/models/ \
+  --local-cache-dir /local/scratch
+
+# 4. Train BetaVAE:
+pa-prep-ph --stores /mnt/beegfs/runs/*/L1/*.dp_ph256.*.zarr \
+  --out /mnt/beegfs/features/ --recipe recipes/vae_train_v1.yml
+pa-train-vae --launcher attach --recipe recipes/vae_train_v1.yml \
+  --feature-cache /mnt/beegfs/features/features.<hash>.zarr \
+  --out /mnt/beegfs/models/ --local-cache-dir /local/scratch
+
+# 5. Run inference with the new model bundle:
+nextflow run . -profile laptop --steps ml \
+  --cloud_model_pt /mnt/beegfs/models/cloud_detector_v2.pt \
+  --cloud_model_json /mnt/beegfs/models/cloud_detector_v2.CloudDetection.json \
+  --input_obs_dir /path/obs.pffd --outdir results/
+```
+
+**Recipes vs Profiles:**
+
+- `recipes/*.yml` — WHAT SCIENCE (feature params, split ratios, hyperparams, scaling, model_out, label_csv). Passed via `--recipe` to training CLIs or `-params-file` to Nextflow.
+- `-profile` — WHERE/HOW (executor, container, resource limits). Never embed science params here.
+
+The `recipe_hash` (sha256 of the YAML bytes) is stamped into every `ProcessingStep` and `TrainingProvenance` record, so every produced artifact is traceable to an exact science configuration.
 
 ## Storage conventions (see `docs/storage_spec.md`)
 

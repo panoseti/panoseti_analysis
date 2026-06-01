@@ -22,9 +22,10 @@ dependencies = [
     "numpy>=1.26",
     "pydantic>=2.5",
     "matplotlib>=3.7",
-    "ray[default]>=2.55.1",
+    "ray[default,train,data]>=2.55.1",
     "torchvision>=0.27.0",
     "torch>=2.12.0",
+    "pyyaml>=6.0",
 ]
 
 [project.scripts]
@@ -35,6 +36,10 @@ pa-manifest = "panoseti_analysis.adapters.manifest:app"
 pa-pack = "panoseti_analysis.adapters.pack:app"
 pa-classify-cloud = "panoseti_analysis.adapters.nextflow.classify_cloud:app"
 pa-ray-classify-cloud = "panoseti_analysis.adapters.ray.classify_cloud:app"
+pa-features-cloud = "panoseti_analysis.adapters.features:app"
+pa-prep-ph = "panoseti_analysis.adapters.ph_prep:app"
+pa-train-cloud = "panoseti_analysis.adapters.ray.train_cloud:app"
+pa-train-vae = "panoseti_analysis.adapters.ray.train_vae:app"
 
 # ── uv workspace ──────────────────────────────────────────────────────────────
 # The repo root is both the workspace root and the `panoseti_analysis` package.
@@ -97,10 +102,13 @@ follow_imports = "skip"
 testpaths = ["tests"]
 markers = [
     "slow: marks tests that start external processes (e.g. real Ray cluster); deselect with -m 'not slow'",
+    "ral_only: marks tests that require the RAL cluster (skip in CI with -m 'not ral_only')",
 ]
 filterwarnings = [
     # Zarr v3 does not include consolidated metadata in its spec; writing without it is correct.
     "ignore:Consolidated metadata is currently not part in the Zarr format 3:zarr.errors.ZarrUserWarning",
     # Ray internal warning about GPU env var override behaviour changing in a future Ray release.
     "ignore:.*Ray will no longer override accelerator visible devices:FutureWarning",
+    # Fixed-length UTF32 string arrays (split/module vars) have no finalised Zarr V3 dtype spec yet.
+    "ignore:The data type.*FixedLengthUTF32.*does not have a Zarr V3 specification:zarr.errors.UnstableSpecificationWarning",
 ]

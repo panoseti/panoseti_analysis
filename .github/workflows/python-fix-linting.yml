@@ -1,0 +1,66 @@
+name: Fix Python linting from a comment
+# Comment `@panoseti-bot fix ruff` on a PR to auto-apply ruff --fix + ruff format.
+# For NF/prettier fixes, use `@panoseti-bot fix linting` (see fix_linting.yml).
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  fix-ruff:
+    if: >
+      contains(github.event.comment.html_url, '/pull/') &&
+      contains(github.event.comment.body, '@panoseti-bot fix ruff') &&
+      github.repository == 'panoseti/panoseti_analysis'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: React on comment
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: eyes
+
+      - name: Checkout Pull Request
+        run: gh pr checkout ${{ github.event.issue.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+
+      - name: Apply ruff fixes
+        id: ruff-fix
+        run: |
+          uv run ruff check --fix src tests || true
+          uv run ruff format src tests
+
+      - name: Commit & push if changed
+        id: commit
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "panoseti-bot"
+          git diff --quiet && git diff --staged --quiet && echo "no_changes=true" >> $GITHUB_OUTPUT || true
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "no_changes=true" >> $GITHUB_OUTPUT
+          else
+            git add src tests
+            git commit -m "[automated] Apply ruff --fix + ruff format"
+            git push
+          fi
+
+      - name: React — no changes needed
+        if: steps.commit.outputs.no_changes == 'true'
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: "+1"
+
+      - name: React — fixes applied
+        if: steps.commit.outputs.no_changes != 'true'
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: hooray
