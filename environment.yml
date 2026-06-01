@@ -1,0 +1,37 @@
+name: ray-env
+channels:
+  - defaults
+  - conda-forge # Recommended for packages like transformers and hydra, as they are often more up-to-date here
+dependencies:
+  # Conda manages the core environment and the pip utility
+  - python=3.14  # Use a specific, stable Python version (e.g., 3.10 or 3.11).
+                 # If you used a specific version, replace 3.10 with it.
+  - pip
+  
+  # --- Visualization & Notebook Tools (Conda-Managed) ---
+  - jupyterlab    # Use jupyterlab for the modern notebook environment
+  - matplotlib    # Core plotting library
+  - seaborn       # Statistical visualization built on Matplotlib
+  - hydra-core # Install the configuration manager via Conda
+  - omegaconf  # Hydra's main dependency, best installed via Conda too
+  
+  # Pip manages the Deep Learning stack, ensuring the exact CUDA version is pulled
+  - pip:
+    # This line tells pip to use the PyTorch CUDA 13.0 package index
+    - --extra-index-url https://download.pytorch.org/whl/cu130
+    
+    # Core Deep Learning Libraries (will be installed from the index URL above)
+    - torch
+    - torchvision
+
+    # Ray
+    - "ray[data,train,tune,serve]"
+    
+    # Project Libraries (will use standard PyPI index unless explicitly specified)
+    - wandb
+    - transformers
+    - muon-optimizer
+    - datasets
+    - tiktoken
+    - xarray
+    - zarr
