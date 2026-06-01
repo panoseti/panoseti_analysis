@@ -16,16 +16,18 @@ authors = [
 keywords = ["panoseti", "pff", "zarr", "nextflow", "astronomy", "seti", "gamma-ray"]
 dependencies = [
     "pypff[zarr]",
+    "panoseti-grpc",
     "typer>=0.9.0",
     "xarray>=2024.1",
     "zarr>=3.0",
     "numpy>=1.26",
     "pydantic>=2.5",
     "matplotlib>=3.7",
-    "ray[default,train,data]>=2.55.1",
+    "ray[default,train,data,serve]>=2.55.1",
     "torchvision>=0.27.0",
     "torch>=2.12.0",
     "pyyaml>=6.0",
+    "grpcio>=1.78.0",
 ]
 
 [project.scripts]
@@ -40,16 +42,18 @@ pa-features-cloud = "panoseti_analysis.adapters.features:app"
 pa-prep-ph = "panoseti_analysis.adapters.ph_prep:app"
 pa-train-cloud = "panoseti_analysis.adapters.ray.train_cloud:app"
 pa-train-vae = "panoseti_analysis.adapters.ray.train_vae:app"
+pa-stream-cloud = "panoseti_analysis.adapters.stream.cli:app"
 
 # ── uv workspace ──────────────────────────────────────────────────────────────
 # The repo root is both the workspace root and the `panoseti_analysis` package.
 # `pypff` is a workspace member (the in-repo git submodule), resolved locally
 # instead of from PyPI.
 [tool.uv.workspace]
-members = ["pypff"]
+members = ["pypff", "grpc"]
 
 [tool.uv.sources]
 pypff = { workspace = true }
+panoseti-grpc = { workspace = true }
 
 [dependency-groups]
 dev = [

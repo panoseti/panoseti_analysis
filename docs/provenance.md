@@ -104,6 +104,24 @@ class TrainingProvenance:
     wandb_run_id: str|None
 ```
 
+### Streaming provenance (real-time path)
+
+The streaming pipeline does not write Zarr stores on the hot path, so it carries a
+**lightweight provenance tag set** on every emitted `Prediction` proto:
+
+| Field | Source | Carried in |
+|-------|--------|------------|
+| `model_name` / `model_version` | `ClassifierBundle.model_name/version` | `Prediction` proto |
+| `checksum` | `ClassifierBundle.checksum` (sha256) | `Prediction.recipe_hash` note |
+| `recipe_hash` | `load_recipe(path)` → sha256 of YAML bytes | `Prediction` proto |
+| `git_sha` | `capture_software()["git_sha"]` | `Prediction.git_sha` |
+| `calibration_maturity` | frames_seen / expected_frames (0=cold, 1=warm) | `Prediction` proto |
+
+**Full `processing_history`** is only materialised when a window-of-interest is archived to disk
+(cloud-flagged window).  The `ProcessingStep` emitted for streaming uses `step_name =
+"stream_cloud_infer"` and carries the same schema as the batch `classify_cloud` step —
+so the L2 store's chain is readable identically by `read_history`.
+
 ## Provenance schema version
 
 `PROVENANCE_SCHEMA_VERSION = "1.0"` (`config/versions.py`).

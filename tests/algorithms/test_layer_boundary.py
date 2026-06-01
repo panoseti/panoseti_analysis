@@ -14,12 +14,21 @@ import panoseti_analysis
 _ALGO_DIR = Path(panoseti_analysis.__file__).parent / "algorithms"
 
 # Frameworks / I/O that must never appear in a pure kernel.
-# Note: plain `ray` (core API) is allowed; only ray.train and ray.tune are banned.
-_FORBIDDEN_ROOTS = {"nextflow", "grpc", "slurm", "typer", "zarr", "pypff"}
+# Note: plain `ray` (core API) is allowed; only specific submodules are banned.
+_FORBIDDEN_ROOTS = {
+    "nextflow",
+    "grpc",
+    "slurm",
+    "typer",
+    "zarr",
+    "pypff",
+    # panoseti_grpc must not leak into Layer A (it's a transport adapter).
+    "panoseti_grpc",
+}
 _FORBIDDEN_PREFIXES = ("panoseti_analysis.io", "panoseti_analysis.adapters")
-# ray.train and ray.tune are forbidden in algorithms/ (would leak training code into kernels)
-# but plain `ray` (core API) is allowed.
-_FORBIDDEN_RAY_SUBMODULES = {"ray.train", "ray.tune"}
+# Banned ray submodules: training, tuning, and serving must not appear in kernels.
+# plain `ray` (core API) is allowed.
+_FORBIDDEN_RAY_SUBMODULES = {"ray.train", "ray.tune", "ray.serve"}
 
 _CUDA_PATTERNS = (
     ".cuda(",

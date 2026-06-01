@@ -1,0 +1,28 @@
+# stream_cloud_v1.yml — Real-time cloud detection streaming recipe
+#
+# Used by pa-stream-cloud --recipe recipes/stream_cloud_v1.yml
+#
+# Science parameters (WHAT):
+#   feature_cadence_s — how often to emit a scored window (seconds)
+#   threshold         — cloud_score >= threshold → cloud_label = True
+#   grace_s           — late-frame tolerance: frames arriving after
+#                        window_end − grace_s are dropped from that window
+#
+# Resource parameters (WHERE/HOW) stay in Nextflow -profile, not here.
+# This recipe is sha256-hashed and stamped into every Prediction.recipe_hash
+# and archived ProcessingStep.recipe_hash for full traceability.
+
+name: stream_cloud_v1
+
+# Window cadence: emit one scored prediction per cadence_s (60s matches the
+# hardcoded kernel window_ns = 60_000_000_000).  Shorter values are fine
+# for faster feedback but increase CPU load.
+feature_cadence_s: 60.0
+
+# Decision threshold for cloud_label (0=clear, 1=cloud).
+# Matches the batch recipe cloud_v1.yml training threshold.
+threshold: 0.5
+
+# Late-frame grace window (seconds).  Frames arriving after
+# window_end − grace_s are dropped to bound per-window latency.
+grace_s: 1.0

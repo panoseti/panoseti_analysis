@@ -141,6 +141,128 @@ Uses **2-channel features** (`raw_fft` + `deriv_fft`, matching inference) and th
 
 `Ray Tune` wraps the `Ray Train` loop via `TuneConfig` for grid search or Bayesian optimization. Seam is defined; not implemented in Chunk 3.
 
-### Real-time Serving (Ray Serve — future)
+---
 
-If real-time cloud detection is required at the observatory, `Ray Serve` wraps `predict_cloud_score` inside a `@serve.deployment`. Out of scope for Chunk 3.
+## Real-Time Streaming Pipeline (Chunk 4)
+
+The streaming path runs alongside or independently of the batch pipeline, producing
+**per-minute cloud scores in real time** from the live DAQ stream without round-tripping
+data through Zarr on disk.
+
+### Architecture
+
+```
+simulate.py / Hashpipe (UDS)
+        │ PFF frames
+        ▼
+panoseti_grpc DaqData server ── StreamImages ──► StreamConsumer (async grpc client)
+                                                        │ (module_id, dp, frame[32,32], unix_t_ns)
+                                                        ▼
+                                              FrameAccumulator (Ray actor, per module+dp)
+                                                        │ rolling buffer + progressive calibrate_img
+                                                        │ emit when ≥60s span, every cadence_s
+                                                        ▼ xr.Dataset {median_subtracted, unix_t_ns}
+                                              CloudInferDeployment (Ray Serve, gaming GPU)
+                                                        │ predict_cloud_score (Layer A kernel)
+                                                   ┌────┴─────────────┐
+                                                   ▼                  ▼
+                                          MLInference gRPC        Telemetry → Redis
+                                          (EmitPrediction)        (log_flexible → Grafana)
+                                                   │
+                                        flagged windows-of-interest
+                                                   ▼
+                                          L2 Zarr archive (write_store + processing_history)
+```
+
+### Key components
+
+| File | Role |
+|------|------|
+| `adapters/stream/consumer.py` | Async `StreamImages` consumer; extracts per-frame ns timestamp from header Struct (16×16/32×32 both handled); routes frames to `FrameAccumulator` actors |
+| `adapters/stream/accumulator.py` | `@ray.remote FrameAccumulator`; rolling buffer + progressive rolling-median calibration; calls `calibrate_img` + `predict_cloud_score`; emits via gRPC + telemetry |
+| `adapters/stream/serve_app.py` | `@serve.deployment CloudInferDeployment`; loads model bundle once; pinned to gaming node (`accelerator_type:G`) to keep A6000s for training |
+| `adapters/stream/cli.py` | `pa-stream-cloud` typer CLI; init_ray(attach) + deploy Serve + run consumer |
+| `grpc/src/panoseti_grpc/ml_inference/` | Thin gRPC pub-sub broker (no ML logic); `EmitPrediction` fans predictions out to `StreamPredictions` / `SubscribeAlerts` subscribers |
+
+### Progressive calibration (cold-start behaviour)
+
+The accumulator uses `calibrate_img` over the rolling buffer as a progressive pedestal
+estimate (rolling median).  Early in the night this underestimates the real pedestal.
+Each `Prediction` carries a `calibration_maturity` field (0=cold, 1=warm) so downstream
+consumers can discount early-night windows.  **End-to-end streaming scores will not
+byte-match batch L2** — by design.  The equivalence keystone
+(`tests/adapters/test_stream_consumer.py::TestEquivalenceKeystone`) proves that:
+
+1. **Kernel outputs are bit-identical** across CLI / Ray task / gRPC-Serve paths given the
+   _same_ Dataset (transport-independence).
+2. **Calibration drift is small but non-zero** (measured MAE ≈ 0.0002 for a 300-frame half-window
+   vs full-batch median).
+
+### GPU placement
+
+| Node | Resource tag | Use |
+|------|-------------|-----|
+| `digilab-receiver` (`10.0.1.14`) | `accelerator_type:RTX` | Training (reserved) |
+| `digilab-transmit` (`10.0.1.34`) | `accelerator_type:G` | Serving (CloudInferDeployment pinned here) |
+| `panoseti-dfs{0,1,2}` | none | CPU fan-out, data pipeline |
+
+Pin serving to the gaming node: `ray_actor_options={"num_gpus": 1, "resources": {"accelerator_type:G": 0.001}}`.
+The Blackwell RTX 5070 requires CUDA ≥12.8 — confirmed available (drp env: cu130).
+
+### Running the streaming pipeline
+
+```bash
+# 1. Start the panoseti_grpc unified server with MLInference enabled.
+#    Edit server.toml: services.ml_inference = true  (or use a custom config)
+pseti-grpc server --config /path/to/server.toml
+
+# 2. (Optional) Start a simulate.py replay for testing with archived PFF data:
+#    (done internally by panoseti_grpc when daq_data.simulate_daq_cfg is set)
+
+# 3. Run the streaming pipeline (attach mode, gaming GPU, 60s cadence):
+pa-stream-cloud \
+    --model-path assets/models/cloud_detector_v1.pt \
+    --recipe recipes/stream_cloud_v1.yml \
+    --grpc-host localhost \
+    --archive-dir /mnt/beegfs/streams/
+
+# 4. (Optional) Subscribe to live predictions from another terminal:
+python -c "
+from panoseti_grpc.ml_inference.client import MLInferenceClient
+with MLInferenceClient() as c:
+    for p in c.stream_predictions():
+        print(p.module_id, p.cloud_score, p.cloud_label)
+"
+```
+
+### ML gRPC service
+
+New proto: `grpc/protos/ml_inference.proto` (package `panoseti.ml`, branch `feat/ml-inference-service`).
+
+| RPC | Direction | Description |
+|-----|-----------|-------------|
+| `EmitPrediction` | accumulator → servicer | Push one scored window |
+| `StreamPredictions` | client ← servicer | Live stream of all scores (filterable by module/model) |
+| `SubscribeAlerts` | client ← servicer | Only cloud-detected events (score ≥ alert_threshold) |
+
+Seams (commented, unimplemented): `TriggerCapture`, `MLInterrupt`, `MountControl`.
+
+Enable in the unified server: `services.ml_inference = true` in `server.toml`.
+
+### Streaming provenance
+
+* **Lightweight in-memory tags** on every `Prediction` proto: `model_name`, `model_version`,
+  model `checksum`, `recipe_hash`, `git_sha`, `calibration_maturity`.
+* **Full `processing_history` on archived windows-of-interest** (cloud-flagged windows):
+  `write_store(ds_l2, archive_dir/..., processing_history=[ProcessingStep(...)])` writes the
+  full chain (step_name="stream_cloud_infer", model provenance, recipe_hash, software) into
+  Zarr root attrs, then the store is PACK'd to ZipStore for the archive hop.
+
+### Future (c) HITL seam
+
+The streaming consumer is designed to work equally against a real Hashpipe DAQ system.
+Replace `simulate.py` replay with real hardware:
+1. Boot the Beelink head node / Quabo stack (see `control/TEST-HW-SW.md` to be authored).
+2. Start `pseti-grpc server --profile daq_node` on the DAQ node.
+3. Port-forward port 50051 (`HEADNODE_IP:HEADNODE_GRPC_PORT`).
+4. Run `pa-stream-cloud --grpc-host <daq-node-ip>` — no other code changes required.

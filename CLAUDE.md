@@ -79,6 +79,43 @@ nextflow run . -profile laptop --steps ingest,ml --input_obs_dir … --outdir �
 CLIs (also on `$PATH` inside Nextflow): `pa-convert`, `pa-calibrate`, `pa-hk`,
 `pa-manifest`, `pa-pack`.
 
+## Real-time streaming (RAL only — attach mode)
+
+The streaming pipeline consumes the live DaqData.StreamImages gRPC feed and emits
+cloud-detection scores in real time.  It runs **alongside** the batch pipeline on the
+same Ray cluster (attach mode, externally owned).  Ray Serve is a **persistent substrate**
+here (the scoped exception to the transient-cluster rule — the cluster is owned externally).
+
+```bash
+# 1. Start the panoseti_grpc unified server with DaqData + MLInference enabled:
+#    Edit grpc/src/panoseti_grpc/config/server.toml:  ml_inference = true
+pseti-grpc server                                   # or: pseti-grpc server --config custom.toml
+
+# 2. (Optional) For replay from archived PFF, configure simulate_daq_cfg in server.toml
+#    and point movie_pff_path to a file under /mnt/beegfs/data/L0/
+
+# 3. Run the streaming pipeline (gaming GPU, 60s cadence):
+pa-stream-cloud \
+    --model-path assets/models/cloud_detector_v1.pt \
+    --recipe recipes/stream_cloud_v1.yml \
+    --grpc-host localhost \
+    --archive-dir /mnt/beegfs/streams/
+
+# 4. Subscribe to live predictions (from another terminal):
+python -c "
+from panoseti_grpc.ml_inference.client import MLInferenceClient
+with MLInferenceClient() as c:
+    for p in c.stream_predictions():
+        print(p.module_id, p.cloud_score, p.cloud_label)
+"
+```
+
+**Ray Serve persistence note:** `pa-stream-cloud` deploys `CloudInferDeployment` onto the
+externally-owned cluster and **shuts it down** on exit (Ctrl-C).  It does NOT shut down the
+Ray cluster itself — the cluster remains for training jobs.  GPU placement: serving replica
+runs on `digilab-transmit` (`accelerator_type:G`); A6000s on `digilab-receiver` are reserved
+for training.
+
 ## Training on RAL
 
 RAL is bare-metal, no SLURM. Head: `radiopi5` (Pi 5). GPU nodes: `a6k` (2× RTX A6000 48 GB + 1 TB SSD), `gf` (RTX 4070 + RTX 5070 + 1 TB SSD). BeeGFS at `/mnt/beegfs`. The pipeline **attaches** to the user's pre-existing cluster — it never provisions RAL.
