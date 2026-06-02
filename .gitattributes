@@ -2,3 +2,8 @@
 *.nf.test linguist-language=nextflow
 modules/nf-core/** linguist-generated
 subworkflows/nf-core/** linguist-generated
+
+# Strip Jupyter notebook outputs on git add (prevents large PNG/data blobs in history).
+# One-time setup per clone: uv run nbstripout --install
+ml/**/*.ipynb filter=nbstripout
+notebooks/**/*.ipynb filter=nbstripout

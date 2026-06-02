@@ -264,6 +264,8 @@ ml/*/cache/
 ml/*/models/
 ml/*/legacy-src
 assets/models/cloud-detection-training/extracted/
+assets/models/cloud-detection-training/*.zip
+assets/models/cloud-detection-training/*.tar.gz
 
 # Secrets
 .env

@@ -63,6 +63,7 @@ dev = [
     "mypy",
     "jupyter>=1.1.1",
     "ipykernel>=7.2.0",
+    "nbstripout>=0.7",
 ]
 
 [tool.hatch.build.targets.wheel]
