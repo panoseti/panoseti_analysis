@@ -172,7 +172,7 @@ def run_train_cloud(
         if k in params_dict:
             train_config[k] = params_dict[k]
 
-    accelerator_type = scaling_cfg.get("accelerator_type", "A6000")
+    accelerator_type = scaling_cfg.get("accelerator_type", "G")
     num_workers = int(scaling_cfg.get("num_workers", 2))
     use_gpu = num_workers > 0 and torch.cuda.is_available()
 
@@ -185,7 +185,20 @@ def run_train_cloud(
     storage_path = str(out_dir / "ray_results")
     run_cfg = RunConfig(storage_path=storage_path)
 
-    init_ray(cast(Literal["attach", "slurm", "standalone"], launcher))
+    # Ship panoseti_analysis source to remote train workers via runtime_env.
+    # Ray Train workers run on remote nodes (e.g. digilab-transmit) that may not
+    # have panoseti_analysis installed; working_dir + PYTHONPATH makes it importable.
+    _repo_root = Path(__file__).resolve().parents[4]
+    _training_runtime_env = {
+        "working_dir": str(_repo_root),
+        "env_vars": {"PYTHONPATH": "src"},
+        "excludes": [
+            ".venv/", ".git/", "*.zarr/", "uv.lock", ".claude/",
+            "assets/models/cloud-detection-training/",
+            "ml/*/cache/", "ml/*/models/", "ml/*/data/",
+        ],
+    }
+    init_ray(cast(Literal["attach", "slurm", "standalone"], launcher), runtime_env=_training_runtime_env)
 
     trainer = TorchTrainer(
         train_loop_per_worker=train_loop_per_worker,

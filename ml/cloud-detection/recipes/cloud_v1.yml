@@ -15,7 +15,7 @@ hyperparams:
   gamma: 0.9
 scaling:
   num_workers: 2
-  accelerator_type: "A6000"
+  accelerator_type: "G"
 model_out_dir: "models/cloud_v1"
 cloud_model_pt: null # filled at inference time pointing to BeeGFS bundle
 cloud_model_json: null
