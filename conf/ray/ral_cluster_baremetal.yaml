@@ -1,0 +1,90 @@
+# PANOSETI RAL Ray Cluster — 5-node bare-metal configuration
+#
+# Runs Ray directly on the host Python (conda env 'drp', Python 3.14) — no Docker.
+# Each node's ~/.bashrc ends with `conda activate drp`, which Ray's SSH sessions
+# inherit via `bash --login -c -i 'source ~/.bashrc; ...'`.
+#
+# Use this if Docker is unavailable or if you prefer to avoid image management.
+# See ral_cluster.yaml for the Docker variant (Python 3.13, py313-gpu image).
+#
+# Usage:
+#   ray up conf/ray/ral_cluster_baremetal.yaml
+#   ray up conf/ray/ral_cluster_baremetal.yaml --no-restart
+#   ray status
+#   ray down conf/ray/ral_cluster_baremetal.yaml
+#
+# Dashboard: http://digilab-receiver:8265
+# Prometheus / Grafana: cd ~/ray-test && docker compose up -d
+
+cluster_name: pseti-ral
+
+# ── Provider ───────────────────────────────────────────────────────────────────
+provider:
+    type: local
+    head_ip: digilab-receiver
+    worker_ips:
+        - panoseti-dfs0
+        - panoseti-dfs1
+        - panoseti-dfs2
+        - digilab-transmit
+
+# ── Auth ───────────────────────────────────────────────────────────────────────
+auth:
+    ssh_user: nico
+    ssh_private_key: ~/.ssh/id_ed25519
+
+# ── Cluster size ───────────────────────────────────────────────────────────────
+# Setting min=max=4 (number of worker IPs) keeps all 4 workers running.
+# Autoscaler v2 counts the head as 1, so effective managed workers = 3.
+# digilab-transmit needs to be joined manually if needed (see docker variant comment).
+min_workers: 4
+max_workers: 4
+idle_timeout_minutes: 0
+
+# ── File sync ──────────────────────────────────────────────────────────────────
+file_mounts:
+    "/home/nico/panoseti_analysis": "/home/nico/panoseti_analysis"
+
+rsync_exclude:
+    - "**/.git"
+    - "**/.git/**"
+
+rsync_filter:
+    - ".gitignore"
+
+file_mounts_sync_continuously: False
+
+initialization_commands: []
+
+# ── Package setup ──────────────────────────────────────────────────────────────
+# Runs on the host (conda env 'drp').  pypff installed first — not on PyPI.
+setup_commands:
+    - pip install --quiet -e "/home/nico/panoseti_analysis/pypff[zarr]"
+    - pip install --quiet -e /home/nico/panoseti_analysis
+
+head_setup_commands: []
+worker_setup_commands: []
+
+# ── Ray start commands ─────────────────────────────────────────────────────────
+head_start_ray_commands:
+    - ray stop
+    - >-
+      GPU_COUNT=$(nvidia-smi -L 2>/dev/null | wc -l || echo 0) &&
+      ulimit -c unlimited &&
+      ray start --head --port=6379
+      --dashboard-host=0.0.0.0
+      --num-gpus=$GPU_COUNT
+      --resources='{"accelerator_type:G": 1}'
+      --autoscaling-config=~/ray_bootstrap_config.yaml
+
+worker_start_ray_commands:
+    - ray stop
+    - >-
+      GPU_COUNT=$(nvidia-smi -L 2>/dev/null | wc -l || echo 0) &&
+      EXTRA=$(case $(hostname) in
+          digilab-transmit) echo '{"accelerator_type:G": 1}' ;;
+          *) echo '{}' ;;
+      esac) &&
+      ray start --address=$RAY_HEAD_IP:6379
+      --num-gpus=$GPU_COUNT
+      --resources="$EXTRA"
