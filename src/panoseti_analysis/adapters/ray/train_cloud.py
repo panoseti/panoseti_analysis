@@ -67,7 +67,11 @@ def train_loop_per_worker(config: dict[str, Any]) -> None:
     )
     criterion = torch.nn.CrossEntropyLoss()
 
-    tracker = make_tracker(config, run_name=config.get("recipe_name", "cloud_train"))
+    # Only rank 0 logs to W&B — DDP runs the same loop on every GPU, so without
+    # this guard every worker creates its own W&B run and metrics appear doubled.
+    _is_chief = ray.train.get_context().get_local_rank() == 0
+    _tracker_config = config if _is_chief else {**config, "wandb_project": None}
+    tracker = make_tracker(_tracker_config, run_name=config.get("recipe_name", "cloud_train"))
 
     train_ds = torch.utils.data.TensorDataset(X_train, y_train)
     train_loader = torch.utils.data.DataLoader(

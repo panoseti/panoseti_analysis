@@ -1,7 +1,7 @@
 name: cloud_v1
 # Cloud detector — DEV / notebook recipe.  Quick iteration: fewer epochs, any-G GPU.
 # For production full training (50 epochs, A6000 GPUs) use: recipes/cloud_v1.yml
-wandb_entity: "nraultwang"
+wandb_entity: "nraultwang-mit-massachusetts-institute-of-technology"
 feature_cadence_s: 60.0
 threshold: 0.5
 split:
@@ -19,7 +19,7 @@ scaling:
   num_workers: 2
   # RTX pins training to digilab-receiver (A6000s), where the local feature
   # cache zarr lives.  Use "G" only after moving CACHE_ZARR to BeeGFS.
-  accelerator_type: "RTX"
+  accelerator_type: "G"
 model_out_dir: "models/cloud_v1"
 cloud_model_pt: null # filled at inference time pointing to BeeGFS bundle
 cloud_model_json: null
