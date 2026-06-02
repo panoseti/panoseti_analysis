@@ -8,8 +8,17 @@ This directory contains the documentation for the pipeline, describing how to us
 
 ## Documentation Index
 
-- [Usage](usage.md) - Instructions on how to run the pipeline, specify inputs, and available profiles.
-- [Output](output.md) - Description of the output directory structure and generated files.
-- [Storage Specification](storage_spec.md) - Detailed specifications for the Zarr L0/L1/L2 data products and schemas.
-- [ML Architecture](ml_architecture.md) - Design of the ML components, Ray distributed execution, and models.
-- [Contributing](CONTRIBUTING.md) - Guidelines for developers.
+| Document | Description |
+|----------|-------------|
+| [Usage](usage.md) | How to run the pipeline, input formats, and available Nextflow profiles |
+| [Output](output.md) | Output directory structure and generated file specifications |
+| [Storage Specification](storage_spec.md) | Zarr v3 L0/L1/L2 data product layouts, manifest schema, PACK conventions |
+| [ML Architecture](ml_architecture.md) | ML execution models (CPU/Ray/Serve), training system, real-time streaming |
+| [Provenance](provenance.md) | ProcessingStep schema, TrainingProvenance, recipe_hash, streaming tags |
+| [W&B Experiment Tracking](wandb.md) | Setting up Weights & Biases API key, .env file, offline mode |
+| [Contributing](CONTRIBUTING.md) | Developer guidelines, three-layer architecture rules, boundary lint |
+
+## ML Projects
+
+See [`ml/README.md`](../ml/README.md) for the ML project index.  
+See [`grpc/README.md`](../grpc/README.md) for gRPC service documentation (DAQ, ML inference).
