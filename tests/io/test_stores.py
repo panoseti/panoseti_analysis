@@ -171,13 +171,16 @@ class TestWriteStoreProcessingHistory:
 class TestWriteStoreSharding:
     """shard_factor=N must pack N dask-chunks into one shard file."""
 
-    def test_sharding_reduces_file_count(self, l0_img_ds: xr.Dataset, tmp_path: Path) -> None:
+    def test_sharding_reduces_file_count(
+        self, l0_img_ds: xr.Dataset, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """shard_factor=4 must produce fewer zarr files than shard_factor=0."""
+        import panoseti_analysis.io.stores as _stores
+        monkeypatch.setattr(_stores, "_TIME_CHUNK", 8)  # makes 60-frame fixture span multiple chunks
         out_un = tmp_path / "unsharded.zarr"
         out_sh = tmp_path / "sharded.zarr"
         write_store(l0_img_ds, out_un, shard_factor=0)
         write_store(l0_img_ds, out_sh, shard_factor=4)
-
         files_un = sum(1 for f in out_un.rglob("*") if f.is_file())
         files_sh = sum(1 for f in out_sh.rglob("*") if f.is_file())
         assert files_sh < files_un, (
