@@ -86,17 +86,26 @@ def write_store(
     if out_path.exists():
         shutil.rmtree(out_path)
 
-    # Drop any inherited (L0) chunk encoding, then rechunk time-like dims uniformly
-    # to _TIME_CHUNK (the inner-chunk size).  When sharding, shard covers shard_factor
-    # inner chunks, so each physical shard file = shard_factor x _TIME_CHUNK frames.
     ds = ds.drop_encoding()
-    time_chunks = {
-        str(d): min(int(ds.sizes[d]), _TIME_CHUNK) for d in ds.dims if d in _TIME_DIMS
-    }
+
+    # Rechunk time-like dims. When sharding, use the full shard size (_TIME_CHUNK *
+    # shard_factor) so each dask task maps to exactly one shard file — this prevents
+    # concurrent writes into the same shard (ShardingCodec is not thread-safe across
+    # tasks targeting the same shard). When not sharding, rechunk to _TIME_CHUNK.
+    if shard_factor > 0:
+        shard_frames = _TIME_CHUNK * shard_factor
+        time_chunks: dict[str, int] = {
+            str(d): min(int(ds.sizes[d]), shard_frames)
+            for d in ds.dims
+            if d in _TIME_DIMS
+        }
+    else:
+        time_chunks = {
+            str(d): min(int(ds.sizes[d]), _TIME_CHUNK) for d in ds.dims if d in _TIME_DIMS
+        }
     if time_chunks:
         ds = ds.chunk(time_chunks)
 
-    # Stamp processing_history into a shallow-copied attrs dict without mutating ds.
     if processing_history:
         new_attrs = dict(ds.attrs)
         new_attrs["processing_history"] = [s.model_dump() for s in processing_history]
@@ -114,19 +123,9 @@ def write_store(
                 continue
             if not hasattr(var.data, "chunks"):
                 continue
-            # Build shard shape: multiply time-like dims by shard_factor, leave spatial alone.
+            # shard shape == dask chunk shape: one dask task writes one shard file.
             dask_chunk = tuple(c[0] for c in var.data.chunks)
-            shard_shape = tuple(
-                c * shard_factor if str(var.dims[i]) in _TIME_DIMS else c
-                for i, c in enumerate(dask_chunk)
-            )
-            encoding[str(name)]["shards"] = shard_shape
+            encoding[str(name)]["shards"] = dask_chunk
 
-    if shard_factor > 0:
-        ds.to_zarr(
-            str(out_path), mode="w", zarr_format=3, consolidated=False,
-            encoding=encoding, safe_chunks=False,
-        )
-    else:
-        ds.to_zarr(str(out_path), mode="w", zarr_format=3, consolidated=False, encoding=encoding)
+    ds.to_zarr(str(out_path), mode="w", zarr_format=3, consolidated=False, encoding=encoding)
     return sum(f.stat().st_size for f in out_path.rglob("*") if f.is_file())

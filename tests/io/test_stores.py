@@ -181,11 +181,17 @@ class TestWriteStoreSharding:
         out_sh = tmp_path / "sharded.zarr"
         write_store(l0_img_ds, out_un, shard_factor=0)
         write_store(l0_img_ds, out_sh, shard_factor=4)
+
         files_un = sum(1 for f in out_un.rglob("*") if f.is_file())
         files_sh = sum(1 for f in out_sh.rglob("*") if f.is_file())
         assert files_sh < files_un, (
             f"Sharded ({files_sh}) must have fewer files than unsharded ({files_un})"
         )
+
+        # Data must round-trip correctly even with multiple shards (catches concurrent-write bugs).
+        back = open_store(out_sh)
+        np.testing.assert_array_equal(back["images"].values, l0_img_ds["images"].values)
+        np.testing.assert_array_equal(back["unix_t_ns"].values, l0_img_ds["unix_t_ns"].values)
 
     def test_sharded_roundtrip(self, l0_img_ds: xr.Dataset, tmp_path: Path) -> None:
         """Data written with sharding must read back identically."""
