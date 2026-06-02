@@ -103,7 +103,9 @@ def train_loop_per_worker(config: dict[str, Any]) -> None:
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_state = {k: v.clone() for k, v in model.state_dict().items()}
+            # Unwrap DDP to get bare keys (DDP wraps with "module." prefix).
+            raw = model.module if hasattr(model, "module") else model
+            best_state = {k: v.clone() for k, v in raw.state_dict().items()}
 
         # On the last epoch, rank 0 writes the best checkpoint so Ray can surface it.
         # All workers still call ray.train.report — it's a collective barrier and every

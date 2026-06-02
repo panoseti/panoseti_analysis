@@ -63,6 +63,10 @@ initialization_commands: []
 # onto CPU-only dfs nodes and filling their root partition.
 # --no-cache-dir: avoids accumulating pip download cache across ray-up runs.
 setup_commands:
+    # uv is used by Ray's runtime_env to build the per-job venv on each worker node.
+    # Without it, background PG-cleaner actors fail to start, leaving stale placement
+    # groups after training that hold GPUs and require manual cleanup.
+    - pip install --quiet --no-cache-dir uv
     - pip install --quiet --no-cache-dir -e "/home/nico/panoseti_analysis/pypff[zarr]"
     - pip install --quiet --no-cache-dir -e /home/nico/panoseti_analysis --no-deps
 
@@ -78,7 +82,7 @@ head_start_ray_commands:
       ray start --head --port=6379
       --dashboard-host=0.0.0.0
       --num-gpus=$GPU_COUNT
-      --resources='{"accelerator_type:G": 1}'
+      --resources='{"accelerator_type:G": 1, "accelerator_type:RTX": 2}'
       --autoscaling-config=~/ray_bootstrap_config.yaml
 
 worker_start_ray_commands:
