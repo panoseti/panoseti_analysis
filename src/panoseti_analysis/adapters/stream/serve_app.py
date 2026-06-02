@@ -8,7 +8,7 @@ This is a PERSISTENT Ray Serve deployment that:
 
 GPU placement
 -------------
-The deployment is pinned to the gaming-node (digilab-transmit, `accelerator_type:G`)
+The deployment is pinned to the gaming-node (digilab-transmit, `accelerator_type:RTX`)
 by default via ray_actor_options, keeping the A6000s free for training.
 Override with the node_ip or num_gpus arguments if needed.
 
@@ -59,7 +59,7 @@ def _serve_deployment(*args: Any, **kwargs: Any) -> Any:  # type: ignore[return]
 
 @_serve_deployment(
     name="CloudInferDeployment",
-    # GPU placement: pin to the gaming node (has accelerator_type:G custom resource).
+    # GPU placement: pin to the gaming node (has accelerator_type:RTX custom resource).
     # Serve controller runs on the head (receiver); replicas land on the gaming node.
     #
     # NOTE: panoseti_analysis + panoseti_grpc source is shipped to workers via
@@ -68,7 +68,7 @@ def _serve_deployment(*args: Any, **kwargs: Any) -> Any:  # type: ignore[return]
     # requires working_dir at job level, not per-actor.
     ray_actor_options={
         "num_gpus": 1,
-        "resources": {"accelerator_type:G": 0.001},
+        "resources": {"accelerator_type:RTX": 0.001},
     },
     max_ongoing_requests=8,
     autoscaling_config=None,  # fixed 1 replica by default
@@ -166,7 +166,7 @@ def deploy_cloud_infer(
         Number of inference replicas.  1 is sufficient for 60s cadence.
     gpu_node_ip : str | None
         If set, pin replicas to this specific node IP instead of using the
-        accelerator_type:G resource constraint.  Useful for testing on the
+        accelerator_type:RTX resource constraint.  Useful for testing on the
         head node.
 
     Returns
@@ -178,7 +178,7 @@ def deploy_cloud_infer(
     if gpu_node_ip is not None:
         ray_actor_opts["resources"] = {f"node:{gpu_node_ip}": 0.001}
     else:
-        ray_actor_opts["resources"] = {"accelerator_type:G": 0.001}
+        ray_actor_opts["resources"] = {"accelerator_type:RTX": 0.001}
 
     deployment = CloudInferDeployment.options(  # type: ignore[attr-defined]
         num_replicas=num_replicas,

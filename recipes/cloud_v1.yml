@@ -1,5 +1,5 @@
 name: cloud_v1
-# Cloud detector — PRODUCTION recipe.  Full training: 50 epochs, A6000 GPUs (accelerator_type:RTX).
+# Cloud detector — PRODUCTION recipe.  Full training: 50 epochs, A6000 GPUs (accelerator_type:G).
 # For quick notebook iteration use: ml/cloud-detection/recipes/cloud_v1.yml
 feature_cadence_s: 60.0
 threshold: 0.5
@@ -16,7 +16,7 @@ hyperparams:
   gamma: 0.9
 scaling:
   num_workers: 2
-  accelerator_type: "RTX"
+  accelerator_type: "G"
 model_out_dir: "models/cloud_v1"
 cloud_model_pt: null # filled at inference time pointing to BeeGFS bundle
 cloud_model_json: null

@@ -113,14 +113,14 @@ with MLInferenceClient() as c:
 **Ray Serve persistence note:** `pa-stream-cloud` deploys `CloudInferDeployment` onto the
 externally-owned cluster and **shuts it down** on exit (Ctrl-C).  It does NOT shut down the
 Ray cluster itself — the cluster remains for training jobs.  GPU placement: serving replica
-runs on `digilab-transmit` (`accelerator_type:G`); A6000s on `digilab-receiver` are reserved
+runs on `digilab-transmit` (`accelerator_type:RTX`); A6000s on `digilab-receiver` are reserved
 for training.
 
 ## Training on RAL
 
 RAL is bare-metal, no SLURM. 5 nodes:
-- **`digilab-receiver`** (head, 2× RTX A6000 48 GB + 1 TB SSD NVMe, `accelerator_type:RTX` — training; runs dashboard docker-compose)
-- **`digilab-transmit`** (gaming GPU, `accelerator_type:G` — Ray Serve inference)
+- **`digilab-receiver`** (head, 2× RTX A6000 48 GB + 1 TB SSD NVMe, `accelerator_type:G` — training; runs dashboard docker-compose)
+- **`digilab-transmit`** (2× consumer RTX GPU, `accelerator_type:RTX` — Ray Serve inference)
 - **`panoseti-dfs0`**, **`panoseti-dfs1`**, **`panoseti-dfs2`** (BeeGFS storage nodes, CPU-only)
 
 BeeGFS at `/mnt/beegfs`.

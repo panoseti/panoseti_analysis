@@ -16,5 +16,5 @@ hyperparams:
   weight_decay: 0.0
 scaling:
   num_workers: 2
-  accelerator_type: "A6000"
+  accelerator_type: "G"
 model_out_dir: "models/vae_v1"

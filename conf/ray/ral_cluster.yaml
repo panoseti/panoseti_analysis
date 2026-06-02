@@ -126,17 +126,11 @@ head_start_ray_commands:
       ray start --head --port=6379
       --dashboard-host=0.0.0.0
       --num-gpus=$GPU_COUNT
-      --resources='{"accelerator_type:G": 1}'
       --autoscaling-config=~/ray_bootstrap_config.yaml
 
 worker_start_ray_commands:
     - ray stop
     - >-
       GPU_COUNT=$(nvidia-smi -L 2>/dev/null | wc -l || echo 0) &&
-      EXTRA=$(case $(hostname) in
-          digilab-transmit) echo '{"accelerator_type:G": 1}' ;;
-          *) echo '{}' ;;
-      esac) &&
       ray start --address=$RAY_HEAD_IP:6379
       --num-gpus=$GPU_COUNT
-      --resources="$EXTRA"
