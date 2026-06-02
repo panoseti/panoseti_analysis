@@ -1,4 +1,37 @@
+# Local-first linting: ruff/ruff-format/nbstripout run on commit, mypy on push.
+# Install both stages once with `uv run pre-commit install` (see Makefile `hooks-install`).
+default_install_hook_types: [pre-commit, pre-push]
+
 repos:
+  # ── Python: ruff + mypy + notebook hygiene (project venv via uv) ──────────────
+  # Local hooks call `uv run`, so the hook versions always match the dev
+  # dependency group — no rev drift between pre-commit and CI.
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi, jupyter]
+        require_serial: false
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --force-exclude
+        language: system
+        types_or: [python, pyi, jupyter]
+      - id: nbstripout
+        name: nbstripout
+        entry: uv run nbstripout
+        language: system
+        files: \.ipynb$
+      - id: mypy
+        name: mypy (src)
+        entry: uv run mypy src/panoseti_analysis
+        language: system
+        pass_filenames: false
+        types: [python]
+        stages: [pre-push]
+
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: "v3.1.0"
     hooks:

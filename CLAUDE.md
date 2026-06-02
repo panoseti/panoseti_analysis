@@ -62,8 +62,10 @@ Ray is opt-in per process via a `gpu_ray` label. Processes that don't need distr
 
 ```bash
 uv sync                                   # create .venv, install workspace
+uv run pre-commit install                 # one-time: install local lint hooks (ruff/format/nbstripout on commit, mypy on push)
 uv run pytest                             # Python unit + integration tests
 uv run ruff check src tests && uv run mypy src/panoseti_analysis
+make check                                # lint + format + typecheck + test in one shot (see `make help`)
 
 # Ingest pipeline (laptop, bundled test data):
 nextflow run . -profile test,laptop --outdir results_smoke
@@ -82,8 +84,8 @@ CLIs (also on `$PATH` inside Nextflow): `pa-convert`, `pa-calibrate`, `pa-hk`,
 ## Real-time streaming (RAL only — attach mode)
 
 The streaming pipeline consumes the live DaqData.StreamImages gRPC feed and emits
-cloud-detection scores in real time.  It runs **alongside** the batch pipeline on the
-same Ray cluster (attach mode, externally owned).  Ray Serve is a **persistent substrate**
+cloud-detection scores in real time. It runs **alongside** the batch pipeline on the
+same Ray cluster (attach mode, externally owned). Ray Serve is a **persistent substrate**
 here (the scoped exception to the transient-cluster rule — the cluster is owned externally).
 
 ```bash
@@ -111,14 +113,15 @@ with MLInferenceClient() as c:
 ```
 
 **Ray Serve persistence note:** `pa-stream-cloud` deploys `CloudInferDeployment` onto the
-externally-owned cluster and **shuts it down** on exit (Ctrl-C).  It does NOT shut down the
-Ray cluster itself — the cluster remains for training jobs.  GPU placement: serving replica
+externally-owned cluster and **shuts it down** on exit (Ctrl-C). It does NOT shut down the
+Ray cluster itself — the cluster remains for training jobs. GPU placement: serving replica
 runs on `digilab-transmit` (`accelerator_type:RTX`); A6000s on `digilab-receiver` are reserved
 for training.
 
 ## Training on RAL
 
 RAL is bare-metal, no SLURM. 5 nodes:
+
 - **`digilab-receiver`** (head, 2× RTX A6000 48 GB + 1 TB SSD NVMe, `accelerator_type:G` — training; runs dashboard docker-compose)
 - **`digilab-transmit`** (2× consumer RTX GPU, `accelerator_type:RTX` — Ray Serve inference)
 - **`panoseti-dfs0`**, **`panoseti-dfs1`**, **`panoseti-dfs2`** (BeeGFS storage nodes, CPU-only)
@@ -126,6 +129,7 @@ RAL is bare-metal, no SLURM. 5 nodes:
 BeeGFS at `/mnt/beegfs`.
 
 **Starting the cluster** (replaces manual `ray start` in tmux):
+
 ```bash
 ray up conf/ray/ral_cluster.yaml           # start / reconnect all 5 nodes
 ray up conf/ray/ral_cluster.yaml --no-restart  # attach without restarting Ray

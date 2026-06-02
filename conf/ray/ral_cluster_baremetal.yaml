@@ -20,18 +20,18 @@ cluster_name: pseti-ral
 
 # ── Provider ───────────────────────────────────────────────────────────────────
 provider:
-    type: local
-    head_ip: digilab-receiver
-    worker_ips:
-        - digilab-transmit       # digilab-transmit — explicit IP avoids hostname-resolution flakiness 10.0.1.34
-        - panoseti-dfs2
-        - panoseti-dfs1
-        - panoseti-dfs0
+  type: local
+  head_ip: digilab-receiver
+  worker_ips:
+    - 10.0.1.34 # digilab-transmit — explicit IP avoids hostname-resolution flakiness under autoscaler v2
+    - panoseti-dfs2
+    - panoseti-dfs1
+    - panoseti-dfs0
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
 auth:
-    ssh_user: nico
-    ssh_private_key: ~/.ssh/id_ed25519
+  ssh_user: nico
+  ssh_private_key: ~/.ssh/id_ed25519
 
 # ── Cluster size ───────────────────────────────────────────────────────────────
 # Autoscaler v2 counts the head node as 1 toward the total.  With 4 worker IPs,
@@ -43,14 +43,32 @@ idle_timeout_minutes: 0
 
 # ── File sync ──────────────────────────────────────────────────────────────────
 file_mounts:
-    "/home/nico/panoseti_analysis": "/home/nico/panoseti_analysis"
+  "/home/nico/panoseti_analysis": "/home/nico/panoseti_analysis"
 
 rsync_exclude:
-    - "**/.git"
-    - "**/.git/**"
+  - "**/.git"
+  - "**/.git/**"
+  # Belt-and-suspenders for the rsync_filter:.gitignore guard below. Relying on .gitignore
+  # ALONE to keep 100+ GB off every worker is fragile (one un-ignored large dir → a
+  # multi-GB rsync to all 4 nodes on every `ray up`). These patterns match by final path
+  # component (no leading slash) except the anchored ml/* ones.
+  - "work" # ~118 GB Nextflow work dir
+  - ".venv" # ~6 GB local virtualenv
+  - ".mypy_cache"
+  - ".ruff_cache"
+  - ".claude"
+  - "__pycache__"
+  - ".ipynb_checkpoints"
+  - "*.zarr" # demo/test stores; workers read zarr from BeeGFS
+  - "results"
+  - "results_*"
+  - "ml/*/data" # ~40 GB cloud-detection demo data
+  - "ml/*/cache"
+  - "ml/*/models"
+  - "assets/models/cloud-detection-training"
 
 rsync_filter:
-    - ".gitignore"
+  - ".gitignore"
 
 file_mounts_sync_continuously: False
 
@@ -63,30 +81,30 @@ initialization_commands: []
 # onto CPU-only dfs nodes and filling their root partition.
 # --no-cache-dir: avoids accumulating pip download cache across ray-up runs.
 setup_commands:
-    # uv is used by Ray's runtime_env to build the per-job venv on each worker node.
-    # Without it, background PG-cleaner actors fail to start, leaving stale placement
-    # groups after training that hold GPUs and require manual cleanup.
-    - pip install --quiet --no-cache-dir uv
-    - pip install --quiet --no-cache-dir -e "/home/nico/panoseti_analysis/pypff[zarr]"
-    - pip install --quiet --no-cache-dir -e /home/nico/panoseti_analysis --no-deps
+  # uv is used by Ray's runtime_env to build the per-job venv on each worker node.
+  # Without it, background PG-cleaner actors fail to start, leaving stale placement
+  # groups after training that hold GPUs and require manual cleanup.
+  - pip install --quiet --no-cache-dir uv
+  - pip install --quiet --no-cache-dir -e "/home/nico/panoseti_analysis/pypff[zarr]"
+  - pip install --quiet --no-cache-dir -e /home/nico/panoseti_analysis --no-deps
 
 head_setup_commands: []
 worker_setup_commands: []
 
 # ── Ray start commands ─────────────────────────────────────────────────────────
 head_start_ray_commands:
-    - ray stop
-    - >-
-      GPU_COUNT=$(nvidia-smi -L 2>/dev/null | wc -l || echo 0) &&
-      ulimit -c unlimited &&
-      ray start --head --port=6379
-      --dashboard-host=0.0.0.0
-      --num-gpus=$GPU_COUNT
-      --autoscaling-config=~/ray_bootstrap_config.yaml
+  - ray stop
+  - >-
+    GPU_COUNT=$(nvidia-smi -L 2>/dev/null | wc -l || echo 0) &&
+    ulimit -c unlimited &&
+    ray start --head --port=6379
+    --dashboard-host=0.0.0.0
+    --num-gpus=$GPU_COUNT
+    --autoscaling-config=~/ray_bootstrap_config.yaml
 
 worker_start_ray_commands:
-    - ray stop
-    - >-
-      GPU_COUNT=$(nvidia-smi -L 2>/dev/null | wc -l || echo 0) &&
-      ray start --address=$RAY_HEAD_IP:6379
-      --num-gpus=$GPU_COUNT
+  - ray stop
+  - >-
+    GPU_COUNT=$(nvidia-smi -L 2>/dev/null | wc -l || echo 0) &&
+    ray start --address=$RAY_HEAD_IP:6379
+    --num-gpus=$GPU_COUNT

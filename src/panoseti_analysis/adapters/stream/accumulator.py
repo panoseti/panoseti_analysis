@@ -175,9 +175,7 @@ class FrameAccumulator:
 
     def stats(self) -> dict[str, Any]:
         """Return accumulator statistics for monitoring / debugging."""
-        ts_range = (
-            (self._buffer[0][0], self._buffer[-1][0]) if len(self._buffer) >= 2 else (0, 0)
-        )
+        ts_range = (self._buffer[0][0], self._buffer[-1][0]) if len(self._buffer) >= 2 else (0, 0)
         return {
             "module_id": self.module_id,
             "data_product": self.data_product,
@@ -233,8 +231,8 @@ class FrameAccumulator:
         """
         import asyncio
 
-        from panoseti_analysis.algorithms.calibrate_img import ImgCalibParams, calibrate_img
-        from panoseti_analysis.config.models import CloudInferParams
+        from panoseti_analysis.algorithms.calibrate_img import calibrate_img
+        from panoseti_analysis.config.models import CloudInferParams, ImgCalibParams
 
         # 1. Build raw Dataset
         timestamps = np.array([ts for ts, _ in window_frames], dtype=np.int64)
@@ -264,7 +262,10 @@ class FrameAccumulator:
         if result is None or len(result.data_vars) == 0:
             logger.warning(
                 "Serve returned empty result for module=%d dp=%s t=[%d,%d]",
-                self.module_id, self.data_product, t_start, t_end,
+                self.module_id,
+                self.data_product,
+                t_start,
+                t_end,
             )
             return
 
@@ -277,8 +278,13 @@ class FrameAccumulator:
 
         logger.info(
             "Window emitted: module=%d dp=%s t=[%d,%d] score=%.3f label=%s maturity=%.2f",
-            self.module_id, self.data_product, t_start, t_end,
-            cloud_score, cloud_label, maturity,
+            self.module_id,
+            self.data_product,
+            t_start,
+            t_end,
+            cloud_score,
+            cloud_label,
+            maturity,
         )
 
         # 5. Emit to ML gRPC service (EmitPrediction)
@@ -348,7 +354,7 @@ class FrameAccumulator:
                 "calibration_maturity": maturity,
                 "windows_emitted": self._windows_emitted,
             }
-            with TelemetryClient(self._telemetry_host, self._telemetry_port) as client:
+            with TelemetryClient(self._telemetry_host, self._telemetry_port) as client:  # type: ignore[attr-defined]  # grpc client is a context manager at runtime but untyped
                 client.log_flexible(
                     device_type="DEV_ml_predictions",
                     device_id=f"module_{self.module_id}_{self.data_product}",
@@ -366,8 +372,7 @@ class FrameAccumulator:
 
             assert self._archive_dir is not None
             store_name = (
-                f"stream.module_{self.module_id}.{self.data_product}"
-                f".t{t_start}_{t_end}.cloud.zarr"
+                f"stream.module_{self.module_id}.{self.data_product}.t{t_start}_{t_end}.cloud.zarr"
             )
             out = self._archive_dir / store_name
             step = ProcessingStep(
@@ -398,6 +403,6 @@ class FrameAccumulator:
 try:
     import ray as _ray
 
-    FrameAccumulator = _ray.remote(FrameAccumulator)
+    FrameAccumulator = _ray.remote(FrameAccumulator)  # type: ignore[misc,assignment]  # @ray.remote rebinds the class to an ActorClass at runtime
 except ModuleNotFoundError:
     pass  # Ray not installed; FrameAccumulator is a plain class (useful for unit tests)

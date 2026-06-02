@@ -29,7 +29,7 @@ import logging
 import tarfile
 import zipfile
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Any
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,7 @@ import xarray as xr
 
 from panoseti_analysis.config.models import ProcessingStep
 from panoseti_analysis.config.recipes import load_recipe
-from panoseti_analysis.io.provenance import append_step, capture_software, now_utc
+from panoseti_analysis.io.provenance import capture_software, now_utc
 from panoseti_analysis.io.stores import write_store
 
 logger = logging.getLogger(__name__)
@@ -147,8 +147,7 @@ def _load_batch_labels(
     label_candidates = list(labels_dir.glob(label_pattern))
     if not label_candidates:
         raise FileNotFoundError(
-            f"No labeled CSV found for batch {batch_id} in {labels_dir}. "
-            f"Pattern: {label_pattern}"
+            f"No labeled CSV found for batch {batch_id} in {labels_dir}. Pattern: {label_pattern}"
         )
     labels_df = pd.read_csv(label_candidates[0], index_col=0)
 
@@ -163,15 +162,15 @@ def _load_batch_labels(
     feat_pattern = f"task_cloud-detection.batch-id_{batch_id}.type_feature.csv"
     feat_candidates = list(batch_dir.glob(feat_pattern))
     if not feat_candidates:
-        raise FileNotFoundError(
-            f"Feature index CSV '{feat_pattern}' not found in {batch_dir}"
-        )
+        raise FileNotFoundError(f"Feature index CSV '{feat_pattern}' not found in {batch_dir}")
     feat_df = pd.read_csv(feat_candidates[0], index_col=0)[["feature_uid", "pano_uid"]]
 
     merged = labels_df.merge(feat_df, on="feature_uid", how="left")
     missing_pano = merged["pano_uid"].isna().sum()
     if missing_pano > 0:
-        logger.warning("Batch %d: %d labels have no pano_uid mapping, skipping.", batch_id, missing_pano)
+        logger.warning(
+            "Batch %d: %d labels have no pano_uid mapping, skipping.", batch_id, missing_pano
+        )
         merged = merged.dropna(subset=["pano_uid"])
 
     return merged[["feature_uid", "pano_uid", "label_int"]].reset_index(drop=True)
@@ -197,6 +196,7 @@ def _load_features(batch_dir: Path, pano_uid: str) -> tuple[np.ndarray, np.ndarr
         # Feature files live at: pano_imgs/<run_dir>/<feature_type>/pano-uid_*.npy
         feature_dir_pattern = batch_dir / "pano_imgs" / "*" / feature_type
         import glob as _glob
+
         candidates = _glob.glob(f"{feature_dir_pattern}/{prefix}.feature-type_{feature_type}.npy")
         if not candidates:
             raise FileNotFoundError(
@@ -241,7 +241,7 @@ def build_legacy_feature_cache(
     extract_dir.mkdir(parents=True, exist_ok=True)
 
     # Load recipe for split params (optional)
-    split_params: dict = {}
+    split_params: dict[str, Any] = {}
     recipe_hash = "sha256:builtin"
     recipe_name = "default"
     if recipe_path is not None:
@@ -290,7 +290,9 @@ def build_legacy_feature_cache(
     X = np.stack(all_X, axis=0)  # (N, 2, 32, 32)
     y = np.array(all_y, dtype=np.int64)
     batch_arr = np.array(all_batch, dtype=np.int64)
-    typer.echo(f"[prep] Total samples: {N} (clear={int((y==0).sum())}, cloudy={int((y==1).sum())})")
+    typer.echo(
+        f"[prep] Total samples: {N} (clear={int((y == 0).sum())}, cloudy={int((y == 1).sum())})"
+    )
 
     # Step 3: Assign splits
     # Use shuffled stratified split (no unix_t_ns available for temporal split)
@@ -305,8 +307,8 @@ def build_legacy_feature_cache(
     split_arr = split_arr.astype(str)
 
     typer.echo(
-        f"[prep] Split: train={int((split_arr=='train').sum())} "
-        f"val={int((split_arr=='val').sum())} test={int((split_arr=='test').sum())}"
+        f"[prep] Split: train={int((split_arr == 'train').sum())} "
+        f"val={int((split_arr == 'val').sum())} test={int((split_arr == 'test').sum())}"
     )
 
     # Step 4: Build xr.Dataset
@@ -365,15 +367,17 @@ def main(
         typer.Option("--out", help="Output feature-cache Zarr path"),
     ],
     extract_dir: Annotated[
-        Optional[Path],
-        typer.Option("--extract-dir", help="Directory for zip extraction (default: <out>/../cache)"),
+        Path | None,
+        typer.Option(
+            "--extract-dir", help="Directory for zip extraction (default: <out>/../cache)"
+        ),
     ] = None,
     recipe: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--recipe", help="Recipe YAML for split params"),
     ] = None,
     batch_ids: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--batch-ids",
             help="Comma-separated batch IDs (0–7). Default: all available.",
@@ -404,7 +408,7 @@ def main(
             parsed_batch_ids = [int(b.strip()) for b in batch_ids.split(",") if b.strip()]
         except ValueError as e:
             typer.echo(f"[ERROR] --batch-ids parse error: {e}", err=True)
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
     else:
         parsed_batch_ids = list(range(8))  # batches 0–7 are in the zip
 

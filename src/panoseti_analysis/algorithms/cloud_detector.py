@@ -24,43 +24,87 @@ class CloudDetection(nn.Module):
         conv1_nker = 28
         conv1_kernel_size = 3
         self.conv1 = nn.Sequential(
-            nn.Conv2d(self.input_shape[0], conv1_nker, conv1_kernel_size, stride=1, padding='same', groups=conv1_groups),
+            nn.Conv2d(
+                self.input_shape[0],
+                conv1_nker,
+                conv1_kernel_size,
+                stride=1,
+                padding="same",
+                groups=conv1_groups,
+            ),
             nn.ReLU(),
             nn.BatchNorm2d(conv1_nker),
             nn.Dropout2d(p=0.5),
-
-            nn.Conv2d(conv1_nker, conv1_nker, conv1_kernel_size, stride=1, padding='same', groups=conv1_groups),
+            nn.Conv2d(
+                conv1_nker,
+                conv1_nker,
+                conv1_kernel_size,
+                stride=1,
+                padding="same",
+                groups=conv1_groups,
+            ),
             nn.ReLU(),
             nn.BatchNorm2d(conv1_nker),
             nn.Dropout2d(p=0.5),
-
-            nn.Conv2d(conv1_nker, conv1_nker, conv1_kernel_size, stride=1, padding='same', groups=conv1_groups),
+            nn.Conv2d(
+                conv1_nker,
+                conv1_nker,
+                conv1_kernel_size,
+                stride=1,
+                padding="same",
+                groups=conv1_groups,
+            ),
             nn.ReLU(),
             nn.BatchNorm2d(conv1_nker),
             nn.Dropout2d(p=0.5),
-
-            nn.Conv2d(conv1_nker, conv1_nker, conv1_kernel_size, stride=1, padding='same', groups=conv1_groups),
+            nn.Conv2d(
+                conv1_nker,
+                conv1_nker,
+                conv1_kernel_size,
+                stride=1,
+                padding="same",
+                groups=conv1_groups,
+            ),
             nn.ReLU(),
             nn.BatchNorm2d(conv1_nker),
             nn.MaxPool2d(kernel_size=3),
-            nn.Dropout2d(p=0.5)
+            nn.Dropout2d(p=0.5),
         )
 
         conv2_groups = 1
         conv2_nker = 27
         conv2_kernel_size = 5
         self.conv2 = nn.Sequential(
-            nn.Conv2d(conv1_nker, conv2_nker, conv2_kernel_size, stride=1, padding='same', groups=conv2_groups),
+            nn.Conv2d(
+                conv1_nker,
+                conv2_nker,
+                conv2_kernel_size,
+                stride=1,
+                padding="same",
+                groups=conv2_groups,
+            ),
             nn.ReLU(),
             nn.BatchNorm2d(conv2_nker),
             nn.Dropout2d(p=0.5),
-
-            nn.Conv2d(conv2_nker, conv2_nker, conv2_kernel_size, stride=1, padding='same', groups=conv2_groups),
+            nn.Conv2d(
+                conv2_nker,
+                conv2_nker,
+                conv2_kernel_size,
+                stride=1,
+                padding="same",
+                groups=conv2_groups,
+            ),
             nn.ReLU(),
             nn.BatchNorm2d(conv2_nker),
             nn.Dropout2d(p=0.5),
-
-            nn.Conv2d(conv2_nker, conv2_nker, conv2_kernel_size, stride=1, padding='same', groups=conv2_groups),
+            nn.Conv2d(
+                conv2_nker,
+                conv2_nker,
+                conv2_kernel_size,
+                stride=1,
+                padding="same",
+                groups=conv2_groups,
+            ),
             nn.ReLU(),
             nn.BatchNorm2d(conv2_nker),
             nn.MaxPool2d(kernel_size=3),
@@ -74,12 +118,10 @@ class CloudDetection(nn.Module):
             nn.ReLU(),
             nn.BatchNorm1d(128),
             nn.Dropout1d(p=0.5),
-
             nn.Linear(128, 84),
             nn.ReLU(),
             nn.BatchNorm1d(84),
             nn.Dropout1d(p=0.5),
-
             nn.Linear(84, 2),
         )
 
@@ -103,15 +145,30 @@ def _batch_apply_fft(batch: np.ndarray, hann_3d: np.ndarray) -> np.ndarray:
     return np.nan_to_num(log_mag, neginf=0.0).astype(np.float32)
 
 
-def _stack_windows(img: np.ndarray, indices: np.ndarray, n_stack: int, n_ts: int) -> np.ndarray:
-    """Stack n_stack frames starting at each index; shape (N, H, W)."""
+def _window_sums(
+    sub: np.ndarray, needed: np.ndarray, indices: np.ndarray, n_stack: int, n_ts: int
+) -> np.ndarray:
+    """Sum ``n_stack`` frames per window from pre-gathered frames.
+
+    ``sub`` holds exactly the frames at row indices ``needed`` (sorted, unique). For each
+    window start ``idx`` in ``indices`` this returns ``sum(img[idx : min(idx+n_stack, n_ts)])``
+    — bit-identical to the old contiguous slice-sum, but it only ever touches the frames the
+    windows actually reference, so the caller never materialises the whole store.
+
+    Windows are grouped by their valid-frame count ``k`` so each group sums *exactly* ``k``
+    frames (no zero-padding): padding with zeros would change numpy's pairwise-summation tree
+    for truncated tail windows and break bit-equivalence with the original kernel.
+    """
     n = len(indices)
-    h, w = img.shape[1], img.shape[2]
-    out = np.zeros((n, h, w), dtype=np.float64)
-    for i, idx in enumerate(indices):
-        end = min(idx + n_stack, n_ts)
-        out[i] = img[idx:end].sum(axis=0)
-    return out.astype(np.float32)
+    h, w = sub.shape[1], sub.shape[2]
+    out = np.empty((n, h, w), dtype=np.float32)
+    rows = indices[:, None] + np.arange(n_stack)  # (N, n_stack) absolute frame indices
+    counts = np.minimum(indices + n_stack, n_ts) - indices  # valid frames per window (>=1)
+    for k in np.unique(counts):
+        sel = counts == k
+        pos = np.searchsorted(needed, rows[sel, : int(k)])  # (m, k) positions into ``sub``
+        out[sel] = sub[pos].sum(axis=1).astype(np.float32)  # sum exactly k contiguous frames
+    return out  # (N, H, W)
 
 
 def extract_cloud_features(
@@ -124,7 +181,7 @@ def extract_cloud_features(
         X: float32 array of shape (N, 2, H, W) — [deriv_fft, raw_fft] channels
         t_centers: int64 array of shape (N,) — center timestamps in nanoseconds
     """
-    img = ds["median_subtracted"].values  # (T, H, W)
+    da = ds["median_subtracted"]  # lazy (T, H, W) — only the referenced frames are loaded below
     unix_t_ns = ds["unix_t_ns"].values
 
     t_start = unix_t_ns[0]
@@ -156,11 +213,23 @@ def extract_cloud_features(
     if len(t_centers) == 0:
         return np.empty((0, 2, 32, 32), dtype=np.float32), np.array([], dtype=np.int64)
 
-    curr_imgs = _stack_windows(img, idx_curr_arr, n_stack, n_ts)   # (N, H, W)
-    prev_imgs = _stack_windows(img, idx_prev_arr, n_stack, n_ts)   # (N, H, W)
-    diff_imgs = curr_imgs - prev_imgs                               # (N, H, W)
+    # Gather only the frames the windows actually reference, instead of loading the whole
+    # (potentially multi-TB) store. Both curr and prev windows stack n_stack contiguous
+    # frames from their start index (truncated at n_ts).
+    rows_curr = idx_curr_arr[:, None] + np.arange(n_stack)
+    rows_prev = idx_prev_arr[:, None] + np.arange(n_stack)
+    needed = np.unique(np.concatenate([rows_curr.ravel(), rows_prev.ravel()]))
+    needed = needed[needed < n_ts]
+    time_dim = da.dims[0]  # positional time axis, matching the original .values semantics
+    sub = da.isel(
+        {time_dim: needed}
+    ).values  # (len(needed), H, W) — native dtype, referenced frames only
 
-    features_fft_arr = _batch_apply_fft(curr_imgs, hann_3d)        # (N, H, W)
+    curr_imgs = _window_sums(sub, needed, idx_curr_arr, n_stack, n_ts)  # (N, H, W)
+    prev_imgs = _window_sums(sub, needed, idx_prev_arr, n_stack, n_ts)  # (N, H, W)
+    diff_imgs = curr_imgs - prev_imgs  # (N, H, W)
+
+    features_fft_arr = _batch_apply_fft(curr_imgs, hann_3d)  # (N, H, W)
     features_deriv_fft_arr = _batch_apply_fft(diff_imgs, hann_3d)  # (N, H, W)
 
     X = np.stack([features_deriv_fft_arr, features_fft_arr], axis=1)  # (N, 2, H, W)
@@ -169,9 +238,7 @@ def extract_cloud_features(
 
 
 def predict_cloud_score(
-    ds: xr.Dataset,
-    model: torch.nn.Module,
-    params: CloudInferParams
+    ds: xr.Dataset, model: torch.nn.Module, params: CloudInferParams
 ) -> xr.Dataset:
     """Run cloud detection inference over an L1 movie-mode dataset.
 
@@ -194,20 +261,26 @@ def predict_cloud_score(
     X, t_centers = extract_cloud_features(ds, params)
 
     if len(t_centers) == 0:
-        return xr.Dataset({
-            "cloud_score": (["T_l2"], np.array([], dtype=np.float32)),
-            "cloud_label": (["T_l2"], np.array([], dtype=np.uint8)),
-            "feature_raw_fft": (["T_l2", "H", "W"], np.empty((0, 32, 32), dtype=np.float32)),
-            "feature_deriv_fft": (["T_l2", "H", "W"], np.empty((0, 32, 32), dtype=np.float32)),
-            "unix_t_ns": (["T_l2"], np.array([], dtype=np.int64)),
-        })
+        return xr.Dataset(
+            {
+                "cloud_score": (["T_l2"], np.array([], dtype=np.float32)),
+                "cloud_label": (["T_l2"], np.array([], dtype=np.uint8)),
+                "feature_raw_fft": (["T_l2", "H", "W"], np.empty((0, 32, 32), dtype=np.float32)),
+                "feature_deriv_fft": (["T_l2", "H", "W"], np.empty((0, 32, 32), dtype=np.float32)),
+                "unix_t_ns": (["T_l2"], np.array([], dtype=np.int64)),
+            }
+        )
 
     # X shape: (N, 2, H, W) — channel 0 = deriv_fft, channel 1 = raw_fft
     features_deriv_fft_arr = X[:, 0, :, :]  # (N, H, W)
-    features_fft_arr = X[:, 1, :, :]        # (N, H, W)
+    features_fft_arr = X[:, 1, :, :]  # (N, H, W)
 
-    #device = next(model.parameters()).device
-    device = torch.accelerator.current_accelerator() if torch.accelerator.is_available() else torch.device("cpu")
+    # device = next(model.parameters()).device
+    device = (
+        torch.accelerator.current_accelerator()
+        if torch.accelerator.is_available()
+        else torch.device("cpu")
+    )
     model = model.to(device)
     tensor_x = torch.from_numpy(X).to(device)
 

@@ -27,13 +27,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import sys
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Any
 
 import typer
 
 from panoseti_analysis.config.recipes import load_recipe
+from panoseti_analysis.paths import REPO_ROOT
 
 app = typer.Typer(name="pa-stream-cloud", no_args_is_help=True)
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ def main(
         ),
     ],
     recipe: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--recipe",
             help="Path to a stream_cloud_*.yml recipe (feature_cadence_s, threshold, grace_s).",
@@ -67,7 +67,7 @@ def main(
         typer.Option("--grpc-port", help="panoseti_grpc server port."),
     ] = 50051,
     module_ids: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--module-ids",
             help="Comma-separated module IDs to subscribe to (e.g. '1,2,3'). Empty = all.",
@@ -78,14 +78,14 @@ def main(
         typer.Option("--frame-limit", help="Stop after this many frames (-1 = unlimited)."),
     ] = -1,
     ray_address: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--ray-address",
             help="Ray cluster address. Defaults to $RAY_ADDRESS or 'auto' (attach mode).",
         ),
     ] = None,
     gpu_node_ip: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--gpu-node-ip",
             help=(
@@ -99,7 +99,7 @@ def main(
         typer.Option("--num-replicas", help="Number of CloudInferDeployment replicas."),
     ] = 1,
     archive_dir: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--archive-dir",
             help="Archive flagged windows-of-interest to L2 Zarr under this directory.",
@@ -140,18 +140,15 @@ def main(
             mids = [int(x.strip()) for x in module_ids.split(",") if x.strip()]
         except ValueError as exc:
             typer.echo(f"[ERROR] --module-ids parse error: {exc}", err=True)
-            raise typer.Exit(1)
+            raise typer.Exit(1) from exc
 
     # --- Init Ray (attach mode with runtime_env) ----------------------------
     # The source must be shipped to remote workers (e.g. gaming node) at init time.
     # Ray 2.55+ requires working_dir at job level (ray.init), NOT per-actor.
     from panoseti_analysis.adapters.ray.launcher import init_ray
 
-    import os
-    _launcher_mode = "attach"   # pa-stream-cloud always attaches to the externally-owned cluster
-    _repo_root = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..")
-    )
+    _launcher_mode = "attach"  # pa-stream-cloud always attaches to the externally-owned cluster
+    _repo_root = str(REPO_ROOT)
     _streaming_runtime_env = {
         "working_dir": _repo_root,
         "env_vars": {"PYTHONPATH": "src:grpc/src"},
@@ -162,7 +159,7 @@ def main(
     init_ray("attach", address=ray_address, runtime_env=_streaming_runtime_env)
     import ray
 
-    res = ray.cluster_resources()
+    res = ray.cluster_resources()  # type: ignore[no-untyped-call]  # Ray API is untyped
     typer.echo(
         f"[pa-stream-cloud] Cluster: CPU={res.get('CPU'):.0f} GPU={res.get('GPU'):.0f} "
         f"RAM={res.get('memory', 0) / 1e9:.1f}GB"
@@ -203,7 +200,7 @@ def main(
     from panoseti_analysis.adapters.stream.accumulator import FrameAccumulator
 
     def actor_factory(mid: int, dp: str) -> object:
-        return FrameAccumulator.remote(
+        return FrameAccumulator.remote(  # type: ignore[attr-defined]  # .remote added by @ray.remote at runtime
             module_id=mid,
             data_product=dp,
             serve_handle=handle,
@@ -235,7 +232,7 @@ def main(
 
     typer.echo(
         f"[pa-stream-cloud] Consuming DaqData.StreamImages at {grpc_host}:{grpc_port} "
-        f"modules={'all' if not mids else mids} frame_limit={frame_limit}"
+        f"modules={mids if mids else 'all'} frame_limit={frame_limit}"
     )
     typer.echo("[pa-stream-cloud] Press Ctrl-C to stop.")
 
@@ -246,13 +243,13 @@ def main(
     except Exception as exc:
         typer.echo(f"[ERROR] StreamConsumer failed: {exc}", err=True)
         logger.exception("StreamConsumer error")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
     finally:
         # Tear down Serve deployments (safe — does not stop the Ray cluster).
         try:
             import ray as _ray
 
-            _ray.serve.shutdown()
+            _ray.serve.shutdown()  # type: ignore[no-untyped-call]  # Ray Serve API is untyped
             typer.echo("[pa-stream-cloud] Serve shut down.")
         except Exception as exc:
             logger.warning("Serve shutdown error: %s", exc)
@@ -267,13 +264,13 @@ def main(
 # ---------------------------------------------------------------------------
 
 
-def _load_recipe_or_defaults(recipe_path: Optional[Path]) -> tuple[dict, str, str]:
+def _load_recipe_or_defaults(recipe_path: Path | None) -> tuple[dict[str, Any], str, str]:
     """Load recipe YAML or return built-in defaults."""
     if recipe_path is not None:
         params, name, recipe_hash = load_recipe(recipe_path)
         return params, name, recipe_hash
     # Built-in defaults (mirrors stream_cloud_v1.yml)
-    defaults: dict = {
+    defaults: dict[str, Any] = {
         "feature_cadence_s": 60.0,
         "threshold": 0.5,
         "grace_s": 1.0,

@@ -10,15 +10,12 @@ import importlib.metadata
 import logging
 import subprocess
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 from panoseti_analysis.config.models import ProcessingStep
+from panoseti_analysis.paths import REPO_ROOT as _REPO_ROOT
 
 logger = logging.getLogger(__name__)
-
-# Repo root: two levels up from this file (src/panoseti_analysis/io/provenance.py)
-_REPO_ROOT = Path(__file__).parent.parent.parent.parent
 
 
 def read_history(attrs: dict[str, Any]) -> list[ProcessingStep]:
@@ -37,15 +34,11 @@ def read_history(attrs: dict[str, Any]) -> list[ProcessingStep]:
         try:
             steps.append(ProcessingStep.model_validate(item))
         except Exception as exc:
-            logger.warning(
-                "processing_history[%d] is malformed and will be skipped: %s", i, exc
-            )
+            logger.warning("processing_history[%d] is malformed and will be skipped: %s", i, exc)
     return steps
 
 
-def append_step(
-    history: list[ProcessingStep], step: ProcessingStep
-) -> list[ProcessingStep]:
+def append_step(history: list[ProcessingStep], step: ProcessingStep) -> list[ProcessingStep]:
     """Return a new list with *step* appended; does not mutate the input list."""
     return [*list(history), step]
 

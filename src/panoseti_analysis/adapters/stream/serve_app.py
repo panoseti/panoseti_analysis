@@ -50,7 +50,7 @@ except ModuleNotFoundError:  # pragma: no cover
     _serve = None  # type: ignore[assignment]
 
 
-def _serve_deployment(*args: Any, **kwargs: Any) -> Any:  # type: ignore[return]
+def _serve_deployment(*args: Any, **kwargs: Any) -> Any:
     """Lazy wrapper for @serve.deployment that fails informatively without Ray."""
     if _serve is None:
         raise RuntimeError("Ray Serve is not installed; cannot create deployment")

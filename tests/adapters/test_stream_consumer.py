@@ -98,8 +98,6 @@ def plain_accumulator(tmp_path: Path) -> object:
     """
     import ray  # type: ignore[import]
 
-    from panoseti_analysis.adapters.stream.accumulator import FrameAccumulator
-
     # Unwrap the ray.remote class to get the underlying Python class.
     # The underlying class is accessible via ._function on the ActorClass.
     # However, the simplest approach: patch ray.remote to be identity.
@@ -160,9 +158,8 @@ class TestAccumulatorWindowing:
         acc = plain_accumulator
         frame = np.zeros((32, 32), dtype=np.uint16)
         t0 = 1_700_000_000_000_000_000
-        window_ns = 60_000_000_000  # 60 s
 
-        # Simulate 601 s of data at 1-second intervals
+        # Simulate 601 s of data at 1-second intervals (> the 60 s window)
         for i in range(602):
             acc._buffer.append((t0 + i * 1_000_000_000, frame))
 
@@ -221,7 +218,7 @@ def model_and_params(tmp_path_factory: pytest.TempPathFactory) -> tuple[object, 
     if not model_path.exists():
         pytest.skip("cloud_detector_v1.pt not found — run from repo root")
 
-    model, bundle = load_classifier(model_path)
+    model, _bundle = load_classifier(model_path)
     params = CloudInferParams(cadence_s=60.0, threshold=0.5)
     return model, params, model_path
 
@@ -258,9 +255,9 @@ class TestEquivalenceKeystone:
         # Path B: via Ray remote task
         ray.init(ignore_reinit_error=True, num_cpus=1, num_gpus=0)
         try:
+
             @ray.remote
             def _score(ds: xr.Dataset, model_path_str: str) -> xr.Dataset:
-                import torch
                 from panoseti_analysis.algorithms.cloud_detector import predict_cloud_score
                 from panoseti_analysis.config.models import CloudInferParams
                 from panoseti_analysis.io.models import load_classifier
@@ -297,7 +294,7 @@ class TestEquivalenceKeystone:
         from panoseti_analysis.algorithms.cloud_detector import predict_cloud_score
         from panoseti_analysis.config.models import CloudInferParams
 
-        model, params, _ = model_and_params
+        model, _params, _ = model_and_params
 
         # Simulate batch calibration (full dataset median)
         rng = np.random.default_rng(99)
@@ -330,7 +327,8 @@ class TestEquivalenceKeystone:
             {
                 "median_subtracted": (
                     ("time", "y", "x"),
-                    ds_raw["images"].values - ds_l1_progressive["median_subtracted"].mean("time").values,
+                    ds_raw["images"].values
+                    - ds_l1_progressive["median_subtracted"].mean("time").values,
                 ),
                 "unix_t_ns": (("time",), ts),
             }

@@ -62,6 +62,7 @@ dev = [
     "pytest>=7.0.0",
     "ruff",
     "mypy",
+    "pre-commit>=4.0",
     "jupyter>=1.1.1",
     "ipykernel>=7.2.0",
     "nbstripout>=0.7",
@@ -72,7 +73,7 @@ packages = ["src/panoseti_analysis"]
 
 # ── lint / type-check (strict, mirrors pypff conventions) ─────────────────────
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 line-length = 100
 
 [tool.ruff.lint]
@@ -80,11 +81,28 @@ select = ["E", "F", "UP", "B", "I", "ASYNC", "RUF", "SIM"]
 ignore = [
     "E501",   # line length handled separately
     "B008",   # function calls in default args (common in typer/pydantic)
+    # Scientific notation legitimately uses these glyphs in comments/docstrings/labels
+    # (e.g. "30 frames × 100 µs", en-dash ranges, the −60 s derivative window).
+    "RUF001", # ambiguous unicode char in string
+    "RUF002", # ambiguous unicode char in docstring
+    "RUF003", # ambiguous unicode char in comment
 ]
+
+# Notebooks: relax import/cell-order rules that fight interactive editing.
+[tool.ruff.lint.per-file-ignores]
+"*.ipynb" = [
+    "E402",   # imports not at top of cell — common and fine in notebooks
+    "F401",   # unused imports — exploratory cells keep handy imports around
+    "E501",   # long lines (already globally ignored, explicit for clarity)
+]
+# The Tracker ABC intentionally ships empty optional hooks (log_image/table/artifact) as
+# no-ops so non-W&B backends satisfy the interface without overriding them — that *is* the
+# design, so B027 (empty method in ABC) does not apply here.
+"src/panoseti_analysis/adapters/ml/tracking.py" = ["B027"]
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
-python_version = "3.13"
+python_version = "3.14"
 strict = true
 check_untyped_defs = true
 strict_equality = true

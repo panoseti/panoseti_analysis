@@ -22,7 +22,6 @@ Design notes
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import Callable
 from typing import Any
@@ -97,7 +96,7 @@ class StreamConsumer:
         self,
         *,
         frame_limit: int = -1,
-        timeout: float = 36000.0,
+        timeout: float = 36000.0,  # noqa: ASYNC109 — public API; overall stream deadline, not a per-await timeout
     ) -> None:
         """
         Consume the StreamImages stream until frame_limit is reached or
@@ -123,13 +122,16 @@ class StreamConsumer:
         async with AioDaqDataClient(self._host, self._port) as client:
             async for parsed in client.stream_images(
                 stream_movie_data=("img16" in self._include_dps or "img8" in self._include_dps),
-                stream_pulse_height_data=("ph256" in self._include_dps or "ph1024" in self._include_dps),
+                stream_pulse_height_data=(
+                    "ph256" in self._include_dps or "ph1024" in self._include_dps
+                ),
                 update_interval_seconds=self._update_interval,
-                module_ids=self._module_ids,
+                module_ids=tuple(self._module_ids),
                 parse_pano_images=True,
                 timeout=timeout,
             ):
-                await self._dispatch(parsed)
+                # parse_pano_images=True ⇒ the client always yields parsed dicts here.
+                await self._dispatch(parsed)  # type: ignore[arg-type]
                 self._total_frames += 1
                 if frame_limit > 0 and self._total_frames >= frame_limit:
                     logger.info("Frame limit %d reached; stopping consumer", frame_limit)
@@ -171,7 +173,9 @@ class StreamConsumer:
         header = parsed.get("header", {})
         ts_ns = _extract_unix_t_ns(header)
         if ts_ns is None:
-            logger.warning("module=%d dp=%s: no timestamp in header; dropping frame", module_id, dp_name)
+            logger.warning(
+                "module=%d dp=%s: no timestamp in header; dropping frame", module_id, dp_name
+            )
             self._dropped_frames += 1
             return
 
@@ -229,7 +233,7 @@ def _extract_unix_t_ns(header: dict[str, Any]) -> int | None:
         try:
             # pd.Timestamp.value is int64 nanoseconds since epoch
             return int(pts.value)
-        except (AttributeError, TypeError):
+        except AttributeError, TypeError:
             pass
 
     # Fallback: derive directly from pkt_unix_timestamp (Decimal)
@@ -237,7 +241,7 @@ def _extract_unix_t_ns(header: dict[str, Any]) -> int | None:
     if pkt_ts is not None:
         try:
             return int(decimal.Decimal(str(pkt_ts)) * decimal.Decimal("1e9"))
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             pass
 
     return None
