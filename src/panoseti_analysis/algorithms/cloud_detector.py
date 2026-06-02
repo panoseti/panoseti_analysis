@@ -131,8 +131,8 @@ def extract_cloud_features(
     t_end = unix_t_ns[-1]
 
     cadence_ns = int(params.cadence_s * 1e9)
-    window_ns = 60_000_000_000
-    n_stack = 10  # 10 frames of 100us = 1ms stacked integration
+    window_ns = int(params.window_s * 1e9)
+    n_stack = params.n_stack
 
     target_times = np.arange(t_start, t_end + 1, cadence_ns)
 
