@@ -43,6 +43,7 @@ pa-prep-ph = "panoseti_analysis.adapters.ph_prep:app"
 pa-train-cloud = "panoseti_analysis.adapters.ray.train_cloud:app"
 pa-train-vae = "panoseti_analysis.adapters.ray.train_vae:app"
 pa-stream-cloud = "panoseti_analysis.adapters.stream.cli:app"
+pa-prep-cloud-legacy = "panoseti_analysis.adapters.cloud.prep_legacy:app"
 
 # ── uv workspace ──────────────────────────────────────────────────────────────
 # The repo root is both the workspace root and the `panoseti_analysis` package.
