@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 import xarray as xr
+import zarr
 
 from panoseti_analysis.adapters._common import SuspectTimestamps
 from panoseti_analysis.adapters.calibrate import run_calibrate
@@ -67,5 +68,5 @@ def test_calibrate_with_shard_factor(make_img, tmp_path: Path) -> None:  # type:
 
     z = _zarr.open(str(l1), mode="r", zarr_format=3)
     # whichever array the img calibration outputs
-    arr_name = next(k for k in z if hasattr(z[k], "shards"))
+    arr_name = next(k for k in z if isinstance(z[k], zarr.Array))
     assert z[arr_name].shards is not None, "shard_factor=4 must produce a sharded store"
