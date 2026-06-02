@@ -26,7 +26,7 @@ provider:
         - panoseti-dfs0
         - panoseti-dfs1
         - panoseti-dfs2
-        - digilab-transmit
+        - 10.0.1.34       # digilab-transmit — explicit IP avoids hostname-resolution flakiness
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
 auth:
@@ -34,11 +34,11 @@ auth:
     ssh_private_key: ~/.ssh/id_ed25519
 
 # ── Cluster size ───────────────────────────────────────────────────────────────
-# Setting min=max=4 (number of worker IPs) keeps all 4 workers running.
-# Autoscaler v2 counts the head as 1, so effective managed workers = 3.
-# digilab-transmit needs to be joined manually if needed (see docker variant comment).
-min_workers: 4
-max_workers: 4
+# Autoscaler v2 counts the head node as 1 toward the total.  With 4 worker IPs,
+# min_workers: 5 = 1 head + 4 workers ensures all nodes start proactively.
+# (min_workers: 4 only starts 3 workers; digilab-transmit stays idle until demand.)
+min_workers: 5
+max_workers: 5
 idle_timeout_minutes: 0
 
 # ── File sync ──────────────────────────────────────────────────────────────────
