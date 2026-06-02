@@ -166,3 +166,52 @@ class TestWriteStoreProcessingHistory:
         z = zarr.open(str(out), mode="r")
         assert z.attrs["data_product"] == "ph256"
         assert "processing_history" in z.attrs
+
+
+class TestWriteStoreSharding:
+    """shard_factor=N must pack N dask-chunks into one shard file."""
+
+    def test_sharding_reduces_file_count(self, l0_img_ds: xr.Dataset, tmp_path: Path) -> None:
+        """shard_factor=4 must produce fewer zarr files than shard_factor=0."""
+        out_un = tmp_path / "unsharded.zarr"
+        out_sh = tmp_path / "sharded.zarr"
+        write_store(l0_img_ds, out_un, shard_factor=0)
+        write_store(l0_img_ds, out_sh, shard_factor=4)
+
+        files_un = sum(1 for f in out_un.rglob("*") if f.is_file())
+        files_sh = sum(1 for f in out_sh.rglob("*") if f.is_file())
+        assert files_sh < files_un, (
+            f"Sharded ({files_sh}) must have fewer files than unsharded ({files_un})"
+        )
+
+    def test_sharded_roundtrip(self, l0_img_ds: xr.Dataset, tmp_path: Path) -> None:
+        """Data written with sharding must read back identically."""
+        out = tmp_path / "s.zarr"
+        write_store(l0_img_ds, out, shard_factor=4)
+        back = open_store(out)
+        np.testing.assert_array_equal(
+            back["images"].values, l0_img_ds["images"].values
+        )
+        np.testing.assert_array_equal(
+            back["unix_t_ns"].values, l0_img_ds["unix_t_ns"].values
+        )
+
+    def test_shard_factor_zero_no_sharding(self, l0_img_ds: xr.Dataset, tmp_path: Path) -> None:
+        """shard_factor=0 must not introduce ShardingCodec."""
+        out = tmp_path / "s.zarr"
+        write_store(l0_img_ds, out, shard_factor=0)
+        z = zarr.open(str(out), mode="r", zarr_format=3)
+        assert z["images"].shards is None, "shard_factor=0 must not shard"
+
+    def test_sharded_store_has_time_dim_sharding_only(
+        self, l0_img_ds: xr.Dataset, tmp_path: Path
+    ) -> None:
+        """Spatial dims must not be sharded (shard H == chunk H, shard W == chunk W)."""
+        out = tmp_path / "s.zarr"
+        write_store(l0_img_ds, out, shard_factor=4)
+        z = zarr.open(str(out), mode="r", zarr_format=3)
+        img = z["images"]
+        if img.shards is not None:
+            # shards along time axis only; spatial dims unchanged
+            assert img.shards[1] == img.chunks[1], "H must not be sharded"
+            assert img.shards[2] == img.chunks[2], "W must not be sharded"

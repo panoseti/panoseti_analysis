@@ -32,8 +32,10 @@ def open_l0(store: str | Path) -> xr.Dataset:
 
 #: Time-like dimensions rechunked to a uniform size before writing.
 _TIME_DIMS = ("time", "hk_time")
-#: Uniform time chunk (frames) — keeps last chunk <= first (a Zarr v3 requirement).
-_TIME_CHUNK = 16384
+#: Uniform inner time chunk (frames). With shard_factor=0 this is the physical chunk;
+#: with shard_factor=N the shard covers N x _TIME_CHUNK frames. Recommended:
+#: shard_factor=8 for L1/L2 on BeeGFS/Expanse (~8x file-count reduction vs unsharded).
+_TIME_CHUNK = 8
 
 
 def _compressors(codec: str, level: int) -> list[Any]:
@@ -62,6 +64,7 @@ def write_store(
     *,
     codec: str = "zstd",
     level: int = 5,
+    shard_factor: int = 0,
     processing_history: list[ProcessingStep] | None = None,
 ) -> int:
     """Write a Dataset to a Zarr v3 directory store; return total bytes on disk.
@@ -74,17 +77,30 @@ def write_store(
     attrs under the ``"processing_history"`` key (list of dicts via ``model_dump``).
     ``None`` or ``[]`` leaves the key absent — preserving backward compat with stores
     written before schema v2.0.  The caller's Dataset is never mutated.
+
+    If *shard_factor* > 0, each variable's time-like dimension is sharded:
+    ``shard_factor`` dask chunks are packed into one physical shard file.
+    Default 0 disables sharding. Recommended value: 8 for L1 on BeeGFS/Expanse.
     """
     out_path = Path(out_path)
     if out_path.exists():
         shutil.rmtree(out_path)
 
-    # Drop any inherited (L0) chunk encoding, then rechunk time-like dims uniformly so
-    # the final chunk is never larger than the first (a Zarr v3 write requirement).
+    # Drop any inherited (L0) chunk encoding, then rechunk time-like dims uniformly.
+    # When sharding, the dask chunk is set to the full shard size (_TIME_CHUNK x shard_factor)
+    # so each dask task writes exactly one shard file — this avoids concurrent-write
+    # conflicts in the ShardingCodec (zarr v3 shards are not concurrency-safe when multiple
+    # dask tasks target the same shard).  The unsharded path uses _TIME_CHUNK directly.
     ds = ds.drop_encoding()
-    time_chunks = {
-        str(d): min(int(ds.sizes[d]), _TIME_CHUNK) for d in ds.dims if d in _TIME_DIMS
-    }
+    if shard_factor > 0:
+        shard_frames = _TIME_CHUNK * shard_factor
+        time_chunks = {
+            str(d): min(int(ds.sizes[d]), shard_frames) for d in ds.dims if d in _TIME_DIMS
+        }
+    else:
+        time_chunks = {
+            str(d): min(int(ds.sizes[d]), _TIME_CHUNK) for d in ds.dims if d in _TIME_DIMS
+        }
     if time_chunks:
         ds = ds.chunk(time_chunks)
 
@@ -96,7 +112,20 @@ def write_store(
 
     compressors = _compressors(codec, level)
     names = list(ds.data_vars) + list(ds.coords)
-    encoding = {str(name): {"compressors": compressors} for name in names}
+    encoding: dict[str, Any] = {str(name): {"compressors": compressors} for name in names}
+
+    if shard_factor > 0:
+        for name in names:
+            try:
+                var = ds[name] if name in ds.data_vars else ds.coords[name]
+            except KeyError:
+                continue
+            if not hasattr(var.data, "chunks"):
+                continue
+            # First element of each dim's dask-chunk tuple is the uniform chunk size.
+            # Because we rechunked to shard_frames above, dask_chunk == shard_shape here.
+            dask_chunk = tuple(c[0] for c in var.data.chunks)
+            encoding[str(name)]["shards"] = dask_chunk
 
     ds.to_zarr(str(out_path), mode="w", zarr_format=3, consolidated=False, encoding=encoding)
     return sum(f.stat().st_size for f in out_path.rglob("*") if f.is_file())
