@@ -1,59 +1,32 @@
-# PANOSETI RAL Ray Cluster — 5-node on-premises configuration
+# PANOSETI RAL Ray Cluster — 5-node bare-metal configuration
+#
+# Runs Ray directly on the host Python (conda env 'drp', Python 3.14) — no Docker.
+# Each node's ~/.bashrc ends with `conda activate drp`, which Ray's SSH sessions inherit.
 #
 # Usage:
 #   ray up conf/ray/ral_cluster.yaml           # start / update cluster
-#   ray up conf/ray/ral_cluster.yaml --no-restart  # reuse existing, don't restart Ray
+#   ray up conf/ray/ral_cluster.yaml --no-restart  # reconnect without restarting Ray
 #   ray status                                 # check node status
-#   ray down conf/ray/ral_cluster.yaml         # stop cluster (use sparingly — prefer keeping alive)
+#   ray down conf/ray/ral_cluster.yaml         # stop cluster (prefer keeping alive)
 #
 # Dashboard: http://digilab-receiver:8265
 # Prometheus / Grafana: cd ~/ray-test && docker compose up -d
 #   (Grafana at http://digilab-receiver:3000)
 #
-# Image choice: rayproject/ray:<version>-gpu (minimal — no ML frameworks pre-installed).
-#   panoseti_analysis and its dependencies (torch+CUDA) are installed via setup_commands
-#   from the bind-mounted source tree, so the image stays lean and version-pinned.
+# NOTE: Do NOT add a `docker:` block.  rayproject/ray:*-gpu ships Python 3.10 which
+# cannot install zarr>=3.0 (requires Python>=3.11).  Bare-metal avoids the mismatch.
 
 cluster_name: pseti-ral
-
-# ── Docker ─────────────────────────────────────────────────────────────────────
-docker:
-    image: "rayproject/ray:2.55.1-gpu"   # minimal GPU image; matches installed ray==2.55.1
-    container_name: "ray_container"
-    pull_before_run: False               # version-pinned; avoid unnecessary re-pulls
-
-    run_options:
-        # Ray session dir — prometheus/grafana docker-compose on digilab-receiver reads
-        # Ray's auto-generated metrics configs from here.
-        - -v /tmp/ray:/tmp/ray
-
-        # BeeGFS shared storage (same mount point on all nodes).
-        - -v /mnt/beegfs:/mnt/beegfs
-
-        # Source tree bind-mount — allows setup_commands to pip install from source.
-        # rsync (file_mounts) keeps this in sync across worker hosts before Docker starts.
-        - -v /home/nico/panoseti_analysis:/home/nico/panoseti_analysis
-
-        # Raise file-descriptor limit for Ray's many internal sockets.
-        - --ulimit nofile=65536:65536
-
-        # Expose all GPUs to the container (nvidia-container-toolkit required on each node).
-        - --gpus all
-
-        # Allows prometheus (in its own Docker container, network_mode: host) to reach
-        # the Ray dashboard at http://host.docker.internal:8265/api/prometheus/sd.
-        - --add-host host.docker.internal:host-gateway
 
 # ── Provider ───────────────────────────────────────────────────────────────────
 provider:
     type: local
-    head_ip: digilab-receiver        # hosts dashboard + A6000 training GPUs
-
+    head_ip: digilab-receiver        # 2× RTX A6000 48 GB; hosts prometheus/grafana
     worker_ips:
         - panoseti-dfs0              # BeeGFS storage — CPU only
         - panoseti-dfs1              # BeeGFS storage — CPU only
         - panoseti-dfs2              # BeeGFS storage — CPU only
-        - digilab-transmit           # gaming GPU (accelerator_type:G) for Ray Serve
+        - digilab-transmit           # gaming GPU (accelerator_type:G) — Ray Serve
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
 auth:
@@ -61,14 +34,19 @@ auth:
     ssh_private_key: ~/.ssh/id_ed25519
 
 # ── Cluster size (fixed, no autoscaling) ───────────────────────────────────────
-# Setting min_workers == max_workers == len(worker_ips) disables the autoscaler.
-# Workers are never stopped automatically — the cluster stays alive indefinitely.
-min_workers: 4
-max_workers: 4
+# Autoscaler v2 with the local provider counts the head node toward the min_workers
+# budget, so to get head + 4 workers = 5 total nodes, set min=max=5.
+# Workers are never stopped automatically — cluster stays alive indefinitely.
+min_workers: 5
+max_workers: 5
+
+# Disable the idle worker shutdown that Ray enables by default (5 min).
+# Setting to 0 keeps all workers alive regardless of load.
+idle_timeout_minutes: 0
 
 # ── File sync ──────────────────────────────────────────────────────────────────
-# Rsyncs source from the launching machine to each worker host before setup_commands run.
-# gitignore is respected (rsync_filter below), so large data files are excluded.
+# Rsyncs source from the launching machine to each worker host before setup_commands.
+# gitignore is respected (rsync_filter below) — large data files are excluded.
 file_mounts:
     "/home/nico/panoseti_analysis": "/home/nico/panoseti_analysis"
 
@@ -77,22 +55,22 @@ rsync_exclude:
     - "**/.git/**"
 
 rsync_filter:
-    - ".gitignore"   # excludes: *.zip, *.zarr/, ml/*/cache/, etc. — only code synced
+    - ".gitignore"   # excludes: *.zip, *.zarr/, ml/*/cache/, etc.
 
 file_mounts_sync_continuously: False
 
+initialization_commands: []
+
 # ── Package setup ──────────────────────────────────────────────────────────────
-# Runs inside the Docker container on every node before Ray starts.
-# Installs torch with CUDA (needed on GPU nodes) and the full panoseti_analysis stack.
-# Subsequent `ray up` calls skip setup if the container is already running.
+# Runs on every node (host Python, conda env 'drp') after rsync.
+# pypff is a local uv workspace member — not on PyPI.  Must be installed before
+# panoseti_analysis so pip resolves pypff[zarr] locally instead of hitting PyPI.
 setup_commands:
-    - pip install --quiet torch --extra-index-url https://download.pytorch.org/whl/cu130
+    - pip install --quiet -e "/home/nico/panoseti_analysis/pypff[zarr]"
     - pip install --quiet -e /home/nico/panoseti_analysis
 
 head_setup_commands: []
 worker_setup_commands: []
-
-initialization_commands: []
 
 # ── Ray start commands ─────────────────────────────────────────────────────────
 head_start_ray_commands:
@@ -103,7 +81,7 @@ head_start_ray_commands:
       ray start --head --port=6379
       --dashboard-host=0.0.0.0
       --num-gpus=$GPU_COUNT
-      --resources='{"accelerator_type:RTX": 1}'
+      --resources='{"accelerator_type:G": 1}'
       --autoscaling-config=~/ray_bootstrap_config.yaml
 
 worker_start_ray_commands:
