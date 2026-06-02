@@ -16,22 +16,9 @@ process CLASSIFY_CLOUD_RAY {
         ? l1_stores.collect { it.toString() }.join(' ')
         : l1_stores.toString()
 
-    if (params.ray_launcher == "standalone") {
-        """
-        export RAY_TMPDIR=\${TMPDIR:-/tmp}
-        for store in ${stores_arg}; do
-            echo "\$store" >> stores.list
-        done
-
-        pa-ray-classify-cloud \\
-            stores.list \\
-            . \\
-            ${model_file} \\
-            --lineage-out lineage.json \\
-            --quicklook-dir .
-        """
-    } else {
-        // Default: SLURM + ray symmetric-run (Expanse / any SLURM cluster)
+    if (params.ray_launcher == "slurm") {
+        // Expanse / SLURM: bring up a transient Ray cluster with ray symmetric-run,
+        // then dispatch inference tasks across the allocation.
         """
         export RAY_TMPDIR=\${TMPDIR:-/tmp}
         for store in ${stores_arg}; do
@@ -51,8 +38,26 @@ process CLASSIFY_CLOUD_RAY {
                 stores.list \\
                 . \\
                 ${model_file} \\
+                --launcher slurm \\
                 --lineage-out lineage.json \\
                 --quicklook-dir .
+        """
+    } else {
+        // attach (RAL bare-metal) or standalone (CI/laptop): run the CLI directly.
+        // init_ray() inside pa-ray-classify-cloud handles cluster attach vs. local spin-up.
+        """
+        export RAY_TMPDIR=\${TMPDIR:-/tmp}
+        for store in ${stores_arg}; do
+            echo "\$store" >> stores.list
+        done
+
+        pa-ray-classify-cloud \\
+            stores.list \\
+            . \\
+            ${model_file} \\
+            --launcher ${params.ray_launcher} \\
+            --lineage-out lineage.json \\
+            --quicklook-dir .
         """
     }
 }

@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 import ray
 import torch
 import typer
 import xarray as xr
 
+from panoseti_analysis.adapters.ray.launcher import init_ray
 from panoseti_analysis.algorithms.cloud_detector import predict_cloud_score
 from panoseti_analysis.config.models import CloudInferParams, ProcessingStep, StoreLineage
 from panoseti_analysis.config.versions import PANOSETI_ANALYSIS_STORAGE_VERSION
@@ -97,6 +97,7 @@ def main(
     stores_list_file: Path = typer.Argument(..., help="File containing paths to L1 stores (one per line)"),
     out_dir: Path = typer.Argument(...),
     model_path: Path = typer.Argument(..., exists=True),
+    launcher: str = typer.Option("attach", help="attach|slurm|standalone"),
     cadence_s: float = typer.Option(60.0),
     threshold: float = typer.Option(0.5),
     lineage_out: Path | None = typer.Option(None),
@@ -104,7 +105,7 @@ def main(
     codec: str = typer.Option("zstd"),
     level: int = typer.Option(5),
 ) -> None:
-    ray.init(address=os.environ.get("RAY_ADDRESS", "auto"), ignore_reinit_error=True)
+    init_ray(cast(Literal["attach", "slurm", "standalone"], launcher))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     if quicklook_dir is not None:
