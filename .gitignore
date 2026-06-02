@@ -257,3 +257,14 @@ trace.txt
 
 # macOS
 .DS_Store
+
+# ML project data — large, generated, not tracked
+ml/*/data/
+ml/*/cache/
+ml/*/models/
+ml/*/legacy-src
+assets/models/cloud-detection-training/extracted/
+
+# Secrets
+.env
+
