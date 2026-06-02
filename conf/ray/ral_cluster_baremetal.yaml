@@ -23,10 +23,10 @@ provider:
     type: local
     head_ip: digilab-receiver
     worker_ips:
-        - panoseti-dfs0
-        - panoseti-dfs1
+        - digilab-transmit       # digilab-transmit — explicit IP avoids hostname-resolution flakiness 10.0.1.34
         - panoseti-dfs2
-        - 10.0.1.34       # digilab-transmit — explicit IP avoids hostname-resolution flakiness
+        - panoseti-dfs1
+        - panoseti-dfs0
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
 auth:

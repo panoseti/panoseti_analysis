@@ -60,7 +60,7 @@ def train_loop_per_worker(config: dict[str, Any]) -> None:
     raw_model = CloudDetection()
     model: torch.nn.Module = ray.train.torch.prepare_model(raw_model)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler_exp = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
     scheduler_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", patience=5, factor=0.5

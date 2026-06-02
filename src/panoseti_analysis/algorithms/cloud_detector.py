@@ -206,7 +206,9 @@ def predict_cloud_score(
     features_deriv_fft_arr = X[:, 0, :, :]  # (N, H, W)
     features_fft_arr = X[:, 1, :, :]        # (N, H, W)
 
-    device = next(model.parameters()).device
+    #device = next(model.parameters()).device
+    device = torch.accelerator.current_accelerator() if torch.accelerator.is_available() else torch.device("cpu")
+    model = model.to(device)
     tensor_x = torch.from_numpy(X).to(device)
 
     model.eval()
