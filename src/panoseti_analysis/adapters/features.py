@@ -162,6 +162,7 @@ def run_features_cloud(
     )
     history = append_step(upstream_history, step)
 
+    n_samples = int(X_cat.shape[0])
     ds_feat = xr.Dataset(
         data_vars={
             "X": (["sample", "channel", "H", "W"], X_cat),
@@ -176,6 +177,11 @@ def run_features_cloud(
             "data_level": "features",
         },
     )
+    # Pin chunk layout so each sample is self-contained: spatial dims (channel, H, W) are
+    # never split, and the sample axis is one big chunk.  write_store's time-rechunking
+    # doesn't apply here (no "time"/"hk_time" dims), so without this the zarr auto-chunker
+    # picks (2200, 1, 8, 16) — spreading one sample across 8 different chunk files.
+    ds_feat = ds_feat.chunk({"sample": n_samples, "channel": 2, "H": 32, "W": 32})
 
     write_store(ds_feat, out_path, codec="zstd", level=5, processing_history=history)
     output_cksum = checksum_store(out_path)
