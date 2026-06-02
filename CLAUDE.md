@@ -118,11 +118,27 @@ for training.
 
 ## Training on RAL
 
-RAL is bare-metal, no SLURM. Head: `radiopi5` (Pi 5). GPU nodes: `a6k` (2× RTX A6000 48 GB + 1 TB SSD), `gf` (RTX 4070 + RTX 5070 + 1 TB SSD). BeeGFS at `/mnt/beegfs`. The pipeline **attaches** to the user's pre-existing cluster — it never provisions RAL.
+RAL is bare-metal, no SLURM. 5 nodes:
+- **`digilab-receiver`** (head, 2× RTX A6000 48 GB + 1 TB SSD NVMe, `accelerator_type:RTX` — training; runs dashboard docker-compose)
+- **`digilab-transmit`** (gaming GPU, `accelerator_type:G` — Ray Serve inference)
+- **`panoseti-dfs0`**, **`panoseti-dfs1`**, **`panoseti-dfs2`** (BeeGFS storage nodes, CPU-only)
+
+BeeGFS at `/mnt/beegfs`.
+
+**Starting the cluster** (replaces manual `ray start` in tmux):
+```bash
+ray up conf/ray/ral_cluster.yaml           # start / reconnect all 5 nodes
+ray up conf/ray/ral_cluster.yaml --no-restart  # attach without restarting Ray
+ray status                                 # verify workers connected
+cd ~/ray-test && docker compose up -d      # start prometheus/grafana (if not running)
+# Dashboard: http://digilab-receiver:8265   Grafana: http://digilab-receiver:3000
+```
+
+The pipeline **attaches** to this running cluster — it never provisions RAL.
 
 ```bash
 # 1. Ingest the label-covered subset to L1 (Nextflow handles PFF → L0 → L1):
-nextflow run . -profile laptop --steps ingest -params-file recipes/ingest_subset.yml --outdir /mnt/beegfs/runs/
+nextflow run . -profile ral --steps ingest -params-file recipes/ingest_subset.yml --outdir /mnt/beegfs/runs/
 
 # 2. Materialize features (runs standalone, reads L1 from BeeGFS):
 pa-features-cloud --stores /mnt/beegfs/runs/*/L1/*.zarr \

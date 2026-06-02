@@ -148,6 +148,7 @@ def main(
     from panoseti_analysis.adapters.ray.launcher import init_ray
 
     import os
+    _launcher_mode = "attach"   # pa-stream-cloud always attaches to the externally-owned cluster
     _repo_root = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..")
     )
@@ -247,7 +248,7 @@ def main(
         logger.exception("StreamConsumer error")
         raise typer.Exit(1)
     finally:
-        # Shut down Serve cleanly (does not destroy the Ray cluster).
+        # Tear down Serve deployments (safe — does not stop the Ray cluster).
         try:
             import ray as _ray
 
@@ -255,7 +256,10 @@ def main(
             typer.echo("[pa-stream-cloud] Serve shut down.")
         except Exception as exc:
             logger.warning("Serve shutdown error: %s", exc)
-        ray.shutdown()
+        # Only shut down the Ray runtime if we created the cluster (standalone mode).
+        # In attach mode the cluster is externally owned and must outlive this process.
+        if _launcher_mode == "standalone":
+            ray.shutdown()
 
 
 # ---------------------------------------------------------------------------
