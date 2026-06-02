@@ -47,7 +47,7 @@ class _WandbTracker(Tracker):
             project=project,
             entity=entity,
             config=config,
-            reinit=True,
+            reinit="finish_previous",
         )
 
     def log(self, metrics: dict[str, Any], step: int | None = None) -> None:

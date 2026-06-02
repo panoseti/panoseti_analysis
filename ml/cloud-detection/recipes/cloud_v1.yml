@@ -1,5 +1,7 @@
 name: cloud_v1
-# Cloud detector retrain — science params (not compute params; those go in profiles)
+# Cloud detector — DEV / notebook recipe.  Quick iteration: fewer epochs, any-G GPU.
+# For production full training (50 epochs, A6000 GPUs) use: recipes/cloud_v1.yml
+wandb_entity: "nraultwang"
 feature_cadence_s: 60.0
 threshold: 0.5
 split:
@@ -10,7 +12,7 @@ split:
 hyperparams:
   lr: 0.001
   batch_size: 128
-  epochs: 50
+  epochs: 10
   weight_decay: 0.00001
   gamma: 0.9
 scaling:

@@ -14,7 +14,7 @@
 #   ray down conf/ray/ral_cluster_baremetal.yaml
 #
 # Dashboard: http://digilab-receiver:8265
-# Prometheus / Grafana: cd ~/ray-test && docker compose up -d
+# Prometheus / Grafana: cd cluster/monitoring && docker compose up -d
 
 cluster_name: pseti-ral
 
@@ -58,9 +58,13 @@ initialization_commands: []
 
 # ── Package setup ──────────────────────────────────────────────────────────────
 # Runs on the host (conda env 'drp').  pypff installed first — not on PyPI.
+# --no-deps on panoseti_analysis: drp conda env already has all transitive deps;
+# skipping re-download prevents pip from pulling ray[train], torch+CUDA (~15 GB)
+# onto CPU-only dfs nodes and filling their root partition.
+# --no-cache-dir: avoids accumulating pip download cache across ray-up runs.
 setup_commands:
-    - pip install --quiet -e "/home/nico/panoseti_analysis/pypff[zarr]"
-    - pip install --quiet -e /home/nico/panoseti_analysis
+    - pip install --quiet --no-cache-dir -e "/home/nico/panoseti_analysis/pypff[zarr]"
+    - pip install --quiet --no-cache-dir -e /home/nico/panoseti_analysis --no-deps
 
 head_setup_commands: []
 worker_setup_commands: []

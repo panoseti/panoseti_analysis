@@ -1,0 +1,46 @@
+services:
+   # redis:
+   #     image: redis:latest
+   #     container_name: ray_redis
+   #     ports:
+   #         - "6379:6379"
+   #     volumes:
+   #         - redis_data:/data
+   #     restart: unless-stopped
+    
+    prometheus:
+        image: prom/prometheus:latest
+        container_name: ray_prometheus
+        network_mode: host
+        command:
+            - '--config.file=/tmp/ray/session_latest/metrics/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+        volumes:
+            - /tmp/ray:/tmp/ray:ro
+            - prometheus_data:/prometheus
+        restart: unless-stopped
+
+    grafana:
+        image: grafana/grafana:latest
+        container_name: ray_grafana
+        network_mode: host
+        environment:
+            - GF_PATHS_CONFIG=/tmp/ray/session_latest/metrics/grafana/grafana.ini
+            - GF_PATHS_PROVISIONING=/tmp/ray/session_latest/metrics/grafana/provisioning
+            - GF_SECURITY_ALLOW_EMBEDDING=true
+            - GF_SECURITY_COOKIE_SECURE=false
+            - GF_SECURITY_COOKIE_SAMESITE=none
+            - GF_AUTH_ANONYMOUS_ENABLED=true
+            - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+            - GF_AUTH_DISABLE_LOGIN_FORM=true
+        volumes:
+            - grafana_data:/var/lib/grafana
+            - /tmp/ray:/tmp/ray:ro
+        restart: unless-stopped
+        depends_on:
+            - prometheus
+
+volumes:
+    redis_data:
+    grafana_data:
+    prometheus_data:

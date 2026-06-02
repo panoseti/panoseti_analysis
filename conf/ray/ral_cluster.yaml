@@ -15,7 +15,7 @@
 #   ray down conf/ray/ral_cluster.yaml         # stop cluster (prefer keeping alive)
 #
 # Dashboard: http://digilab-receiver:8265
-# Prometheus / Grafana: cd ~/ray-test && docker compose up -d
+# Prometheus / Grafana: cd cluster/monitoring && docker compose up -d
 #   (Grafana at http://digilab-receiver:3000)
 
 cluster_name: pseti-ral

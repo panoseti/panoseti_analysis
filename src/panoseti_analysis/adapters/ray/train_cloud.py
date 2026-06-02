@@ -105,23 +105,27 @@ def train_loop_per_worker(config: dict[str, Any]) -> None:
             best_val_loss = val_loss
             best_state = {k: v.clone() for k, v in model.state_dict().items()}
 
-        ray.train.report(metrics)
+        # On the last epoch, rank 0 writes the best checkpoint so Ray can surface it.
+        # All workers still call ray.train.report — it's a collective barrier and every
+        # worker must call it the same number of times (once per epoch, no extras).
+        checkpoint: ray.train.Checkpoint | None = None
+        _ckpt_dir: str | None = None
+        if epoch == epochs - 1 and best_state is not None:
+            if ray.train.get_context().get_local_rank() == 0:
+                import shutil
+                import tempfile
+
+                _ckpt_dir = tempfile.mkdtemp(prefix="ray_ckpt_cloud_")
+                torch.save(best_state, Path(_ckpt_dir) / "model.pt")
+                checkpoint = ray.train.Checkpoint.from_directory(_ckpt_dir)
+
+        ray.train.report(metrics, checkpoint=checkpoint)
+
+        if _ckpt_dir is not None:
+            import shutil
+            shutil.rmtree(_ckpt_dir, ignore_errors=True)
 
     tracker.finish()
-
-    # Report the best checkpoint from rank-0 worker.
-    # Ray 2.x uses directory-based checkpoints — serialize the state dict to a
-    # temporary file and wrap it in a Checkpoint.from_directory.
-    if best_state is not None and ray.train.get_context().get_local_rank() == 0:
-        import tempfile
-
-        with tempfile.TemporaryDirectory() as ckpt_dir:
-            torch.save(best_state, Path(ckpt_dir) / "model.pt")
-            checkpoint = ray.train.Checkpoint.from_directory(ckpt_dir)
-            ray.train.report(
-                {"val_loss": best_val_loss, "val_acc": val_acc},
-                checkpoint=checkpoint,
-            )
 
 
 def run_train_cloud(
@@ -131,6 +135,8 @@ def run_train_cloud(
     launcher: str = "standalone",
     local_cache_dir: Path | None = None,
     lineage_out: Path | None = None,
+    wandb_project: str | None = None,
+    epochs: int | None = None,
 ) -> tuple[Path, Path, Path]:
     """Retrain the cloud detector on a pre-materialized feature cache.
 
@@ -141,6 +147,8 @@ def run_train_cloud(
         launcher: Ray init mode (attach/slurm/standalone).
         local_cache_dir: If set, pre-stages the feature cache to local SSD first.
         lineage_out: If set, writes a StoreLineage JSON record.
+        wandb_project: W&B project name override.
+        epochs: Epochs override.
 
     Returns:
         (pt_path, json_path, provenance_path)
@@ -167,10 +175,14 @@ def run_train_cloud(
         "recipe_name": recipe_name,
         **hp,
     }
+    if epochs is not None:
+        train_config["epochs"] = epochs
     # W&B tracking config passthrough
     for k in ("wandb_project", "wandb_entity"):
         if k in params_dict:
             train_config[k] = params_dict[k]
+    if wandb_project is not None:
+        train_config["wandb_project"] = wandb_project
 
     accelerator_type = scaling_cfg.get("accelerator_type", "G")
     num_workers = int(scaling_cfg.get("num_workers", 2))
@@ -189,13 +201,21 @@ def run_train_cloud(
     # Ray Train workers run on remote nodes (e.g. digilab-transmit) that may not
     # have panoseti_analysis installed; working_dir + PYTHONPATH makes it importable.
     _repo_root = Path(__file__).resolve().parents[4]
+    import os
+    env_vars = {"PYTHONPATH": "src"}
+    if "WANDB_API_KEY" in os.environ:
+        env_vars["WANDB_API_KEY"] = os.environ["WANDB_API_KEY"]
+
     _training_runtime_env = {
         "working_dir": str(_repo_root),
-        "env_vars": {"PYTHONPATH": "src"},
+        "env_vars": env_vars,
         "excludes": [
             ".venv/", ".git/", "*.zarr/", "uv.lock", ".claude/",
             "assets/models/cloud-detection-training/",
             "ml/*/cache/", "ml/*/models/", "ml/*/data/",
+            "pypff/example/",
+            "grpc/src/panoseti_grpc/daq_data/simulated_data_dir/",
+            "grpc/scripts/daq_data/simulated_data_dir/",
         ],
     }
     init_ray(cast(Literal["attach", "slurm", "standalone"], launcher), runtime_env=_training_runtime_env)
