@@ -140,9 +140,11 @@ def run_train_vae(
     scaling_cfg: dict[str, Any] = dict(params_dict.get("scaling", {}))
     split_cfg: dict[str, Any] = dict(params_dict.get("split", {}))
 
+    # Resolve to absolute: Ray workers run from a different CWD, so a relative path fails.
     effective_path = feature_cache
     if local_cache_dir is not None:
         effective_path = stage_to_local(feature_cache, local_cache_dir)
+    effective_path = Path(effective_path).resolve()
 
     ds_feat = open_store(effective_path)
     _ = read_history(dict(ds_feat.attrs))  # validates the store has provenance

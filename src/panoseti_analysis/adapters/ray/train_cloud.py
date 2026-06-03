@@ -18,7 +18,7 @@ from panoseti_analysis.adapters.ml.data import load_labeled_feature_cache
 from panoseti_analysis.adapters.ml.runner import report_final_checkpoint, run_torch_trainer
 from panoseti_analysis.adapters.ml.tracking import make_tracker
 from panoseti_analysis.adapters.ray._staging import stage_to_local
-from panoseti_analysis.algorithms.cloud_detector import CloudDetection
+from panoseti_analysis.algorithms.cloud_detector import CloudDetectionV2
 from panoseti_analysis.algorithms.cloud_train import (
     build_cloud_optimizer,
     cloud_loss_fn,
@@ -53,7 +53,7 @@ def train_loop_per_worker(config: dict[str, Any]) -> None:
 
     x_train, y_train, x_val, y_val = load_labeled_feature_cache(Path(config["local_feature_path"]))
 
-    model = ray.train.torch.prepare_model(CloudDetection())
+    model = ray.train.torch.prepare_model(CloudDetectionV2())
     optimizer, step_schedulers = build_cloud_optimizer(model, config)
     train_loader: DataLoader[Any] = DataLoader(
         TensorDataset(x_train, y_train),
@@ -73,6 +73,7 @@ def train_loop_per_worker(config: dict[str, Any]) -> None:
         if is_chief:
             tracker.log(metrics, step=epoch)
 
+    train_loader = ray.train.torch.prepare_data_loader(train_loader)
     result = fit(
         model,
         train_loader,
@@ -141,10 +142,12 @@ def run_train_cloud(
     hp = params_dict.get("hyperparams", {})
     scaling_cfg = params_dict.get("scaling", {})
 
-    # Stage to SSD if requested
+    # Stage to SSD if requested. Resolve to an absolute path: Ray workers run from a
+    # different CWD (the session artifacts dir), so a relative cache path won't be found.
     effective_path = feature_cache
     if local_cache_dir is not None:
         effective_path = stage_to_local(feature_cache, local_cache_dir)
+    effective_path = Path(effective_path).resolve()
 
     # Read upstream provenance from feature cache (kept as ProcessingStep context).
     ds_feat = open_store(effective_path)
@@ -172,13 +175,14 @@ def run_train_cloud(
         launcher=launcher,
         out_dir=out_dir,
     )
+    print(f"{best_state=}, {metrics=}")
 
-    model = CloudDetection()
+    model = CloudDetectionV2()
     model.load_state_dict(best_state)
 
     # Build ClassifierBundle with placeholder checksum (save_classifier will fix it)
     bundle = ClassifierBundle(
-        model_name="cloud_detector_retrained",
+        model_name="cloud_detector_retrained2",
         model_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
         checksum="sha256:placeholder",
         input_spec={

@@ -1,3 +1,8 @@
 {
-    "markdown.styles": ["public/vscode_markdown.css"]
+    "markdown.styles": [
+        "public/vscode_markdown.css"
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:ums-python.python:venv",
+    "python-envs.defaultPackageManager": "ms-python.python:pip",
+    "python.defaultInterpreterPath": "/home/nico/panoseti_analysis/.venv/bin/python"
 }

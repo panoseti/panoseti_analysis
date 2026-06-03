@@ -8,8 +8,39 @@ import numpy as np
 import torch
 import torch.nn as nn
 import xarray as xr
+from torchvision.models import ConvNeXt_Tiny_Weights, convnext_tiny
 
 from panoseti_analysis.config.models import CloudInferParams
+
+
+class CloudDetectionV2(nn.Module):
+    input_shape = (2, 32, 32)
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        # Lift legacy input to the right dimensions
+        self.conv_lift = nn.Conv2d(
+            in_channels=2,
+            out_channels=3,
+            kernel_size=3,
+            padding=1,
+        )
+
+        # load pre-trained convextmodel and freeze the weights --> treat as a feature extractor
+        self.convnext = convnext_tiny(weights=ConvNeXt_Tiny_Weights.DEFAULT)
+        for p in self.convnext.parameters():
+            p.requires_grad = False
+
+        # Train new classifer heads
+        self.convnext.classifier[2] = nn.Linear(768, 256, bias=True)
+        self.fc = nn.Sequential(nn.LayerNorm(256), nn.GELU(), nn.Linear(256, 2))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = self.conv_lift(x)
+        out = self.convnext(out)
+        out = self.fc(out)
+        return out
 
 
 class CloudDetection(nn.Module):
@@ -34,7 +65,7 @@ class CloudDetection(nn.Module):
             ),
             nn.ReLU(),
             nn.BatchNorm2d(conv1_nker),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.1),
             nn.Conv2d(
                 conv1_nker,
                 conv1_nker,
@@ -45,7 +76,7 @@ class CloudDetection(nn.Module):
             ),
             nn.ReLU(),
             nn.BatchNorm2d(conv1_nker),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.1),
             nn.Conv2d(
                 conv1_nker,
                 conv1_nker,
@@ -56,7 +87,7 @@ class CloudDetection(nn.Module):
             ),
             nn.ReLU(),
             nn.BatchNorm2d(conv1_nker),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.2),
             nn.Conv2d(
                 conv1_nker,
                 conv1_nker,
@@ -68,7 +99,7 @@ class CloudDetection(nn.Module):
             nn.ReLU(),
             nn.BatchNorm2d(conv1_nker),
             nn.MaxPool2d(kernel_size=3),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.2),
         )
 
         conv2_groups = 1
@@ -85,7 +116,7 @@ class CloudDetection(nn.Module):
             ),
             nn.ReLU(),
             nn.BatchNorm2d(conv2_nker),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.3),
             nn.Conv2d(
                 conv2_nker,
                 conv2_nker,
@@ -96,7 +127,7 @@ class CloudDetection(nn.Module):
             ),
             nn.ReLU(),
             nn.BatchNorm2d(conv2_nker),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.3),
             nn.Conv2d(
                 conv2_nker,
                 conv2_nker,
@@ -108,7 +139,7 @@ class CloudDetection(nn.Module):
             nn.ReLU(),
             nn.BatchNorm2d(conv2_nker),
             nn.MaxPool2d(kernel_size=3),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.3),
         )
 
         self.flatten = nn.Flatten()

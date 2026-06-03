@@ -12,7 +12,9 @@ from panoseti_analysis.io.checksum import compute_sha256
 __all__ = ["load_classifier", "load_vae", "save_classifier"]
 
 
-def load_classifier(model_path: Path) -> tuple[torch.nn.Module, ClassifierBundle]:
+def load_classifier(
+    model_path: Path, model: None | torch.nn.Module = None
+) -> tuple[torch.nn.Module, ClassifierBundle]:
     """Load a PyTorch model and its metadata sidecar.
 
     Verifies the model file's SHA256 checksum against the sidecar before loading.
@@ -41,7 +43,8 @@ def load_classifier(model_path: Path) -> tuple[torch.nn.Module, ClassifierBundle
 
     # The .pt file is a state_dict (OrderedDict)
     state_dict = torch.load(model_path, map_location="cpu", weights_only=True)
-    model = CloudDetection()
+    if model is None:
+        model = CloudDetection()
     model.load_state_dict(state_dict)
 
     return model, bundle

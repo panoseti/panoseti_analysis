@@ -51,7 +51,9 @@ def run_torch_trainer(
         use_gpu=use_gpu,
         **({"accelerator_type": accelerator_type} if accelerator_type else {}),
     )
-    run_cfg = RunConfig(storage_path=str(out_dir / "ray_results"))
+    # Ray Train v2 requires an absolute storage path (a bare relative path is read as a URI
+    # with an empty scheme and rejected by pyarrow). resolve() so a relative --out still works.
+    run_cfg = RunConfig(storage_path=str((out_dir / "ray_results").resolve()))
 
     # Workers import panoseti_analysis from the editable install on each node; only the
     # W&B key needs forwarding (no working_dir — see train_cloud.py for the rationale).

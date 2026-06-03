@@ -29,6 +29,7 @@ trace.txt
 
 # Test data and fixture stores
 tests/data/
+**/data/**
 
 # Zarr stores anywhere
 *.zarr/

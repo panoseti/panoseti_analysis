@@ -251,6 +251,7 @@ L1_zarr/
 logs/
 *.html
 trace.txt
+*.png
 
 # pytest
 .pytest_cache/
@@ -270,3 +271,5 @@ assets/models/cloud-detection-training/*.tar.gz
 # Secrets
 .env
 
+# VSCode
+.vscode/*
