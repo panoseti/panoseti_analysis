@@ -1,10 +1,10 @@
 name: cloud_v2
 # Cloud detector v2 — pipeline-native features at 10s cadence (DEV / notebook recipe).
 # Labels come from pa-prep-cloud-labels (batch ZIPs → interval CSV).
-# For production full training (50 epochs) use: recipes/cloud_v2.yml
-feature_cadence_s: 10.0    # match original batch-builder 10s sampling resolution
-window_s: 60.0             # lookback window for the differential channel
-n_stack: 10                # frames stacked per integration point
+# For production full training (50 epochs) use: recipes/ml/cloud_v2.yml
+feature_cadence_s: 10.0 # match original batch-builder 10s sampling resolution
+window_s: 60.0 # lookback window for the differential channel
+n_stack: 10 # frames stacked per integration point
 threshold: 0.5
 split:
   test_prop: 0.15
@@ -12,6 +12,8 @@ split:
   boundary_prop: 0.20
   seed: 35
 hyperparams:
+  arch: "cloud_detector_v2"
+  optimizer: "adamw"
   lr: 0.001
   batch_size: 128
   epochs: 10

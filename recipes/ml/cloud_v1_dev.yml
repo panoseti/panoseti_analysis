@@ -1,6 +1,6 @@
 name: cloud_v1
 # Cloud detector — DEV / notebook recipe.  Quick iteration: fewer epochs, any-G GPU.
-# For production full training (50 epochs, A6000 GPUs) use: recipes/cloud_v1.yml
+# For production full training (50 epochs, A6000 GPUs) use: recipes/ml/cloud_v1.yml
 wandb_entity: "nraultwang-mit-massachusetts-institute-of-technology"
 feature_cadence_s: 60.0
 threshold: 0.5

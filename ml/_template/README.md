@@ -55,12 +55,12 @@ from panoseti_analysis.adapters.ml.bench import (
 3. **Full Ray Train run** once the recipe is ready:
 
    ```bash
-   pa-train-cloud FEATURE_CACHE.zarr models/ --recipe recipes/my_model_v1.yml
+   pa-train-cloud FEATURE_CACHE.zarr models/ --recipe recipes/ml/my_model_v1_template.yml
    ```
 
 4. **Hyperparameter sweep**:
    ```bash
-   pa-tune-cloud FEATURE_CACHE.zarr models/ --recipe recipes/my_model_v1.yml
+   pa-tune-cloud FEATURE_CACHE.zarr models/ --recipe recipes/ml/my_model_v1_template.yml
    ```
 
 ## Tracking (optional)
