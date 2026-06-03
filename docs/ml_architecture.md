@@ -2,6 +2,9 @@
 
 This document outlines the architecture of the Machine Learning workloads in `panoseti_analysis`, focusing primarily on the Cloud Detection inference pipeline, the Nextflow-to-Ray substrate, and future extensions.
 
+**Model cards:** [Cloud Detector](../ml/cloud-detection/README.md) · [β-VAE Anomaly Detector](../ml/anomaly-detection/README.md)  
+**Operational guides:** [Real-time Streaming (RAL)](streaming_ral.md) · [Training on RAL](training_ral.md)
+
 ## Data Flow & Inference Pipeline
 
 The ML pipeline is architected around "Pure Kernels" (Layer A) that operate independently of any transport or orchestration framework, wrapped by thin CLI adapters (Layer B) that handle data loading and distribution.
@@ -137,9 +140,11 @@ Uses **2-channel features** (`raw_fft` + `deriv_fft`, matching inference) and th
 
 `algorithms/ph_vae.py::BetaVAE(latent_dim=32, hidden_dim=64)` — pure PyTorch, input `(N, 1, 16, 16)`. Loss: `MSE(mean) + beta·KL(sum) + sparsity·L1(mu)`. Preprocessing (`pa-prep-ph`): L1 `pedestal_subtracted` → log-norm to unit range. Split seed=1984.
 
-### Hyperparameter Tuning (Ray Tune — future)
+### Hyperparameter Tuning (Ray Tune)
 
-`Ray Tune` wraps the `Ray Train` loop via `TuneConfig` for grid search or Bayesian optimization. Seam is defined; not implemented in Chunk 3.
+`pa-tune-cloud` wraps `TorchTrainer` in a `Tuner` with ASHA scheduler. The recipe `tune:`
+block defines the search space (`uniform`, `loguniform`, `choice`, `grid`, `randint`). See
+[Training on RAL](training_ral.md#hyperparameter-sweep-ray-tune) for usage.
 
 ---
 
@@ -176,21 +181,21 @@ panoseti_grpc DaqData server ── StreamImages ──► StreamConsumer (async
 
 ### Key components
 
-| File | Role |
-|------|------|
-| `adapters/stream/consumer.py` | Async `StreamImages` consumer; extracts per-frame ns timestamp from header Struct (16×16/32×32 both handled); routes frames to `FrameAccumulator` actors |
-| `adapters/stream/accumulator.py` | `@ray.remote FrameAccumulator`; rolling buffer + progressive rolling-median calibration; calls `calibrate_img` + `predict_cloud_score`; emits via gRPC + telemetry |
-| `adapters/stream/serve_app.py` | `@serve.deployment CloudInferDeployment`; loads model bundle once; pinned to gaming node (`accelerator_type:G`) to keep A6000s for training |
-| `adapters/stream/cli.py` | `pa-stream-cloud` typer CLI; init_ray(attach) + deploy Serve + run consumer |
-| `grpc/src/panoseti_grpc/ml_inference/` | Thin gRPC pub-sub broker (no ML logic); `EmitPrediction` fans predictions out to `StreamPredictions` / `SubscribeAlerts` subscribers |
+| File                                   | Role                                                                                                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `adapters/stream/consumer.py`          | Async `StreamImages` consumer; extracts per-frame ns timestamp from header Struct (16×16/32×32 both handled); routes frames to `FrameAccumulator` actors           |
+| `adapters/stream/accumulator.py`       | `@ray.remote FrameAccumulator`; rolling buffer + progressive rolling-median calibration; calls `calibrate_img` + `predict_cloud_score`; emits via gRPC + telemetry |
+| `adapters/stream/serve_app.py`         | `@serve.deployment CloudInferDeployment`; loads model bundle once; pinned to gaming node (`accelerator_type:G`) to keep A6000s for training                        |
+| `adapters/stream/cli.py`               | `pa-stream-cloud` typer CLI; init_ray(attach) + deploy Serve + run consumer                                                                                        |
+| `grpc/src/panoseti_grpc/ml_inference/` | Thin gRPC pub-sub broker (no ML logic); `EmitPrediction` fans predictions out to `StreamPredictions` / `SubscribeAlerts` subscribers                               |
 
 ### Progressive calibration (cold-start behaviour)
 
 The accumulator uses `calibrate_img` over the rolling buffer as a progressive pedestal
-estimate (rolling median).  Early in the night this underestimates the real pedestal.
+estimate (rolling median). Early in the night this underestimates the real pedestal.
 Each `Prediction` carries a `calibration_maturity` field (0=cold, 1=warm) so downstream
-consumers can discount early-night windows.  **End-to-end streaming scores will not
-byte-match batch L2** — by design.  The equivalence keystone
+consumers can discount early-night windows. **End-to-end streaming scores will not
+byte-match batch L2** — by design. The equivalence keystone
 (`tests/adapters/test_stream_consumer.py::TestEquivalenceKeystone`) proves that:
 
 1. **Kernel outputs are bit-identical** across CLI / Ray task / gRPC-Serve paths given the
@@ -200,11 +205,11 @@ byte-match batch L2** — by design.  The equivalence keystone
 
 ### GPU placement
 
-| Node | Resource tag | Use |
-|------|-------------|-----|
-| `digilab-receiver` (`10.0.1.14`) | `accelerator_type:RTX` | Training (reserved) |
-| `digilab-transmit` (`10.0.1.34`) | `accelerator_type:G` | Serving (CloudInferDeployment pinned here) |
-| `panoseti-dfs{0,1,2}` | none | CPU fan-out, data pipeline |
+| Node                             | Resource tag           | Use                                        |
+| -------------------------------- | ---------------------- | ------------------------------------------ |
+| `digilab-receiver` (`10.0.1.14`) | `accelerator_type:RTX` | Training (reserved)                        |
+| `digilab-transmit` (`10.0.1.34`) | `accelerator_type:G`   | Serving (CloudInferDeployment pinned here) |
+| `panoseti-dfs{0,1,2}`            | none                   | CPU fan-out, data pipeline                 |
 
 Pin serving to the gaming node: `ray_actor_options={"num_gpus": 1, "resources": {"accelerator_type:G": 0.001}}`.
 The Blackwell RTX 5070 requires CUDA ≥12.8 — confirmed available (drp env: cu130).
@@ -222,7 +227,7 @@ pseti-grpc server --config /path/to/server.toml
 # 3. Run the streaming pipeline (attach mode, gaming GPU, 60s cadence):
 pa-stream-cloud \
     --model-path assets/models/cloud_detector_v1.pt \
-    --recipe recipes/stream_cloud_v1.yml \
+    --recipe recipes/ml/stream_cloud_v1.yml \
     --grpc-host localhost \
     --archive-dir /mnt/beegfs/streams/
 
@@ -239,11 +244,11 @@ with MLInferenceClient() as c:
 
 New proto: `grpc/protos/ml_inference.proto` (package `panoseti.ml`, branch `feat/ml-inference-service`).
 
-| RPC | Direction | Description |
-|-----|-----------|-------------|
-| `EmitPrediction` | accumulator → servicer | Push one scored window |
-| `StreamPredictions` | client ← servicer | Live stream of all scores (filterable by module/model) |
-| `SubscribeAlerts` | client ← servicer | Only cloud-detected events (score ≥ alert_threshold) |
+| RPC                 | Direction              | Description                                            |
+| ------------------- | ---------------------- | ------------------------------------------------------ |
+| `EmitPrediction`    | accumulator → servicer | Push one scored window                                 |
+| `StreamPredictions` | client ← servicer      | Live stream of all scores (filterable by module/model) |
+| `SubscribeAlerts`   | client ← servicer      | Only cloud-detected events (score ≥ alert_threshold)   |
 
 Seams (commented, unimplemented): `TriggerCapture`, `MLInterrupt`, `MountControl`.
 
@@ -251,9 +256,9 @@ Enable in the unified server: `services.ml_inference = true` in `server.toml`.
 
 ### Streaming provenance
 
-* **Lightweight in-memory tags** on every `Prediction` proto: `model_name`, `model_version`,
+- **Lightweight in-memory tags** on every `Prediction` proto: `model_name`, `model_version`,
   model `checksum`, `recipe_hash`, `git_sha`, `calibration_maturity`.
-* **Full `processing_history` on archived windows-of-interest** (cloud-flagged windows):
+- **Full `processing_history` on archived windows-of-interest** (cloud-flagged windows):
   `write_store(ds_l2, archive_dir/..., processing_history=[ProcessingStep(...)])` writes the
   full chain (step_name="stream_cloud_infer", model provenance, recipe_hash, software) into
   Zarr root attrs, then the store is PACK'd to ZipStore for the archive hop.
@@ -262,6 +267,7 @@ Enable in the unified server: `services.ml_inference = true` in `server.toml`.
 
 The streaming consumer is designed to work equally against a real Hashpipe DAQ system.
 Replace `simulate.py` replay with real hardware:
+
 1. Boot the Beelink head node / Quabo stack (see `control/TEST-HW-SW.md` to be authored).
 2. Start `pseti-grpc server --profile daq_node` on the DAQ node.
 3. Port-forward port 50051 (`HEADNODE_IP:HEADNODE_GRPC_PORT`).

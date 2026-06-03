@@ -93,116 +93,17 @@ Ray is opt-in per process via a `gpu_ray` label. Processes that don't need distr
 
 ## How to run
 
-```bash
-uv sync                                   # create .venv, install workspace
-uv run pre-commit install                 # one-time: install local lint hooks (ruff/format/nbstripout on commit, mypy on push)
-uv run pytest                             # Python unit + integration tests
-uv run ruff check src tests && uv run mypy src/panoseti_analysis
-make check                                # lint + format + typecheck + test in one shot (see `make help`)
+_Quick start: see `README.md`. Full dev setup: see [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)._
 
-# Ingest pipeline (laptop, bundled test data):
-nextflow run . -profile test,laptop --outdir results_smoke
-# Real run (samplesheet of run_id,obs_dir) or single-run convenience:
-nextflow run . -profile laptop --input samplesheet.csv --outdir <OUT>
-nextflow run . -profile laptop --input_obs_dir /path/obs.pffd --outdir <OUT>
-# Choose steps (ingest implemented; reconstruct is stub; ml runs cloud classification):
-nextflow run . -profile laptop --steps ingest,ml --input_obs_dir … --outdir …
-# HPC: -profile hpc_slurm  (SLURM + Apptainer; --slurm_account/--slurm_queue)
-# To use Ray for ML workloads: add --use_ray true
-```
+## Real-time streaming
 
-CLIs (also on `$PATH` inside Nextflow): `pa-convert`, `pa-calibrate`, `pa-hk`,
-`pa-manifest`, `pa-pack`.
-
-## Real-time streaming (RAL only — attach mode)
-
-The streaming pipeline consumes the live DaqData.StreamImages gRPC feed and emits
-cloud-detection scores in real time. It runs **alongside** the batch pipeline on the
-same Ray cluster (attach mode, externally owned). Ray Serve is a **persistent substrate**
-here (the scoped exception to the transient-cluster rule — the cluster is owned externally).
-
-```bash
-# 1. Start the panoseti_grpc unified server with DaqData + MLInference enabled:
-#    Edit grpc/src/panoseti_grpc/config/server.toml:  ml_inference = true
-pseti-grpc server                                   # or: pseti-grpc server --config custom.toml
-
-# 2. (Optional) For replay from archived PFF, configure simulate_daq_cfg in server.toml
-#    and point movie_pff_path to a file under /mnt/beegfs/data/L0/
-
-# 3. Run the streaming pipeline (gaming GPU, 60s cadence):
-pa-stream-cloud \
-    --model-path assets/models/cloud_detector_v1.pt \
-    --recipe recipes/ml/stream_cloud_v1.yml \
-    --grpc-host localhost \
-    --archive-dir /mnt/beegfs/streams/
-
-# 4. Subscribe to live predictions (from another terminal):
-python -c "
-from panoseti_grpc.ml_inference.client import MLInferenceClient
-with MLInferenceClient() as c:
-    for p in c.stream_predictions():
-        print(p.module_id, p.cloud_score, p.cloud_label)
-"
-```
-
-**Ray Serve persistence note:** `pa-stream-cloud` deploys `CloudInferDeployment` onto the
-externally-owned cluster and **shuts it down** on exit (Ctrl-C). It does NOT shut down the
-Ray cluster itself — the cluster remains for training jobs. GPU placement: serving replica
-runs on `digilab-transmit` (`accelerator_type:RTX`); A6000s on `digilab-receiver` are reserved
-for training.
+See [`docs/streaming_ral.md`](docs/streaming_ral.md) — setup guide for the RAL attach-mode streaming pipeline.
 
 ## Training on RAL
 
-RAL is bare-metal, no SLURM. 5 nodes:
+See [`docs/training_ral.md`](docs/training_ral.md) — cluster topology, startup commands, and full training workflow.
 
-- **`digilab-receiver`** (head, 2× RTX A6000 48 GB + 1 TB SSD NVMe, `accelerator_type:G` — training; runs dashboard docker-compose)
-- **`digilab-transmit`** (2× consumer RTX GPU, `accelerator_type:RTX` — Ray Serve inference)
-- **`panoseti-dfs0`**, **`panoseti-dfs1`**, **`panoseti-dfs2`** (BeeGFS storage nodes, CPU-only)
-
-BeeGFS at `/mnt/beegfs`.
-
-**Starting the cluster** (replaces manual `ray start` in tmux):
-
-```bash
-ray up conf/ray/ral_cluster.yaml           # start / reconnect all 5 nodes
-ray up conf/ray/ral_cluster.yaml --no-restart  # attach without restarting Ray
-ray status                                 # verify workers connected
-cd ~/ray-test && docker compose up -d      # start prometheus/grafana (if not running)
-# Dashboard: http://digilab-receiver:8265   Grafana: http://digilab-receiver:3000
-```
-
-The pipeline **attaches** to this running cluster — it never provisions RAL.
-
-```bash
-# 1. Ingest the label-covered subset to L1 (Nextflow handles PFF → L0 → L1):
-nextflow run . -profile ral --steps ingest -params-file recipes/ingest_subset.yml --outdir /mnt/beegfs/runs/
-
-# 2. Materialize features (runs standalone, reads L1 from BeeGFS):
-pa-features-cloud --stores /mnt/beegfs/runs/*/L1/*.zarr \
-  --out /mnt/beegfs/features/ --recipe recipes/ml/cloud_v1.yml \
-  --label-csv /mnt/beegfs/labels/cloud_labels.csv
-
-# 3. Train cloud detector (attaches to user's running Ray cluster):
-pa-train-cloud --launcher attach --recipe recipes/ml/cloud_v1.yml \
-  --feature-cache /mnt/beegfs/features/features.<hash>.zarr \
-  --out /mnt/beegfs/models/ \
-  --local-cache-dir /local/scratch
-
-# 4. Train BetaVAE:
-pa-prep-ph --stores /mnt/beegfs/runs/*/L1/*.dp_ph256.*.zarr \
-  --out /mnt/beegfs/features/ --recipe recipes/ml/vae_train_v1.yml
-pa-train-vae --launcher attach --recipe recipes/ml/vae_train_v1.yml \
-  --feature-cache /mnt/beegfs/features/features.<hash>.zarr \
-  --out /mnt/beegfs/models/ --local-cache-dir /local/scratch
-
-# 5. Run inference with the new model bundle:
-nextflow run . -profile laptop --steps ml \
-  --cloud_model_pt /mnt/beegfs/models/cloud_detector_v2.pt \
-  --cloud_model_json /mnt/beegfs/models/cloud_detector_v2.CloudDetection.json \
-  --input_obs_dir /path/obs.pffd --outdir results/
-```
-
-**Recipes vs Profiles:**
+## Recipes vs Profiles
 
 - `recipes/ml/*.yml` — ML training recipes (WHAT SCIENCE: feature params, split ratios, hyperparams, scaling). Passed via `--recipe` to training CLIs (`pa-train-cloud`, `pa-tune-cloud`, etc.). Dev variants (notebook-friendly hyperparams): `*_dev.yml`. Template for new models: `my_model_v1_template.yml`.
 - `recipes/*.yml` — non-ML pipeline recipes (calibration defaults, ingest subsets). Passed via `-params-file` to Nextflow.
