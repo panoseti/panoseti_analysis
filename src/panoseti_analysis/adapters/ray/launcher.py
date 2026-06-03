@@ -16,6 +16,7 @@ at ``ray.init()`` time — NOT per-actor.  Pass ``runtime_env`` to ``init_ray`` 
 launching the streaming pipeline (``pa-stream-cloud``).  Training/batch adapters do
 NOT need runtime_env (they run only on the head node or via Nextflow's container).
 """
+
 from __future__ import annotations
 
 import os

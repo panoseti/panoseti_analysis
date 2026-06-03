@@ -41,9 +41,7 @@ app = typer.Typer(
 _LABEL_MAP = {"clear_night_sky": 0, "not_clear_cloudy": 1}
 
 
-def _read_batch_tables(
-    data_zip: Path, batch_id: int
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _read_batch_tables(data_zip: Path, batch_id: int) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return (feat_df, pano_df) for one batch, read entirely in-memory."""
     tgz_pattern = f"batch-id_{batch_id}.tar.gz"
     with zipfile.ZipFile(data_zip) as outer:
@@ -82,7 +80,9 @@ def _read_batch_labels(labels_zip: Path, batch_id: int, skip_unsure: bool) -> pd
         for inner_name in inner_zips:
             inner_bytes = outer.read(inner_name)
             with zipfile.ZipFile(io.BytesIO(inner_bytes)) as inner:
-                csv_candidates = [n for n in inner.namelist() if label_pattern in n and n.endswith(".csv")]
+                csv_candidates = [
+                    n for n in inner.namelist() if label_pattern in n and n.endswith(".csv")
+                ]
                 if csv_candidates:
                     label_df = pd.read_csv(io.BytesIO(inner.read(csv_candidates[0])), index_col=0)
                     break
@@ -135,10 +135,8 @@ def build_interval_label_csv(
             continue
 
         # feature_uid → pano_uid → (module_id, frame_unix_t)
-        merged = (
-            label_df
-            .merge(feat_df, on="feature_uid", how="left")
-            .merge(pano_df, on="pano_uid", how="left")
+        merged = label_df.merge(feat_df, on="feature_uid", how="left").merge(
+            pano_df, on="pano_uid", how="left"
         )
         n_missing = merged["frame_unix_t"].isna().sum()
         if n_missing:
@@ -147,12 +145,14 @@ def build_interval_label_csv(
 
         for _, row in merged.iterrows():
             t_center_ns = int(float(row["frame_unix_t"]) * 1e9)
-            rows.append({
-                "module": str(int(row["module_id"])),
-                "t_start_ns": t_center_ns - half_window_ns,
-                "t_end_ns": t_center_ns + half_window_ns,
-                "label": int(row["label_int"]),
-            })
+            rows.append(
+                {
+                    "module": str(int(row["module_id"])),
+                    "t_start_ns": t_center_ns - half_window_ns,
+                    "t_end_ns": t_center_ns + half_window_ns,
+                    "label": int(row["label_int"]),
+                }
+            )
 
         logger.info("  batch %d: %d labeled samples", bid, len(merged))
 
@@ -165,7 +165,10 @@ def build_interval_label_csv(
     n_clear = (df_out["label"] == 0).sum()
     logger.info(
         "Total: %d intervals — cloudy=%d clear=%d modules=%s",
-        len(df_out), n_cloudy, n_clear, sorted(df_out["module"].unique()),
+        len(df_out),
+        n_cloudy,
+        n_clear,
+        sorted(df_out["module"].unique()),
     )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -237,6 +240,6 @@ def main(
 
     typer.echo(
         f"[pa-prep-cloud-labels] {len(df)} intervals written to {out}\n"
-        f"  cloudy={int((df['label']==1).sum())}  clear={int((df['label']==0).sum())}"
+        f"  cloudy={int((df['label'] == 1).sum())}  clear={int((df['label'] == 0).sum())}"
         f"  modules={sorted(df['module'].unique())}"
     )

@@ -63,6 +63,13 @@ def test_loss_is_non_negative(small_model: BetaVAE, batch_input: torch.Tensor) -
 def test_no_device_placement() -> None:
     """ph_vae.py must not contain hard-coded CUDA device placement (AST check)."""
     src = _PH_VAE_FILE.read_text()
-    forbidden = (".cuda(", "torch.cuda", '.to("cuda"', ".to('cuda'", 'device="cuda"', "device='cuda'")
+    forbidden = (
+        ".cuda(",
+        "torch.cuda",
+        '.to("cuda"',
+        ".to('cuda'",
+        'device="cuda"',
+        "device='cuda'",
+    )
     offenders = [p for p in forbidden if p in src]
     assert not offenders, f"ph_vae.py contains hard-coded CUDA references: {offenders}"

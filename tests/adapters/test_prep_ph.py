@@ -49,16 +49,18 @@ def _make_l1_ph_store(
 
 # ── unit test for helper ──────────────────────────────────────────────────────
 
+
 def test_log_norm_to_unit_mean_near_zero() -> None:
     """_log_norm_to_unit output must have approximately zero mean and be float32."""
     rng = np.random.default_rng(0)
-    arr = (rng.random((10, 16, 16)).astype(np.float32) * 100 + 1)
+    arr = rng.random((10, 16, 16)).astype(np.float32) * 100 + 1
     result = _log_norm_to_unit(arr)
     assert result.dtype == np.float32, f"Expected float32, got {result.dtype}"
     assert abs(result.mean()) < 0.1, f"Mean {result.mean():.4f} not close to 0"
 
 
 # ── adapter tests ─────────────────────────────────────────────────────────────
+
 
 def test_prep_ph_produces_zarr(tmp_path: Path) -> None:
     """run_prep_ph must write a readable feature cache with X shape (N, 1, H, W)."""
@@ -123,7 +125,9 @@ def test_prep_ph_raises_on_no_valid_stores(tmp_path: Path) -> None:
     # Create an img store (no pedestal_subtracted / baseline_subtracted / ph_counts)
     store_path = tmp_path / "not_a_ph_store.zarr"
     ds = xr.Dataset(
-        data_vars={"median_subtracted": (["time", "y", "x"], np.zeros((10, 32, 32), dtype=np.float32))},
+        data_vars={
+            "median_subtracted": (["time", "y", "x"], np.zeros((10, 32, 32), dtype=np.float32))
+        },
         attrs={"data_product": "img16", "module": "1", "data_level": "L1"},
     )
     ds.to_zarr(str(store_path), zarr_format=3)

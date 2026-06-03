@@ -6,6 +6,7 @@ cluster — the same pattern used by the standalone launcher path for RAL.
 
 Marked with 'slow' so it can be excluded from quick CI runs: pytest -m "not slow".
 """
+
 import json
 import os
 import subprocess
@@ -26,9 +27,12 @@ def real_ray_cluster(tmp_path_factory):
     pytest.importorskip("ray")
     subprocess.Popen(
         [
-            "ray", "start", "--head",
+            "ray",
+            "start",
+            "--head",
             f"--port={RAY_TEST_PORT}",
-            "--num-cpus=2", "--num-gpus=0",
+            "--num-cpus=2",
+            "--num-gpus=0",
             "--include-dashboard=false",
         ],
         stdout=subprocess.DEVNULL,

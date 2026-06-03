@@ -24,6 +24,7 @@ from panoseti_analysis.config.versions import (
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+
 def _make_step(**overrides: object) -> ProcessingStep:
     defaults: dict[str, object] = {
         "step_name": "convert",
@@ -49,6 +50,7 @@ def _make_lineage(**overrides: object) -> StoreLineage:
 
 
 # ── ProcessingStep ─────────────────────────────────────────────────────────────
+
 
 class TestProcessingStep:
     def test_creates_with_required_fields(self) -> None:
@@ -119,13 +121,20 @@ class TestProcessingStep:
             ProcessingStep(step_name="x", step_version="1")  # type: ignore[call-arg]
 
     def test_all_documented_step_names_work(self) -> None:
-        for name in ("convert", "calibrate_ph", "cloud_features", "classify_cloud",
-                     "train_cloud", "train_vae"):
+        for name in (
+            "convert",
+            "calibrate_ph",
+            "cloud_features",
+            "classify_cloud",
+            "train_cloud",
+            "train_vae",
+        ):
             step = _make_step(step_name=name)
             assert step.step_name == name
 
 
 # ── TrainingProvenance ─────────────────────────────────────────────────────────
+
 
 class TestTrainingProvenance:
     def _make_tp(self, **overrides: object) -> TrainingProvenance:
@@ -198,6 +207,7 @@ class TestTrainingProvenance:
 
 # ── StoreLineage.processing_history ───────────────────────────────────────────
 
+
 class TestStoreLineageProcessingHistory:
     def test_processing_history_defaults_to_empty_list(self) -> None:
         sl = _make_lineage()
@@ -205,8 +215,11 @@ class TestStoreLineageProcessingHistory:
 
     def test_existing_fields_unaffected(self) -> None:
         qc = TimestampQC(
-            status=TimestampQCStatus.CLEAN, monotonic=True, n_frames=10,
-            t_start_ns=1000, t_end_ns=2000,
+            status=TimestampQCStatus.CLEAN,
+            monotonic=True,
+            n_frames=10,
+            t_start_ns=1000,
+            t_end_ns=2000,
         )
         sl = _make_lineage(
             checksum="sha256:abc",
@@ -221,8 +234,9 @@ class TestStoreLineageProcessingHistory:
 
     def test_processing_history_with_steps(self) -> None:
         step1 = _make_step(step_name="convert", step_version="1.0")
-        step2 = _make_step(step_name="calibrate_ph", step_version="2.0",
-                           params={"sigma_threshold": 5.0})
+        step2 = _make_step(
+            step_name="calibrate_ph", step_version="2.0", params={"sigma_threshold": 5.0}
+        )
         sl = _make_lineage(processing_history=[step1, step2])
         assert len(sl.processing_history) == 2
         assert sl.processing_history[0].step_name == "convert"
@@ -255,19 +269,26 @@ class TestStoreLineageProcessingHistory:
         """ProcessingStep inside StoreLineage also rejects extra keys."""
         with pytest.raises(ValidationError):
             StoreLineage(
-                dp="ph256", module="1", level="L1", kind="ph",
-                store="x.zarr", n_frames=1,
-                processing_history=[{  # type: ignore[list-item]
-                    "step_name": "convert",
-                    "step_version": "1",
-                    "params": {},
-                    "timestamp_utc": "2026-01-01T00:00:00Z",
-                    "bogus": "bad",
-                }],
+                dp="ph256",
+                module="1",
+                level="L1",
+                kind="ph",
+                store="x.zarr",
+                n_frames=1,
+                processing_history=[
+                    {  # type: ignore[list-item]
+                        "step_name": "convert",
+                        "step_version": "1",
+                        "params": {},
+                        "timestamp_utc": "2026-01-01T00:00:00Z",
+                        "bogus": "bad",
+                    }
+                ],
             )
 
 
 # ── Manifest with processing_history ──────────────────────────────────────────
+
 
 class TestManifestWithProcessingHistory:
     def test_manifest_round_trip_with_history(self) -> None:
@@ -305,6 +326,7 @@ class TestManifestWithProcessingHistory:
 
 
 # ── versions ──────────────────────────────────────────────────────────────────
+
 
 class TestVersions:
     def test_storage_version_bumped_to_2(self) -> None:

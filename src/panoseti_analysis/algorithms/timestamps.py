@@ -57,9 +57,7 @@ def compute_timestamp_qc(
     sorted_diffs = np.diff(sorted_t) if n > 1 else np.empty(0, dtype=t.dtype)
     max_gap_ns = int(sorted_diffs.max()) if sorted_diffs.size else 0
     gap_threshold = _gap_threshold_ns(sorted_diffs, cadence_ns, gap_factor, mad_k)
-    n_gaps_over = (
-        int(np.count_nonzero(sorted_diffs > gap_threshold)) if gap_threshold > 0 else 0
-    )
+    n_gaps_over = int(np.count_nonzero(sorted_diffs > gap_threshold)) if gap_threshold > 0 else 0
     max_backward = int(-diffs.min()) if n_nonmonotonic else 0
 
     if max_backward > suspect_displacement_ns:

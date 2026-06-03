@@ -60,7 +60,9 @@ def run_hk(
         records.append(record)
 
     if lineage_out is not None:
-        Path(lineage_out).write_text(json.dumps([r.model_dump(mode="json") for r in records], indent=2))
+        Path(lineage_out).write_text(
+            json.dumps([r.model_dump(mode="json") for r in records], indent=2)
+        )
 
     return records
 

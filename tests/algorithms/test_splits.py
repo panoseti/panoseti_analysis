@@ -76,6 +76,4 @@ def test_all_indices_in_range(timestamps: np.ndarray) -> None:
     n = len(timestamps)
     splits = data_split(timestamps)
     for key, idx in splits.items():
-        assert np.all(idx >= 0) and np.all(idx < n), (
-            f"Split '{key}' contains out-of-range indices"
-        )
+        assert np.all(idx >= 0) and np.all(idx < n), f"Split '{key}' contains out-of-range indices"

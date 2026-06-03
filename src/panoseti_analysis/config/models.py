@@ -52,7 +52,7 @@ class CloudInferParams(_Base):
     cadence_s: float = 60.0
     threshold: float = 0.5
     window_s: float = 60.0  # lookback window for the differential (deriv) channel
-    n_stack: int = 10       # frames stacked per integration point
+    n_stack: int = 10  # frames stacked per integration point
 
 
 # ── provenance / processing history ──────────────────────────────────────────
@@ -63,16 +63,18 @@ class ProcessingStep(_Base):
     redesign.
     """
 
-    step_name: str                               # IVOA Activity.name (e.g. "convert", "calibrate_ph")
-    step_version: str                            # IVOA Activity/Agent version (kernel/software version)
-    params: dict[str, Any]                       # IVOA Activity Parameters
-    recipe_name: str | None = None               # IVOA Agent/config descriptor
-    recipe_hash: str | None = None               # content hash of the recipe ("sha256:…")
-    input_checksums: list[str] = Field(default_factory=list)   # IVOA used (Entity refs)
-    output_checksum: str | None = None           # IVOA wasGeneratedBy
-    timestamp_utc: str                           # IVOA Activity.startTime (ISO 8601); ISO 8601 format required; consumers validate
-    software: dict[str, str] = Field(default_factory=dict)     # IVOA wasAssociatedWith Agent
-    nextflow_lineage_id: str | None = None       # external execution ref (lid://); NF 26.04 lineage
+    step_name: str  # IVOA Activity.name (e.g. "convert", "calibrate_ph")
+    step_version: str  # IVOA Activity/Agent version (kernel/software version)
+    params: dict[str, Any]  # IVOA Activity Parameters
+    recipe_name: str | None = None  # IVOA Agent/config descriptor
+    recipe_hash: str | None = None  # content hash of the recipe ("sha256:…")
+    input_checksums: list[str] = Field(default_factory=list)  # IVOA used (Entity refs)
+    output_checksum: str | None = None  # IVOA wasGeneratedBy
+    timestamp_utc: (
+        str  # IVOA Activity.startTime (ISO 8601); ISO 8601 format required; consumers validate
+    )
+    software: dict[str, str] = Field(default_factory=dict)  # IVOA wasAssociatedWith Agent
+    nextflow_lineage_id: str | None = None  # external execution ref (lid://); NF 26.04 lineage
 
 
 class TrainingProvenance(_Base):
@@ -82,25 +84,27 @@ class TrainingProvenance(_Base):
     ``.json`` sidecar next to the ``.pt`` weights file.
     """
 
-    step_name: str                               # e.g. "train_cloud" or "train_vae"
-    step_version: str                            # software/model version
+    step_name: str  # e.g. "train_cloud" or "train_vae"
+    step_version: str  # software/model version
     recipe_name: str | None = None
     recipe_hash: str | None = None
-    params: dict[str, Any]                       # all hyperparams (lr, batch, epochs, …)
-    input_checksums: list[str] = Field(default_factory=list)   # feature-cache + L1 checksums
-    output_checksum: str | None = None           # checksum of the .pt weights file
-    timestamp_utc: str                                           # ISO 8601 format required; consumers validate
-    software: dict[str, str] = Field(default_factory=dict)     # git_sha, ray_version, torch_version, …
-    metrics: dict[str, float] = Field(default_factory=dict)    # e.g. {"val_accuracy": 0.96}; numeric-only; use dict[str, Any] if non-numeric values are needed
+    params: dict[str, Any]  # all hyperparams (lr, batch, epochs, …)
+    input_checksums: list[str] = Field(default_factory=list)  # feature-cache + L1 checksums
+    output_checksum: str | None = None  # checksum of the .pt weights file
+    timestamp_utc: str  # ISO 8601 format required; consumers validate
+    software: dict[str, str] = Field(default_factory=dict)  # git_sha, ray_version, torch_version, …
+    metrics: dict[str, float] = Field(
+        default_factory=dict
+    )  # e.g. {"val_accuracy": 0.96}; numeric-only; use dict[str, Any] if non-numeric values are needed
     wandb_run_id: str | None = None
 
 
 # ── timestamp QC ──────────────────────────────────────────────────────────────
 class TimestampQCStatus(StrEnum):
-    CLEAN = "clean"          # already monotonic non-decreasing, no gaps over threshold
-    REPAIRED = "repaired"    # was non-monotonic; stable-sorted into order
-    FLAGGED = "flagged"      # monotonic/repaired but has gaps and/or duplicates
-    SUSPECT = "suspect"      # corruption-grade displacement; hard-fail under --fail_on_suspect
+    CLEAN = "clean"  # already monotonic non-decreasing, no gaps over threshold
+    REPAIRED = "repaired"  # was non-monotonic; stable-sorted into order
+    FLAGGED = "flagged"  # monotonic/repaired but has gaps and/or duplicates
+    SUSPECT = "suspect"  # corruption-grade displacement; hard-fail under --fail_on_suspect
 
 
 class TimestampQC(_Base):

@@ -85,9 +85,7 @@ def test_features_cloud_with_label_csv(tmp_path: Path) -> None:
     t_end = _EPOCH_NS + 120_000_000_000  # 120 s covers first 2 features at 60 s cadence
 
     label_csv = tmp_path / "labels.csv"
-    df = pd.DataFrame(
-        [{"module": "1", "t_start_ns": t_start, "t_end_ns": t_end, "label": 1}]
-    )
+    df = pd.DataFrame([{"module": "1", "t_start_ns": t_start, "t_end_ns": t_end, "label": 1}])
     df.to_csv(label_csv, index=False)
 
     run_features_cloud([l1_store], out_path, _RECIPE, label_csv=label_csv)

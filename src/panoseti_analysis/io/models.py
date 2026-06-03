@@ -35,7 +35,9 @@ def load_classifier(model_path: Path) -> tuple[torch.nn.Module, ClassifierBundle
     # Verify checksum
     actual_sha = f"sha256:{compute_sha256(model_path)}"
     if actual_sha != bundle.checksum:
-        raise ValueError(f"Model checksum mismatch for {model_path}. Expected {bundle.checksum}, got {actual_sha}")
+        raise ValueError(
+            f"Model checksum mismatch for {model_path}. Expected {bundle.checksum}, got {actual_sha}"
+        )
 
     # The .pt file is a state_dict (OrderedDict)
     state_dict = torch.load(model_path, map_location="cpu", weights_only=True)
@@ -125,8 +127,7 @@ def load_vae(
     actual_sha = f"sha256:{compute_sha256(model_path)}"
     if actual_sha != bundle.checksum:
         raise ValueError(
-            f"Checksum mismatch for {model_path}. "
-            f"Expected {bundle.checksum}, got {actual_sha}"
+            f"Checksum mismatch for {model_path}. Expected {bundle.checksum}, got {actual_sha}"
         )
 
     ld: int | str = bundle.input_spec.get("latent_dim", latent_dim)

@@ -17,6 +17,7 @@ from panoseti_analysis.io.provenance import (
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+
 def _make_step_dict(**overrides: object) -> dict:
     base: dict = {
         "step_name": "convert",
@@ -33,6 +34,7 @@ def _make_step(**overrides: object) -> ProcessingStep:
 
 
 # ── read_history ──────────────────────────────────────────────────────────────
+
 
 class TestReadHistory:
     def test_returns_empty_list_for_missing_key(self) -> None:
@@ -111,6 +113,7 @@ class TestReadHistory:
 
 # ── append_step ───────────────────────────────────────────────────────────────
 
+
 class TestAppendStep:
     def test_appends_step_to_empty_list(self) -> None:
         step = _make_step()
@@ -150,6 +153,7 @@ class TestAppendStep:
 
 
 # ── capture_software ──────────────────────────────────────────────────────────
+
 
 class TestCaptureSoftware:
     def test_returns_dict_with_git_sha_key(self) -> None:
@@ -192,16 +196,14 @@ class TestCaptureSoftware:
         """git_sha must be either 'unknown' or a short hex string."""
         result = capture_software()
         sha = result["git_sha"]
-        assert sha == "unknown" or re.match(r"^[0-9a-f]+$", sha), \
-            f"unexpected git_sha: {sha!r}"
+        assert sha == "unknown" or re.match(r"^[0-9a-f]+$", sha), f"unexpected git_sha: {sha!r}"
 
 
 # ── now_utc ───────────────────────────────────────────────────────────────────
 
+
 class TestNowUtc:
-    _ISO8601_RE = re.compile(
-        r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
-    )
+    _ISO8601_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
     def test_returns_string(self) -> None:
         result = now_utc()
@@ -209,8 +211,9 @@ class TestNowUtc:
 
     def test_matches_iso8601_format(self) -> None:
         result = now_utc()
-        assert self._ISO8601_RE.match(result), \
+        assert self._ISO8601_RE.match(result), (
             f"now_utc() returned {result!r}, expected ISO 8601 like '2026-05-29T14:23:00Z'"
+        )
 
     def test_ends_with_z(self) -> None:
         result = now_utc()
@@ -219,6 +222,7 @@ class TestNowUtc:
     def test_two_calls_are_close(self) -> None:
         """Two consecutive calls should return the same or adjacent second."""
         import time
+
         t1 = now_utc()
         time.sleep(0.01)
         t2 = now_utc()

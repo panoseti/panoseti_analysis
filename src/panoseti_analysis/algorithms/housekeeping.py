@@ -33,9 +33,7 @@ def build_hk_datasets(hk: dict[str, dict[str, np.ndarray]]) -> dict[str, xr.Data
             hk_t_ns = np.arange(n, dtype="int64")
 
         data_vars = {
-            name: ("hk_time", np.asarray(arr))
-            for name, arr in fields.items()
-            if name != time_field
+            name: ("hk_time", np.asarray(arr)) for name, arr in fields.items() if name != time_field
         }
         datasets[hashset] = xr.Dataset(
             data_vars=data_vars,
