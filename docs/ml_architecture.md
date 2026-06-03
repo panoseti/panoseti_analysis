@@ -205,8 +205,8 @@ byte-match batch L2** — by design. The equivalence keystone
 
 ### GPU placement
 
-| Node                             | Resource tag           | Use                                        |
-| -------------------------------- | ---------------------- | ------------------------------------------ |
+| Node                             | Resource tag              | Use                                        |
+| -------------------------------- | ------------------------- | ------------------------------------------ |
 | `digilab-receiver` (`10.0.1.14`) | `accelerator_type:A6000`  | Training (reserved)                        |
 | `digilab-transmit` (`10.0.1.34`) | `accelerator_type:GAMING` | Serving (CloudInferDeployment pinned here) |
 | `panoseti-dfs{0,1,2}`            | none                      | CPU fan-out, data pipeline                 |

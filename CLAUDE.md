@@ -74,11 +74,11 @@ Ray is opt-in per process via a `gpu_ray` label. Processes that don't need distr
 
 **Three launcher modes** (`adapters/ray/launcher.py::init_ray(launcher)`):
 
-| Mode         | Cluster ownership                                 | When                                                |
-| ------------ | ------------------------------------------------- | --------------------------------------------------- |
-| `attach`     | **Persistent, user-owned** (`cluster/ral_up.sh`)  | RAL (default), dev                                  |
-| `slurm`      | Transient — == SLURM allocation                   | Expanse; cluster brought up via `ray symmetric-run` |
-| `standalone` | Process-local, real multi-process                 | CI / laptop                                         |
+| Mode         | Cluster ownership                                | When                                                |
+| ------------ | ------------------------------------------------ | --------------------------------------------------- |
+| `attach`     | **Persistent, user-owned** (`cluster/ral_up.sh`) | RAL (default), dev                                  |
+| `slurm`      | Transient — == SLURM allocation                  | Expanse; cluster brought up via `ray symmetric-run` |
+| `standalone` | Process-local, real multi-process                | CI / laptop                                         |
 
 **The transient-cluster invariant is SLURM-only.** On RAL the cluster outlives any job; on `standalone` it is process-local. `attach` and `slurm` both call `ray.init(address="auto")` — the difference is _who owns the cluster_.
 

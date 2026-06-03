@@ -8,11 +8,11 @@ checkpointing, and SSD-staging details.
 
 ## Cluster topology
 
-| Node                | Specs                                                          | Role                                         |
-| ------------------- | -------------------------------------------------------------- | -------------------------------------------- |
-| `digilab-receiver`  | 2× RTX A6000 48 GB + 1 TB NVMe SSD (`accelerator_type:A6000`)  | Head node; training; Ray + Grafana dashboard |
-| `digilab-transmit`  | RTX 5070 + RTX 4070 (`accelerator_type:GAMING`)                | Ray Serve inference                          |
-| `panoseti-dfs0/1/2` | CPU-only                                                       | BeeGFS storage nodes                         |
+| Node                | Specs                                                         | Role                                         |
+| ------------------- | ------------------------------------------------------------- | -------------------------------------------- |
+| `digilab-receiver`  | 2× RTX A6000 48 GB + 1 TB NVMe SSD (`accelerator_type:A6000`) | Head node; training; Ray + Grafana dashboard |
+| `digilab-transmit`  | RTX 5070 + RTX 4070 (`accelerator_type:GAMING`)               | Ray Serve inference                          |
+| `panoseti-dfs0/1/2` | CPU-only                                                      | BeeGFS storage nodes                         |
 
 GPU resource labels (`accelerator_type:A6000` for training, `accelerator_type:GAMING` for
 serving) are **custom resources set explicitly by `cluster/ral_up.sh`** — not Ray's

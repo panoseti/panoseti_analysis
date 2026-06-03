@@ -65,9 +65,7 @@ def test_no_large_unignored_files() -> None:
     ]
     leaks = sorted(set(large) - _rayignored(large))
     if leaks:
-        detail = "\n".join(
-            f"  {(REPO / p).stat().st_size / 1048576:.0f} MB\t{p}" for p in leaks
-        )
+        detail = "\n".join(f"  {(REPO / p).stat().st_size / 1048576:.0f} MB\t{p}" for p in leaks)
         raise AssertionError(
             f"Files > {THRESHOLD_MB} MB are neither .gitignore'd nor .rayignore'd and would "
             f"ship to every Ray node / Serve package:\n{detail}\n"

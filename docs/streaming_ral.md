@@ -38,8 +38,8 @@ with MLInferenceClient() as c:
 
 ## GPU placement
 
-| Node               | GPU                                      | Role                                            |
-| ------------------ | ---------------------------------------- | ----------------------------------------------- |
+| Node               | GPU                                             | Role                                            |
+| ------------------ | ----------------------------------------------- | ----------------------------------------------- |
 | `digilab-transmit` | RTX 5070 + RTX 4070 (`accelerator_type:GAMING`) | Ray Serve inference replica (serving)           |
 | `digilab-receiver` | 2× RTX A6000 (`accelerator_type:A6000`)         | Training — **reserved, do not use for serving** |
 

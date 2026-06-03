@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+
 import pytest
 import ray
 
-import os
-import subprocess
+from panoseti_analysis.adapters.ray.launcher import init_ray
+
 
 def is_live_cluster_up() -> bool:
     if "RAY_ADDRESS" in os.environ:
@@ -17,9 +20,8 @@ def is_live_cluster_up() -> bool:
     except subprocess.CalledProcessError:
         return False
 
-LIVE_CLUSTER_UP = is_live_cluster_up()
 
-from panoseti_analysis.adapters.ray.launcher import init_ray
+LIVE_CLUSTER_UP = is_live_cluster_up()
 
 
 @pytest.fixture(autouse=True)
