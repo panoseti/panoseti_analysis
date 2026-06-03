@@ -1,3 +1,6 @@
+# ⚠️  DEPRECATED — superseded by cluster/ral_up.sh (explicit, config-driven bring-up).
+# The Docker variant is unused; node labels here are stale (see docs/training_ral.md).
+#
 # PANOSETI RAL Ray Cluster — 5-node on-premises configuration
 #
 # Runs Ray inside Docker (rayproject/ray:2.55.1-py313-gpu, Python 3.13).

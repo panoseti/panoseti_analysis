@@ -76,7 +76,7 @@ Ray is opt-in per process via a `gpu_ray` label. Processes that don't need distr
 
 | Mode         | Cluster ownership                                 | When                                                |
 | ------------ | ------------------------------------------------- | --------------------------------------------------- |
-| `attach`     | **Persistent, user-owned** (user ran `ray start`) | RAL (default), dev                                  |
+| `attach`     | **Persistent, user-owned** (`cluster/ral_up.sh`)  | RAL (default), dev                                  |
 | `slurm`      | Transient — == SLURM allocation                   | Expanse; cluster brought up via `ray symmetric-run` |
 | `standalone` | Process-local, real multi-process                 | CI / laptop                                         |
 

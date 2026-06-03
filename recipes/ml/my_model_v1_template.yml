@@ -24,7 +24,7 @@ hyperparams:
 # Ray Train scaling
 scaling:
   num_workers: 2
-  accelerator_type: "G" # "G" = A6000 on RAL; "RTX" = consumer GPUs
+  accelerator_type: "A6000" # "A6000" = training GPUs (digilab-receiver); "GAMING" = serving (digilab-transmit)
 
 # Ray Tune sweep (used by pa-tune-cloud; remove if not sweeping)
 tune:

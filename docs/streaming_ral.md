@@ -6,7 +6,7 @@ same Ray cluster (attach mode, externally owned). See [ML Architecture](ml_archi
 for the component diagram, progressive-calibration design, and equivalence keystone tests.
 
 Ray Serve is a **persistent substrate** here — the scoped exception to the
-transient-cluster rule. The cluster is owned externally (user ran `ray up`); the
+transient-cluster rule. The cluster is owned externally (brought up via `cluster/ral_up.sh`); the
 pipeline deploys onto it and tears down its own deployment on exit, but never the
 cluster itself.
 
@@ -40,11 +40,11 @@ with MLInferenceClient() as c:
 
 | Node               | GPU                                      | Role                                            |
 | ------------------ | ---------------------------------------- | ----------------------------------------------- |
-| `digilab-transmit` | 2× consumer RTX (`accelerator_type:RTX`) | Ray Serve inference replica (serving)           |
-| `digilab-receiver` | 2× RTX A6000 (`accelerator_type:G`)      | Training — **reserved, do not use for serving** |
+| `digilab-transmit` | RTX 5070 + RTX 4070 (`accelerator_type:GAMING`) | Ray Serve inference replica (serving)           |
+| `digilab-receiver` | 2× RTX A6000 (`accelerator_type:A6000`)         | Training — **reserved, do not use for serving** |
 
 `pa-stream-cloud` pins `CloudInferDeployment` to `digilab-transmit` with
-`ray_actor_options={"num_gpus": 1, "resources": {"accelerator_type:G": 0.001}}`.
+`ray_actor_options={"num_gpus": 1, "resources": {"accelerator_type:GAMING": 0.001}}`.
 
 ## Shutdown behaviour
 

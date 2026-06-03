@@ -52,10 +52,13 @@ def l1_store_for_cluster(tmp_path: Path) -> Path:
     t_arr = np.arange(t0_ns, t0_ns + n_frames * 1_000_000_000, 1_000_000_000, dtype=np.int64)
     rng = np.random.default_rng(7)
     img_data = rng.standard_normal((n_frames, 32, 32)).astype(np.float32)
+    mask = np.zeros((32, 32), dtype=np.uint8)
     ds = xr.Dataset(
         {
             "median_subtracted": (["T", "H", "W"], img_data),
             "unix_t_ns": (["T"], t_arr),
+            "hot_pixel_mask": (["H", "W"], mask),
+            "dead_pixel_mask": (["H", "W"], mask),
         },
         attrs={"data_product": "img16", "module": "2", "run_id": "obs_CLUSTERTEST"},
     )

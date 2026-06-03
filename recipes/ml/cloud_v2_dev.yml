@@ -21,6 +21,6 @@ hyperparams:
   gamma: 0.9
 scaling:
   num_workers: 2
-  accelerator_type: "G"
+  accelerator_type: "A6000"
 wandb_entity: "nraultwang-mit-massachusetts-institute-of-technology"
 model_out_dir: "models/cloud_v2"

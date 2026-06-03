@@ -1,3 +1,12 @@
+# ⚠️  DEPRECATED — do NOT use `ray up` for RAL. Use `cluster/ral_up.sh` instead.
+#
+# Ray's local provider gives the head + workers ONE shared node type and caps its worker
+# quota at len(worker_ips), so the head consumes a slot and only len(worker_ips)-1 workers
+# ever launch (digilab-transmit is the casualty — `min_workers: 5` below is silently clamped
+# to 4, so the workaround cannot work). This fixed-size cluster needs no autoscaler; every
+# node is started explicitly with deterministic GPU labels by cluster/ral_up.sh. See
+# docs/training_ral.md. This file is retained only as a record of per-node setup_commands.
+#
 # PANOSETI RAL Ray Cluster — 5-node bare-metal configuration
 #
 # Runs Ray directly on the host Python (conda env 'drp', Python 3.14) — no Docker.

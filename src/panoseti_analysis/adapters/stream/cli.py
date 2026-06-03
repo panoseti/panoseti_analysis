@@ -90,7 +90,7 @@ def main(
             "--gpu-node-ip",
             help=(
                 "Pin the Serve inference replica to this specific node IP. "
-                "Default: use accelerator_type:RTX (digilab-transmit)."
+                "Default: use accelerator_type:GAMING (digilab-transmit)."
             ),
         ),
     ] = None,

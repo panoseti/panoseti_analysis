@@ -27,7 +27,9 @@ def _build_scaling_and_run_cfg(scaling_cfg: dict[str, Any], out_dir: Path) -> tu
     """Build ScalingConfig + RunConfig from the recipe ``scaling`` block."""
     from ray.train import RunConfig, ScalingConfig
 
-    accelerator_type = scaling_cfg.get("accelerator_type", "G")
+    # Default None = no accelerator pin (run on any GPU). Recipes set "A6000" to pin to the
+    # training GPUs (digilab-receiver); "G" is no longer a valid label on the RAL cluster.
+    accelerator_type = scaling_cfg.get("accelerator_type")
     num_workers = int(scaling_cfg.get("num_workers", 2))
     use_gpu = num_workers > 0 and torch.cuda.is_available()
     scaling = ScalingConfig(

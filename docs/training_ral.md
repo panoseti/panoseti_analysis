@@ -8,11 +8,16 @@ checkpointing, and SSD-staging details.
 
 ## Cluster topology
 
-| Node                | Specs                                                     | Role                                         |
-| ------------------- | --------------------------------------------------------- | -------------------------------------------- |
-| `digilab-receiver`  | 2× RTX A6000 48 GB + 1 TB NVMe SSD (`accelerator_type:G`) | Head node; training; Ray + Grafana dashboard |
-| `digilab-transmit`  | 2× consumer RTX (`accelerator_type:RTX`)                  | Ray Serve inference                          |
-| `panoseti-dfs0/1/2` | CPU-only                                                  | BeeGFS storage nodes                         |
+| Node                | Specs                                                          | Role                                         |
+| ------------------- | -------------------------------------------------------------- | -------------------------------------------- |
+| `digilab-receiver`  | 2× RTX A6000 48 GB + 1 TB NVMe SSD (`accelerator_type:A6000`)  | Head node; training; Ray + Grafana dashboard |
+| `digilab-transmit`  | RTX 5070 + RTX 4070 (`accelerator_type:GAMING`)                | Ray Serve inference                          |
+| `panoseti-dfs0/1/2` | CPU-only                                                       | BeeGFS storage nodes                         |
+
+GPU resource labels (`accelerator_type:A6000` for training, `accelerator_type:GAMING` for
+serving) are **custom resources set explicitly by `cluster/ral_up.sh`** — not Ray's
+auto-detected types. Recipes pin training to `A6000`; `serve_app.py` pins inference to
+`GAMING`. This keeps the A6000s free for training.
 
 BeeGFS at `/mnt/beegfs`. ML artifacts: `/mnt/beegfs/models/`, `/mnt/beegfs/features/`,
 `/mnt/beegfs/runs/`.
@@ -20,12 +25,23 @@ BeeGFS at `/mnt/beegfs`. ML artifacts: `/mnt/beegfs/models/`, `/mnt/beegfs/featu
 ## Starting the cluster
 
 ```bash
-ray up conf/ray/ral_cluster.yaml             # start / reconnect all 5 nodes
-ray up conf/ray/ral_cluster.yaml --no-restart  # attach without restarting Ray
-ray status                                   # verify workers connected
-cd ~/ray-test && docker compose up -d        # start prometheus/grafana (if not running)
+bash cluster/ral_up.sh             # start all 5 nodes with correct GPU labels
+bash cluster/ral_up.sh --no-sync   # restart Ray only (skip source rsync)
+bash cluster/ral_down.sh           # ray stop on every node
+ray status                         # verify all 5 nodes connected
+cd cluster/monitoring && docker compose up -d   # prometheus/grafana (if not running)
 # Dashboard: http://digilab-receiver:8265   Grafana: http://digilab-receiver:3000
 ```
+
+Edit node IPs / GPU counts / env names / labels in [`cluster/ral_nodes.conf`](../cluster/ral_nodes.conf)
+— never in the scripts. `ral_up.sh` also runs a payload guard that aborts if a large file
+(> 50 MB) would be rsynced to the workers (override with `--allow-large`).
+
+**Why a script instead of `ray up`:** Ray's local provider gives the head and all workers one
+shared node type and caps its worker quota at `len(worker_ips)`, so the head consumes a slot and
+only `len(worker_ips) − 1` workers ever launch — `digilab-transmit` is the perennial casualty.
+This fixed-size cluster needs no autoscaler, so every node is started explicitly with deterministic
+GPU labels.
 
 The pipeline **attaches** to this running cluster — it never provisions RAL.
 
@@ -73,3 +89,14 @@ pa-tune-cloud --launcher attach --recipe recipes/ml/cloud_v1.yml \
 Add a `tune:` block to the recipe to define the search space. See
 [`recipes/ml/my_model_v1_template.yml`](../recipes/ml/my_model_v1_template.yml) for the
 format (`uniform`, `loguniform`, `choice`, `grid`, `randint`).
+
+## Environment notes
+
+- `cluster/ral_up.sh` does **not** copy the conda env — each node already has its env
+  (`drp` on receiver/transmit, `ray_env` on the dfs nodes) and an editable install of the
+  workspace. It only rsyncs source (editable picks up code changes; `--reinstall` re-runs
+  `pip install --no-deps -e .` when deps change).
+- The `drp` env may carry `transformers`/`datasets`; these are **not** project dependencies
+  (absent from `pyproject.toml` / `uv.lock`), are imported nowhere, and never ship in the
+  Docker images (`uv sync --frozen`). They do not affect cluster launch or build time — leave
+  them, or `pip uninstall` for a leaner dev env. Do not add them to `pyproject` until used.

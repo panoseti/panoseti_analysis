@@ -185,7 +185,7 @@ panoseti_grpc DaqData server ── StreamImages ──► StreamConsumer (async
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `adapters/stream/consumer.py`          | Async `StreamImages` consumer; extracts per-frame ns timestamp from header Struct (16×16/32×32 both handled); routes frames to `FrameAccumulator` actors           |
 | `adapters/stream/accumulator.py`       | `@ray.remote FrameAccumulator`; rolling buffer + progressive rolling-median calibration; calls `calibrate_img` + `predict_cloud_score`; emits via gRPC + telemetry |
-| `adapters/stream/serve_app.py`         | `@serve.deployment CloudInferDeployment`; loads model bundle once; pinned to gaming node (`accelerator_type:G`) to keep A6000s for training                        |
+| `adapters/stream/serve_app.py`         | `@serve.deployment CloudInferDeployment`; loads model bundle once; pinned to gaming node (`accelerator_type:GAMING`) to keep A6000s for training                   |
 | `adapters/stream/cli.py`               | `pa-stream-cloud` typer CLI; init_ray(attach) + deploy Serve + run consumer                                                                                        |
 | `grpc/src/panoseti_grpc/ml_inference/` | Thin gRPC pub-sub broker (no ML logic); `EmitPrediction` fans predictions out to `StreamPredictions` / `SubscribeAlerts` subscribers                               |
 
@@ -207,11 +207,12 @@ byte-match batch L2** — by design. The equivalence keystone
 
 | Node                             | Resource tag           | Use                                        |
 | -------------------------------- | ---------------------- | ------------------------------------------ |
-| `digilab-receiver` (`10.0.1.14`) | `accelerator_type:RTX` | Training (reserved)                        |
-| `digilab-transmit` (`10.0.1.34`) | `accelerator_type:G`   | Serving (CloudInferDeployment pinned here) |
-| `panoseti-dfs{0,1,2}`            | none                   | CPU fan-out, data pipeline                 |
+| `digilab-receiver` (`10.0.1.14`) | `accelerator_type:A6000`  | Training (reserved)                        |
+| `digilab-transmit` (`10.0.1.34`) | `accelerator_type:GAMING` | Serving (CloudInferDeployment pinned here) |
+| `panoseti-dfs{0,1,2}`            | none                      | CPU fan-out, data pipeline                 |
 
-Pin serving to the gaming node: `ray_actor_options={"num_gpus": 1, "resources": {"accelerator_type:G": 0.001}}`.
+Pin serving to the gaming node: `ray_actor_options={"num_gpus": 1, "resources": {"accelerator_type:GAMING": 0.001}}`.
+Labels are set explicitly by `cluster/ral_up.sh` (not Ray auto-detection).
 The Blackwell RTX 5070 requires CUDA ≥12.8 — confirmed available (drp env: cu130).
 
 ### Running the streaming pipeline

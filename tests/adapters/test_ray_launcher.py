@@ -5,6 +5,20 @@ from __future__ import annotations
 import pytest
 import ray
 
+import os
+import subprocess
+
+def is_live_cluster_up() -> bool:
+    if "RAY_ADDRESS" in os.environ:
+        return True
+    try:
+        subprocess.run(["ray", "status"], check=True, capture_output=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+LIVE_CLUSTER_UP = is_live_cluster_up()
+
 from panoseti_analysis.adapters.ray.launcher import init_ray
 
 
@@ -18,12 +32,14 @@ def shutdown_ray():
         ray.shutdown()
 
 
+@pytest.mark.skipif(LIVE_CLUSTER_UP, reason="Conflicts with live cluster")
 def test_init_ray_standalone_initializes() -> None:
     """standalone mode should start a real local cluster."""
     init_ray("standalone", num_cpus=2)
     assert ray.is_initialized()
 
 
+@pytest.mark.skipif(LIVE_CLUSTER_UP, reason="Conflicts with live cluster")
 def test_init_ray_is_idempotent() -> None:
     """Calling init_ray twice should not raise."""
     init_ray("standalone")
