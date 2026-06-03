@@ -1,13 +1,11 @@
 """Shared W&B media logging for model trainers (Layer B).
 
-These helpers render figures with matplotlib and log them through the *generic*
-:class:`~panoseti_analysis.adapters.ml.tracking.Tracker` plumbing (``log_image`` /
-``log_artifact``), so they work for any model and degrade gracefully on non-W&B backends.
-The pure report data (confusion-matrix counts, PR-curve points) is built by Layer-A kernels
-(e.g. ``algorithms/cloud_train.py``); this module only turns that data into pictures.
+Delegates figure rendering to :mod:`panoseti_analysis.adapters.ml.viz` (the
+single source of truth for figure layout), then calls ``tracker.log_image`` /
+``tracker.log_artifact`` to push the result to W&B.
 
-Everything is best-effort: a missing matplotlib (or any rendering hiccup) must never fail a
-training run, so callers should treat these as fire-and-forget.
+Everything is best-effort: a missing matplotlib (or any rendering hiccup) must
+never fail a training run, so callers should treat these as fire-and-forget.
 """
 
 from __future__ import annotations
@@ -19,6 +17,11 @@ from pathlib import Path
 from typing import Any
 
 from panoseti_analysis.adapters.ml.tracking import Tracker
+from panoseti_analysis.adapters.ml.viz import (
+    confusion_matrix_fig,
+    histogram_fig,
+    pr_curve_fig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,33 +36,12 @@ def log_confusion_matrix(
 ) -> None:
     """Render a confusion-matrix heatmap (counts) and log it as an image."""
     try:
-        import matplotlib
+        fig = confusion_matrix_fig(cm, class_names=class_names)
+        if fig is not None:
+            tracker.log_image(key, fig, step=step)
+            import matplotlib.pyplot as plt
 
-        matplotlib.use("Agg")  # headless: no display on Ray workers / CI
-        import matplotlib.pyplot as plt
-        import numpy as np
-
-        arr = np.asarray(cm)
-        fig, ax = plt.subplots(figsize=(3.4, 3.0))
-        im = ax.imshow(arr, cmap="Blues")
-        ax.set_xticks(range(len(class_names)), labels=[f"pred {c}" for c in class_names])
-        ax.set_yticks(range(len(class_names)), labels=[f"true {c}" for c in class_names])
-        thresh = arr.max() / 2 if arr.size else 0
-        for i in range(arr.shape[0]):
-            for j in range(arr.shape[1]):
-                ax.text(
-                    j,
-                    i,
-                    str(int(arr[i, j])),
-                    ha="center",
-                    va="center",
-                    color="white" if arr[i, j] > thresh else "black",
-                )
-        ax.set_title("Confusion matrix")
-        fig.colorbar(im, ax=ax, fraction=0.046)
-        fig.tight_layout()
-        tracker.log_image(key, fig, step=step)
-        plt.close(fig)
+            plt.close(fig)
     except Exception:  # pragma: no cover - best-effort media logging
         logger.warning("Skipped confusion-matrix logging", exc_info=True)
 
@@ -72,25 +54,13 @@ def log_pr_curve(
     step: int | None = None,
 ) -> None:
     """Render a precision–recall curve and log it as an image."""
-    if not pr.get("recall"):
-        return
     try:
-        import matplotlib
+        fig = pr_curve_fig(pr)
+        if fig is not None:
+            tracker.log_image(key, fig, step=step)
+            import matplotlib.pyplot as plt
 
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-
-        fig, ax = plt.subplots(figsize=(3.6, 3.0))
-        ax.plot(pr["recall"], pr["precision"], marker=".", linewidth=1, color="steelblue")
-        ax.set_xlabel("Recall")
-        ax.set_ylabel("Precision")
-        ax.set_xlim(0, 1.02)
-        ax.set_ylim(0, 1.02)
-        ax.set_title("Precision–Recall")
-        ax.grid(True, alpha=0.3)
-        fig.tight_layout()
-        tracker.log_image(key, fig, step=step)
-        plt.close(fig)
+            plt.close(fig)
     except Exception:  # pragma: no cover - best-effort media logging
         logger.warning("Skipped PR-curve logging", exc_info=True)
 
@@ -107,24 +77,12 @@ def log_histogram(
 ) -> None:
     """Render a 1-D histogram (e.g. VAE reconstruction errors) and log it as an image."""
     try:
-        import matplotlib
+        fig = histogram_fig(values, title=title, xlabel=xlabel, bins=bins)
+        if fig is not None:
+            tracker.log_image(key, fig, step=step)
+            import matplotlib.pyplot as plt
 
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        import numpy as np
-
-        arr = np.asarray(values).ravel()
-        if arr.size == 0:
-            return
-        fig, ax = plt.subplots(figsize=(4.0, 3.0))
-        ax.hist(arr, bins=bins, color="steelblue", edgecolor="white", linewidth=0.4)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel("count")
-        if title:
-            ax.set_title(title)
-        fig.tight_layout()
-        tracker.log_image(key, fig, step=step)
-        plt.close(fig)
+            plt.close(fig)
     except Exception:  # pragma: no cover - best-effort media logging
         logger.warning("Skipped histogram logging", exc_info=True)
 

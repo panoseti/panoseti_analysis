@@ -10,6 +10,8 @@ split:
   boundary_prop: 0.20
   seed: 35
 hyperparams:
+  arch: "cloud_detector_v2"
+  optimizer: "adamw"
   lr: 0.001
   batch_size: 128
   epochs: 10

@@ -1,0 +1,45 @@
+name: my_model_v1
+# ── science params (WHAT) — not WHERE/HOW (that's -profile in Nextflow) ─────
+# Feature extraction
+feature_cadence_s: 60.0
+threshold: 0.5
+
+# Train/val/test split
+split:
+  test_prop: 0.15
+  val_prop: 0.10
+  boundary_prop: 0.20
+  seed: 35
+
+# Hyperparams (all keys flow into TrainConfig via model_validate)
+hyperparams:
+  arch: "my_model_v1" # ← match your @register_model id
+  optimizer: "adamw"
+  lr: 0.001
+  batch_size: 128
+  epochs: 50
+  weight_decay: 0.00001
+  gamma: 0.9
+
+# Ray Train scaling
+scaling:
+  num_workers: 2
+  accelerator_type: "G" # "G" = A6000 on RAL; "RTX" = consumer GPUs
+
+# Ray Tune sweep (used by pa-tune-cloud; remove if not sweeping)
+tune:
+  num_samples: 8
+  use_asha: true
+  metric: val_loss
+  mode: min
+  lr:
+    loguniform: [1.0e-4, 1.0e-2]
+  batch_size:
+    choice: [64, 128, 256]
+  gamma:
+    grid: [0.85, 0.9, 0.95]
+
+# Output (filled at inference time)
+model_out_dir: "models/my_model_v1"
+cloud_model_pt: null
+cloud_model_json: null

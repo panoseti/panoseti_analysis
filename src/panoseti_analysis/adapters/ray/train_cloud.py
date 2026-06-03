@@ -14,19 +14,21 @@ from typing import Any
 
 import typer
 
+import panoseti_analysis.algorithms.cloud_detector  # noqa: F401 — register models
 from panoseti_analysis.adapters.ml.data import load_labeled_feature_cache
 from panoseti_analysis.adapters.ml.runner import report_final_checkpoint, run_torch_trainer
 from panoseti_analysis.adapters.ml.tracking import make_tracker
 from panoseti_analysis.adapters.ray._staging import stage_to_local
-from panoseti_analysis.algorithms.cloud_detector import CloudDetectionV2
 from panoseti_analysis.algorithms.cloud_train import (
-    build_cloud_optimizer,
     cloud_loss_fn,
     make_cloud_val_eval,
 )
+from panoseti_analysis.algorithms.optim import build_optimizer, build_scheduler
+from panoseti_analysis.algorithms.registry import build_model
 from panoseti_analysis.algorithms.training import fit
 from panoseti_analysis.config.models import (
     ClassifierBundle,
+    TrainConfig,
     TrainingProvenance,
 )
 from panoseti_analysis.config.recipes import load_recipe
@@ -53,11 +55,14 @@ def train_loop_per_worker(config: dict[str, Any]) -> None:
 
     x_train, y_train, x_val, y_val = load_labeled_feature_cache(Path(config["local_feature_path"]))
 
-    model = ray.train.torch.prepare_model(CloudDetectionV2())
-    optimizer, step_schedulers = build_cloud_optimizer(model, config)
+    # Build model from registry — arch id comes from the recipe via train_config["arch"].
+    train_cfg = TrainConfig.model_validate(config)
+    model = ray.train.torch.prepare_model(build_model(train_cfg.arch))
+    optimizer = build_optimizer(model.parameters(), train_cfg.model_dump())
+    step_schedulers = build_scheduler(optimizer, train_cfg.model_dump())
     train_loader: DataLoader[Any] = DataLoader(
         TensorDataset(x_train, y_train),
-        batch_size=int(config.get("batch_size", 128)),
+        batch_size=train_cfg.batch_size,
         shuffle=True,
         drop_last=True,
     )
@@ -73,18 +78,27 @@ def train_loop_per_worker(config: dict[str, Any]) -> None:
         if is_chief:
             tracker.log(metrics, step=epoch)
 
+    # Workstream 2: set_epoch required each epoch for proper shuffle when world_size > 1.
     train_loader = ray.train.torch.prepare_data_loader(train_loader)
+
+    def on_epoch_start(epoch: int) -> None:
+        sampler = getattr(train_loader, "sampler", None)
+        set_epoch = getattr(sampler, "set_epoch", None)
+        if ray.train.get_context().get_world_size() > 1 and callable(set_epoch):
+            set_epoch(epoch)
+
     result = fit(
         model,
         train_loader,
         loss_fn=cloud_loss_fn,
         optimizer=optimizer,
-        epochs=int(config.get("epochs", 50)),
+        epochs=train_cfg.epochs,
         device=device,
         val_eval=val_eval,
         step_schedulers=step_schedulers,
+        on_epoch_start=on_epoch_start,
         on_epoch=on_epoch,
-        monitor="val_loss",
+        monitor=train_cfg.monitor,
     )
 
     # Rank 0 logs end-of-training media (confusion matrix + PR curve over the best
@@ -175,14 +189,18 @@ def run_train_cloud(
         launcher=launcher,
         out_dir=out_dir,
     )
-    print(f"{best_state=}, {metrics=}")
+    print(f"{metrics=}")
 
-    model = CloudDetectionV2()
+    # Resolve arch from the config that was passed to workers (comes from recipe hyperparams).
+    train_cfg = TrainConfig.model_validate(train_config)
+    model = build_model(train_cfg.arch)
     model.load_state_dict(best_state)
 
-    # Build ClassifierBundle with placeholder checksum (save_classifier will fix it)
+    # Build ClassifierBundle with placeholder checksum (save_classifier will fix it).
+    # model_name is derived from the recipe name so artifacts are traceable.
+    model_name = f"{recipe_name}_{train_cfg.arch}".replace("/", "_")
     bundle = ClassifierBundle(
-        model_name="cloud_detector_retrained2",
+        model_name=model_name,
         model_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
         checksum="sha256:placeholder",
         input_spec={
@@ -191,6 +209,7 @@ def run_train_cloud(
             "width": 32,
             "dtype": "float32",
         },
+        arch=train_cfg.arch,
     )
 
     prov = TrainingProvenance(

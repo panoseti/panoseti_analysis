@@ -37,6 +37,41 @@ class ImgCalibParams(_Base):
 
 
 # ── ML parameters (Layer A kernel inputs/configs) ─────────────────────────────
+
+
+class _IgnoreExtra(BaseModel):
+    """Base for config models read from mixed dicts (e.g. Ray worker config).
+
+    ``extra="ignore"`` lets ``model_validate`` consume a large dict without errors
+    on keys we don't own (e.g. feature-cache path, W&B settings).
+    """
+
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+
+class TrainConfig(_IgnoreExtra):
+    """Typed surface for all training hyperparameters and architecture selection.
+
+    Keys match the recipe ``hyperparams:`` block.  Defaults reproduce the legacy
+    cloud-detector schedule so existing recipes without a ``arch:`` key work
+    unchanged.  Ray Tune can override any field via ``param_space["train_loop_config"]``.
+    """
+
+    arch: str = "cloud_detector"  # registry id (see algorithms/registry.py)
+    optimizer: str = "adamw"
+    lr: float = 1e-3
+    weight_decay: float = 1e-5
+    gamma: float = 0.9  # ExponentialLR decay
+    scheduler_exp: bool = True
+    scheduler_plateau: bool = True
+    plateau_patience: int = 5
+    plateau_factor: float = 0.5
+    batch_size: int = 128
+    epochs: int = 50
+    monitor: str = "val_loss"
+    minimize: bool = True
+
+
 class ClassifierBundle(_Base):
     """Metadata describing an ML model checkpoint and its input expectations."""
 
@@ -44,6 +79,10 @@ class ClassifierBundle(_Base):
     model_version: str
     checksum: str
     input_spec: dict[str, Any]
+    # Registry id for the model architecture — used by io/models.py::load_classifier
+    # to reconstruct the correct class without hard-coding it.
+    # Default "cloud_detector" keeps legacy v1 .json sidecars loading the legacy CNN.
+    arch: str = "cloud_detector"
 
 
 class CloudInferParams(_Base):

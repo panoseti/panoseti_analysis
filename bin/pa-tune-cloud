@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+"""Entrypoint shim for pa-tune-cloud — calls the Typer app."""
+
+from panoseti_analysis.adapters.ray.tune_cloud import app
+
+app()
