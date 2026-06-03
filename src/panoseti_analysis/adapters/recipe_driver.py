@@ -84,9 +84,7 @@ def run_pipeline(
     outputs = RunOutputs()
 
     # ── 1. Convert: PFF → L0 ─────────────────────────────────────────────────
-    outputs.l0_stores = run_convert(
-        obs_dir, l0_dir, codec=codec, level=level, shard_factor=shard_factor
-    )
+    outputs.l0_stores = run_convert(obs_dir, l0_dir, codec=codec, level=level)
 
     # ── 2. HK (parallel branch in Nextflow; sequential here) ─────────────────
     outputs.hk_stores = run_hk(obs_dir, l0_dir, codec=codec, level=level)
