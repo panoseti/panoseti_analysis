@@ -200,11 +200,15 @@ def l1_dataset() -> xr.Dataset:
     ts = np.arange(t0_ns, t0_ns + n_frames * cadence_ns, cadence_ns, dtype=np.int64)
     img = rng.normal(0, 1, (n_frames, 32, 32)).astype(np.float32)
 
+    mask = np.zeros((32, 32), dtype=np.uint8)
     return xr.Dataset(
         {
             "median_subtracted": (("time", "y", "x"), img),
             "unix_t_ns": (("time",), ts),
-        }
+            "hot_pixel_mask": (("y", "x"), mask),
+            "dead_pixel_mask": (("y", "x"), mask),
+        },
+        attrs={"data_product": "img16"},
     )
 
 
@@ -331,6 +335,8 @@ class TestEquivalenceKeystone:
                     - ds_l1_progressive["median_subtracted"].mean("time").values,
                 ),
                 "unix_t_ns": (("time",), ts),
+                "hot_pixel_mask": ds_l1_progressive["hot_pixel_mask"],
+                "dead_pixel_mask": ds_l1_progressive["dead_pixel_mask"],
             }
         )
         result_prog = predict_cloud_score(ds_l1_prog_full, model, CloudInferParams())

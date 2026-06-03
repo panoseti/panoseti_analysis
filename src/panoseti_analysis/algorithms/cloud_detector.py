@@ -250,8 +250,7 @@ def predict_cloud_score(
     Returns:
         An L2 Dataset with dimensions T_l2 and cloud_score / cloud_label.
     """
-    if "median_subtracted" not in ds.data_vars:
-        raise ValueError("Cloud detection requires L1 movie-mode dataset with 'median_subtracted'")
+    ds.pano.validate(level="L1", kind="img")
 
     unix_t_ns = ds["unix_t_ns"].values
 
