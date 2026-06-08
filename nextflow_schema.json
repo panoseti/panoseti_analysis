@@ -123,6 +123,21 @@
                     "default": 0,
                     "description": "Time chunk size; 0 = auto-sized by pypff."
                 },
+                "shard_factor_l0": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Shards per L0 Zarr chunk; 0 = no sharding."
+                },
+                "shard_factor_l1": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Shards per L1 Zarr chunk; 0 = no sharding."
+                },
+                "use_tensorstore": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Use Tensorstore backend for faster Zarr writing."
+                },
                 "ph_sigma": { "type": "number", "default": 5.0, "description": "n-sigma pulse-height threshold." },
                 "ph_offset": {
                     "type": "integer",
