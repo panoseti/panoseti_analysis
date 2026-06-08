@@ -29,6 +29,8 @@ def run_convert(
     time_chunk: int = 0,
     shard_factor: int = 0,
     lineage_out: Path | None = None,
+    use_tensorstore: bool = False,
+    max_workers: int | None = None,
 ) -> list[StoreLineage]:
     """Convert via pypff, then enumerate the emitted L0 stores into lineage records."""
     from pypff.zarr import convert_run  # local import: keeps Layer B free of import-time pypff cost
@@ -43,6 +45,8 @@ def run_convert(
         level=level,
         time_chunk=time_chunk or None,
         shard_factor=shard_factor,
+        use_tensorstore=use_tensorstore,
+        max_workers=max_workers,
     )
 
     started_at = now_utc()
@@ -110,6 +114,8 @@ def main(
         ),
     ] = 0,
     lineage_out: Path | None = typer.Option(None),
+    use_tensorstore: bool = typer.Option(False, "--use-tensorstore", help="Use tensorstore backend for faster conversion"),
+    max_workers: int | None = typer.Option(None, "--max-workers", help="Max parallel workers for data products"),
 ) -> None:
     run_convert(
         obs_dir,
@@ -119,6 +125,8 @@ def main(
         time_chunk=time_chunk,
         shard_factor=shard_factor,
         lineage_out=lineage_out,
+        use_tensorstore=use_tensorstore,
+        max_workers=max_workers,
     )
 
 
