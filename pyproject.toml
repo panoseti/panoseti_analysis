@@ -96,6 +96,7 @@ ignore = [
     "E402",   # imports not at top of cell — common and fine in notebooks
     "F401",   # unused imports — exploratory cells keep handy imports around
     "E501",   # long lines (already globally ignored, explicit for clarity)
+    "RUF059",
 ]
 # The Tracker ABC intentionally ships empty optional hooks (log_image/table/artifact) as
 # no-ops so non-W&B backends satisfy the interface without overriding them — that *is* the
