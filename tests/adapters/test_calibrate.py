@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 import xarray as xr
+import zarr
 
 from panoseti_analysis.adapters._common import SuspectTimestamps
 from panoseti_analysis.adapters.calibrate import run_calibrate
@@ -53,3 +54,19 @@ def test_suspect_timestamps_abort_unless_overridden(make_ph, tmp_path: Path) -> 
     assert rec.timestamp_qc is not None
     assert rec.timestamp_qc.status.value == "suspect"
     assert isinstance(open_store(tmp_path / "l1b.zarr"), xr.Dataset)
+
+
+def test_calibrate_with_shard_factor(make_img, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
+    """run_calibrate with shard_factor=4 must produce a sharded L1 store."""
+    import zarr as _zarr
+
+    l0 = tmp_path / "l0.zarr"
+    l1 = tmp_path / "l1.zarr"
+    write_store(make_img(n=200, size=32), l0)
+
+    run_calibrate(l0, l1, kind="img", shard_factor=4)
+
+    z = _zarr.open(str(l1), mode="r", zarr_format=3)
+    # whichever array the img calibration outputs
+    arr_name = next(k for k in z if isinstance(z[k], zarr.Array))
+    assert z[arr_name].shards is not None, "shard_factor=4 must produce a sharded store"

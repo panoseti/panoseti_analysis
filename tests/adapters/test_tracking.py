@@ -1,7 +1,8 @@
-"""Tests for the experiment-tracking abstraction (adapters/ray/_tracking.py)."""
+"""Tests for the experiment-tracking abstraction (adapters/ml/tracking.py)."""
+
 from __future__ import annotations
 
-from panoseti_analysis.adapters.ray._tracking import (
+from panoseti_analysis.adapters.ml.tracking import (
     Tracker,
     _NoOpTracker,
     make_tracker,

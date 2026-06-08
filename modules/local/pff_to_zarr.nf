@@ -14,6 +14,7 @@ process PFF_TO_ZARR {
         --codec ${params.codec} \\
         --level ${params.level} \\
         --time-chunk ${params.time_chunk} \\
+        --shard-factor ${params.shard_factor_l0} \\
         --lineage-out l0_lineage.json
     """
 }

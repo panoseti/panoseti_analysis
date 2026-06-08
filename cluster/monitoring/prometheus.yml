@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'ray'
+    http_sd_configs:
+      - url: 'http://host.docker.internal:8265/api/prometheus/sd'
+        refresh_interval: 60s

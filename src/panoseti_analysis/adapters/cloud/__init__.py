@@ -1,0 +1,1 @@
+"""Cloud-detection adapter utilities."""

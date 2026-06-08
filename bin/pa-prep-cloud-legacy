@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+"""Shim: pa-prep-cloud-legacy — build feature-cache Zarr from legacy training data."""
+from panoseti_analysis.adapters.cloud.prep_legacy import app
+
+app()

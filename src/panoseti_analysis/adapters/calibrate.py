@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -46,6 +47,7 @@ def run_calibrate(
     lineage_out: Path | None = None,
     codec: str = "zstd",
     level: int = 5,
+    shard_factor: int = 0,
 ) -> StoreLineage:
     """Open L0, repair timestamps (single QC call), calibrate, write L1 + lineage."""
     ds = open_l0(l0_store)
@@ -93,7 +95,7 @@ def run_calibrate(
     new_history = append_step(l0_history, calib_step)
 
     out.attrs[TIMESTAMP_QC_KEY] = qc.model_dump(mode="json")
-    write_store(out, l1_store, codec=codec, level=level, processing_history=new_history)
+    write_store(out, l1_store, codec=codec, level=level, processing_history=new_history, shard_factor=shard_factor)
 
     l1_checksum = checksum_store(l1_store)
 
@@ -132,12 +134,17 @@ def main(
     lineage_out: Path | None = typer.Option(None),
     codec: str = typer.Option("zstd"),
     level: int = typer.Option(5),
+    shard_factor: Annotated[int, typer.Option(
+        "--shard-factor",
+        help="Inner chunks per shard (0 = no sharding). Use 8 for BeeGFS/Expanse.",
+    )] = 0,
 ) -> None:
     try:
         run_calibrate(
             l0_store, l1_store, kind=kind, sigma=sigma, offset=offset, ph_stride=ph_stride,
             img_stride=img_stride, block=block, adc_to_pe=adc_to_pe,
             fail_on_suspect=fail_on_suspect, lineage_out=lineage_out, codec=codec, level=level,
+            shard_factor=shard_factor,
         )
     except SuspectTimestamps as exc:
         typer.echo(str(exc), err=True)

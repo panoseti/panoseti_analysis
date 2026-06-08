@@ -1,0 +1,136 @@
+# PANOSETI RAL Ray Cluster — 5-node on-premises configuration
+#
+# Runs Ray inside Docker (rayproject/ray:2.55.1-py313-gpu, Python 3.13).
+# Requires panoseti_analysis requires-python = ">=3.13" (pyproject.toml).
+#
+# GPU guard: cpu-only storage nodes (dfs0/1/2) lack nvidia-container-toolkit, so
+# --gpus all would hard-fail.  initialization_commands installs ~/bin/docker on every
+# node: strips --gpus on nodes where nvidia-smi fails; transparent passthrough on GPU
+# nodes.  ~/bin is prepended to PATH in ~/.bashrc so Ray picks up the wrapper.
+#
+# Usage:
+#   ray up conf/ray/ral_cluster.yaml           # start / update cluster
+#   ray up conf/ray/ral_cluster.yaml --no-restart  # reconnect without restarting Ray
+#   ray status                                 # check node status
+#   ray down conf/ray/ral_cluster.yaml         # stop cluster (prefer keeping alive)
+#
+# Dashboard: http://digilab-receiver:8265
+# Prometheus / Grafana: cd cluster/monitoring && docker compose up -d
+#   (Grafana at http://digilab-receiver:3000)
+
+cluster_name: pseti-ral
+
+# ── Docker ─────────────────────────────────────────────────────────────────────
+docker:
+    image: "rayproject/ray:2.55.1-py313-gpu"   # Python 3.13; matches requires-python >=3.13
+    container_name: "ray_container"
+    pull_before_run: False
+
+    run_options:
+        - -v /tmp/ray:/tmp/ray
+        - -v /mnt/beegfs:/mnt/beegfs
+        - --ulimit nofile=65536:65536
+        # GPU passthrough — the ~/bin/docker wrapper strips this on cpu-only nodes.
+        - --gpus all
+        - --add-host host.docker.internal:host-gateway
+
+# ── Provider ───────────────────────────────────────────────────────────────────
+provider:
+    type: local
+    head_ip: digilab-receiver        # 2× RTX A6000 48 GB; hosts prometheus/grafana
+    worker_ips:
+        - panoseti-dfs0              # BeeGFS storage — CPU only
+        - panoseti-dfs1              # BeeGFS storage — CPU only
+        - panoseti-dfs2              # BeeGFS storage — CPU only
+        - digilab-transmit           # gaming GPU (accelerator_type:G) — Ray Serve
+
+# ── Auth ───────────────────────────────────────────────────────────────────────
+auth:
+    ssh_user: nico
+    ssh_private_key: ~/.ssh/id_ed25519
+
+# ── Cluster size (fixed, no autoscaling) ───────────────────────────────────────
+# Setting min=max=4 (the number of worker IPs) keeps all 4 workers running.
+# Autoscaler v2 counts head as 1, so the cluster runs as head + 3 autoscaler-managed
+# workers.  digilab-transmit (the 4th worker) is not launched by the autoscaler
+# unless there is active resource demand — start it manually if needed:
+#   ssh digilab-transmit "ray start --address=digilab-receiver:6379 --num-gpus=2 --resources='{\"accelerator_type:G\":1}'"
+# Workers are never stopped automatically — cluster stays alive indefinitely.
+min_workers: 4
+max_workers: 4
+
+# Disable the idle worker shutdown that Ray enables by default (5 min).
+# Setting to 0 keeps all workers alive regardless of load.
+idle_timeout_minutes: 0
+
+# ── File sync ──────────────────────────────────────────────────────────────────
+# Rsyncs source from the launching machine to each worker host before setup_commands.
+# gitignore is respected (rsync_filter below) — large data files are excluded.
+file_mounts:
+    "/home/nico/panoseti_analysis": "/home/nico/panoseti_analysis"
+
+rsync_exclude:
+    - "**/.git"
+    - "**/.git/**"
+
+rsync_filter:
+    - ".gitignore"   # excludes: *.zip, *.zarr/, ml/*/cache/, etc.
+
+file_mounts_sync_continuously: False
+
+# ── GPU wrapper ────────────────────────────────────────────────────────────────
+# Runs on the HOST before Docker starts.  Creates ~/bin/docker on every node:
+# gpu nodes (nvidia-smi exits 0) get a transparent passthrough; cpu-only nodes
+# get a wrapper that strips --gpus flags so docker run doesn't fail.
+# ~/bin is prepended to PATH in ~/.bashrc so Ray's SSH docker calls use it.
+initialization_commands:
+    - |
+      mkdir -p ~/bin
+      cat > ~/bin/docker << 'WRAPPER'
+      #!/bin/bash
+      if nvidia-smi &>/dev/null 2>&1; then
+          exec /usr/bin/docker "$@"
+      fi
+      args=()
+      skip=false
+      for arg in "$@"; do
+          if $skip; then skip=false; continue; fi
+          case "$arg" in
+              --gpus) skip=true ;;
+              --gpus=*) ;;
+              *) args+=("$arg") ;;
+          esac
+      done
+      exec /usr/bin/docker "${args[@]}"
+      WRAPPER
+      chmod +x ~/bin/docker
+      grep -qxF 'export PATH="$HOME/bin:$PATH"' ~/.bashrc || echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+
+# ── Package setup (runs inside Docker container) ────────────────────────────────
+# pypff is a local uv workspace member — not on PyPI.  Install it before
+# panoseti_analysis so pip resolves pypff[zarr] locally instead of hitting PyPI.
+setup_commands:
+    - pip install --quiet torch --extra-index-url https://download.pytorch.org/whl/cu121
+    - pip install --quiet -e "/home/nico/panoseti_analysis/pypff[zarr]"
+    - pip install --quiet -e /home/nico/panoseti_analysis
+
+head_setup_commands: []
+worker_setup_commands: []
+
+# ── Ray start commands ─────────────────────────────────────────────────────────
+head_start_ray_commands:
+    - ray stop
+    - >-
+      GPU_COUNT=$(nvidia-smi -L 2>/dev/null | wc -l || echo 0) &&
+      ulimit -c unlimited &&
+      ray start --head --port=6379
+      --dashboard-host=0.0.0.0
+      --num-gpus=$GPU_COUNT
+      --autoscaling-config=~/ray_bootstrap_config.yaml
+
+worker_start_ray_commands:
+    - ray stop
+    - >-
+      GPU_COUNT=$(nvidia-smi -L 2>/dev/null | wc -l || echo 0) &&
+      ray start --address=$RAY_HEAD_IP:6379
+      --num-gpus=$GPU_COUNT

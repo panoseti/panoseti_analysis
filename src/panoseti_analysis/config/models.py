@@ -51,6 +51,8 @@ class CloudInferParams(_Base):
 
     cadence_s: float = 60.0
     threshold: float = 0.5
+    window_s: float = 60.0  # lookback window for the differential (deriv) channel
+    n_stack: int = 10       # frames stacked per integration point
 
 
 # ── provenance / processing history ──────────────────────────────────────────

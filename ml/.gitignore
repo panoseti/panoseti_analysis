@@ -1,0 +1,11 @@
+# ML project data — large, not tracked in git
+*/data/
+*/cache/
+*/models/
+*.zarr/
+*.zarr
+*.pth
+*.pt
+
+# Local convenience symlink to original source repo
+*/legacy-src

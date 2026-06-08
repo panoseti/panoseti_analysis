@@ -49,8 +49,10 @@ Constants live in `src/panoseti_analysis/config/versions.py`.
 | img (`img8`,`img16`)  | `median_subtracted` float32 `(T,H,W)`; `hot_pixel_mask`,`dead_pixel_mask` uint8 `(H,W)`   |
 
 L1 carries forward all L0 header/timing arrays (incl. `pkt_num`). `unix_t_ns` is
-monotonic-non-decreasing (§4). Time-like dims are rechunked uniformly on write (≤16384
-frames/chunk) so the final chunk is never larger than the first (a Zarr v3 requirement).
+monotonic-non-decreasing (§4). Time-like dims are rechunked uniformly on write. With `shard_factor=0` (default), the
+physical zarr chunk is ≤16384 frames. With `shard_factor=N`, each physical shard file
+packs N×16384 frames — reducing file counts ~N× on BeeGFS/Expanse without changing read
+semantics (all zarr-python ≥3.0 readers handle sharded stores transparently).
 
 **L2 (Derived Products):**
 
@@ -74,6 +76,24 @@ frames/chunk) so the final chunk is never larger than the first (a Zarr v3 requi
   L2 manifest lineage entry per store: `StoreLineage` (see `config/models.py`) with fields
   `dp`, `module`, `level="L2"`, `kind="cloud"`, `store`, `n_frames`, `source_store`,
   `model`, `inference_params`.
+
+### Sharding
+
+Sharding (`ShardingCodec`, Zarr v3) packs multiple inner chunks into one physical file,
+dramatically reducing inode counts on parallel filesystems.
+
+**Recommended shard factors by platform:**
+
+| Platform | `shard_factor_l0` | `shard_factor_l1` | L0 files (img16, 13.6M frames) |
+|---|---|---|---|
+| Laptop / test | 0 | 0 | ~38K |
+| RAL (BeeGFS) | 16 | 8 | ~468 |
+| Expanse (SDSC) | 16 | 8 | ~468 (required: 2M inode quota) |
+
+Sharding is transparent to readers: `xr.open_zarr`, `zarr.open_group`, and all zarr-python
+≥3.0 readers access sharded and unsharded stores identically. Feature caches (produced by
+`pa-features-cloud`) use a single monolithic chunk per variable — sharding is not applied
+there.
 
 ## §3 Root attributes
 

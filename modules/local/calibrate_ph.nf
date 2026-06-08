@@ -20,6 +20,7 @@ process CALIBRATE_PH {
         --ph-stride ${params.ph_stride} \\
         --codec ${params.codec} \\
         --level ${params.level} \\
+        --shard-factor ${params.shard_factor_l1} \\
         --lineage-out ${out_lineage}
     """
 }

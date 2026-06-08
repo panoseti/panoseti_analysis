@@ -9,4 +9,4 @@ Layer C (orchestration) lives in the repo's Nextflow ``*.nf`` files, which call 
 the Layer B CLIs — never the kernels directly.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

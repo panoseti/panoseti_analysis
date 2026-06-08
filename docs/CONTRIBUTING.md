@@ -15,6 +15,19 @@ This page describes the recommended nf-core way to contribute to both panoseti/a
 
 ## General contribution guidelines
 
+### One-time dev setup
+
+After cloning, run these once to configure local git hooks:
+
+```bash
+uv sync                         # install all deps including dev group
+uv run nbstripout --install     # auto-strip Jupyter outputs on git add
+```
+
+The `nbstripout` filter is registered in `.gitattributes` for `ml/**/*.ipynb` and
+`notebooks/**/*.ipynb`. Without running `--install` once per clone, cell outputs
+will not be stripped automatically and large PNG blobs may end up in commits.
+
 ### Contribution quick start
 
 To contribute code to any nf-core pipeline:

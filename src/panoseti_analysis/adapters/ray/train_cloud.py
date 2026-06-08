@@ -1,19 +1,30 @@
-"""pa-train-cloud — retrain the cloud detector on a pre-staged feature cache (Layer B)."""
+"""pa-train-cloud — retrain the cloud detector on a pre-staged feature cache (Layer B).
+
+Thin wiring on top of the shared ML utilities: the epoch loop is
+:func:`panoseti_analysis.algorithms.training.fit` (also used by notebooks), the data load is
+:func:`panoseti_analysis.adapters.ml.data.load_labeled_feature_cache`, and the Ray
+``TorchTrainer`` boilerplate is :func:`panoseti_analysis.adapters.ml.runner.run_torch_trainer`.
+"""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any
 
-import numpy as np
-import torch
 import typer
 
+from panoseti_analysis.adapters.ml.data import load_labeled_feature_cache
+from panoseti_analysis.adapters.ml.runner import report_final_checkpoint, run_torch_trainer
+from panoseti_analysis.adapters.ml.tracking import make_tracker
 from panoseti_analysis.adapters.ray._staging import stage_to_local
-from panoseti_analysis.adapters.ray._tracking import make_tracker
-from panoseti_analysis.adapters.ray.launcher import init_ray
 from panoseti_analysis.algorithms.cloud_detector import CloudDetection
+from panoseti_analysis.algorithms.cloud_train import (
+    build_cloud_optimizer,
+    cloud_loss_fn,
+    make_cloud_val_eval,
+)
+from panoseti_analysis.algorithms.training import fit
 from panoseti_analysis.config.models import (
     ClassifierBundle,
     TrainingProvenance,
@@ -29,99 +40,76 @@ app = typer.Typer(add_completion=False, help="Retrain the cloud detector via Ray
 
 
 def train_loop_per_worker(config: dict[str, Any]) -> None:
-    """Ray Train worker function — runs on each allocated worker process."""
+    """Ray Train worker function — runs on each allocated worker process.
+
+    Loads the feature cache, DDP-wraps the model, then runs the *same* ``fit`` loop and
+    cloud hooks that notebooks use via ``algorithms/cloud_train.py``.
+    """
     import ray.train
     import ray.train.torch
+    from torch.utils.data import DataLoader, TensorDataset
 
-    # Device: follow Ray's assignment (never hard-code cuda)
-    device = ray.train.torch.get_device()
+    device = ray.train.torch.get_device()  # follow Ray's assignment (never hard-code cuda)
 
-    # Load feature cache from the staged local path
-    local_path = Path(config["local_feature_path"])
-    ds = open_store(local_path)
-    X_all = ds["X"].values.astype(np.float32)  # (N, 2, H, W)
-    y_all = ds["label"].values.astype(np.int64)
-    split_arr = np.array(ds["split"].values, dtype=str)
+    x_train, y_train, x_val, y_val = load_labeled_feature_cache(Path(config["local_feature_path"]))
 
-    train_mask = split_arr == "train"
-    val_mask = split_arr == "val"
-
-    X_train = torch.from_numpy(X_all[train_mask])
-    y_train = torch.from_numpy(y_all[train_mask])
-    X_val = torch.from_numpy(X_all[val_mask])
-    y_val = torch.from_numpy(y_all[val_mask])
-
-    batch_size = int(config.get("batch_size", 128))
-    lr = float(config.get("lr", 1e-3))
-    weight_decay = float(config.get("weight_decay", 1e-5))
-    gamma = float(config.get("gamma", 0.9))
-    epochs = int(config.get("epochs", 50))
-
-    raw_model = CloudDetection()
-    model: torch.nn.Module = ray.train.torch.prepare_model(raw_model)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler_exp = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
-    scheduler_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", patience=5, factor=0.5
+    model = ray.train.torch.prepare_model(CloudDetection())
+    optimizer, step_schedulers = build_cloud_optimizer(model, config)
+    train_loader: DataLoader[Any] = DataLoader(
+        TensorDataset(x_train, y_train),
+        batch_size=int(config.get("batch_size", 128)),
+        shuffle=True,
+        drop_last=True,
     )
-    criterion = torch.nn.CrossEntropyLoss()
+    val_eval = make_cloud_val_eval(x_val, y_val, device)
 
-    tracker = make_tracker(config, run_name=config.get("recipe_name", "cloud_train"))
+    # Only rank 0 logs to W&B — DDP runs the same loop on every worker, so without this
+    # guard every worker creates its own run and metrics appear doubled.
+    is_chief = ray.train.get_context().get_local_rank() == 0
+    tracker_config = config if is_chief else {**config, "wandb_project": None}
+    tracker = make_tracker(tracker_config, run_name=config.get("recipe_name", "cloud_train"))
 
-    train_ds = torch.utils.data.TensorDataset(X_train, y_train)
-    train_loader = torch.utils.data.DataLoader(
-        train_ds, batch_size=batch_size, shuffle=True, drop_last=True
+    def on_epoch(epoch: int, metrics: dict[str, float]) -> None:
+        if is_chief:
+            tracker.log(metrics, step=epoch)
+
+    result = fit(
+        model,
+        train_loader,
+        loss_fn=cloud_loss_fn,
+        optimizer=optimizer,
+        epochs=int(config.get("epochs", 50)),
+        device=device,
+        val_eval=val_eval,
+        step_schedulers=step_schedulers,
+        on_epoch=on_epoch,
+        monitor="val_loss",
     )
 
-    best_val_loss = float("inf")
-    best_state: dict[str, torch.Tensor] | None = None
-    val_acc = 0.0
+    # Rank 0 logs end-of-training media (confusion matrix + PR curve over the best
+    # checkpoint) and uploads the model weights as a W&B artifact. Best-effort: the
+    # reporting helpers swallow rendering errors so they can never fail a training run.
+    if is_chief:
+        from panoseti_analysis.adapters.ml.reporting import (
+            log_confusion_matrix,
+            log_pr_curve,
+            log_state_dict_artifact,
+        )
+        from panoseti_analysis.algorithms.cloud_train import (
+            cloud_val_predictions,
+            confusion_counts,
+            pr_curve_points,
+        )
 
-    for epoch in range(epochs):
-        model.train()
-        for xb, yb in train_loader:
-            xb, yb = xb.to(device), yb.to(device)
-            optimizer.zero_grad()
-            loss = criterion(model(xb), yb)
-            loss.backward()
-            optimizer.step()
-
-        # Validation
-        model.eval()
-        with torch.no_grad():
-            val_logits = model(X_val.to(device))
-            val_loss = criterion(val_logits, y_val.to(device)).item()
-            val_preds = val_logits.argmax(1).cpu()
-            val_acc = float((val_preds == y_val).float().mean().item())
-
-        metrics = {"epoch": epoch, "val_loss": val_loss, "val_acc": val_acc}
-        tracker.log(metrics, step=epoch)
-
-        scheduler_exp.step()
-        scheduler_plateau.step(val_loss)
-
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            best_state = {k: v.clone() for k, v in model.state_dict().items()}
-
-        ray.train.report(metrics)
-
+        y_true, y_pred, y_score = cloud_val_predictions(result.best_state, x_val, y_val, device)
+        log_confusion_matrix(tracker, confusion_counts(y_true, y_pred))
+        log_pr_curve(tracker, pr_curve_points(y_true, y_score))
+        log_state_dict_artifact(tracker, result.best_state, name="cloud_detector")
     tracker.finish()
 
-    # Report the best checkpoint from rank-0 worker.
-    # Ray 2.x uses directory-based checkpoints — serialize the state dict to a
-    # temporary file and wrap it in a Checkpoint.from_directory.
-    if best_state is not None and ray.train.get_context().get_local_rank() == 0:
-        import tempfile
-
-        with tempfile.TemporaryDirectory() as ckpt_dir:
-            torch.save(best_state, Path(ckpt_dir) / "model.pt")
-            checkpoint = ray.train.Checkpoint.from_directory(ckpt_dir)
-            ray.train.report(
-                {"val_loss": best_val_loss, "val_acc": val_acc},
-                checkpoint=checkpoint,
-            )
+    # Report the best checkpoint to Ray (rank 0 writes it; all workers call report once).
+    final_metrics = result.history[-1] if result.history else {"val_loss": result.best_value}
+    report_final_checkpoint(result.best_state, final_metrics)
 
 
 def run_train_cloud(
@@ -131,6 +119,8 @@ def run_train_cloud(
     launcher: str = "standalone",
     local_cache_dir: Path | None = None,
     lineage_out: Path | None = None,
+    wandb_project: str | None = None,
+    epochs: int | None = None,
 ) -> tuple[Path, Path, Path]:
     """Retrain the cloud detector on a pre-materialized feature cache.
 
@@ -141,13 +131,12 @@ def run_train_cloud(
         launcher: Ray init mode (attach/slurm/standalone).
         local_cache_dir: If set, pre-stages the feature cache to local SSD first.
         lineage_out: If set, writes a StoreLineage JSON record.
+        wandb_project: W&B project name override.
+        epochs: Epochs override.
 
     Returns:
         (pt_path, json_path, provenance_path)
     """
-    from ray.train import RunConfig, ScalingConfig
-    from ray.train.torch import TorchTrainer
-
     params_dict, recipe_name, recipe_hash = load_recipe(recipe_path)
     hp = params_dict.get("hyperparams", {})
     scaling_cfg = params_dict.get("scaling", {})
@@ -157,9 +146,9 @@ def run_train_cloud(
     if local_cache_dir is not None:
         effective_path = stage_to_local(feature_cache, local_cache_dir)
 
-    # Read upstream provenance from feature cache
+    # Read upstream provenance from feature cache (kept as ProcessingStep context).
     ds_feat = open_store(effective_path)
-    feat_history = read_history(dict(ds_feat.attrs))
+    _ = read_history(dict(ds_feat.attrs))
     feat_cksum = checksum_store(feature_cache)
 
     train_config: dict[str, Any] = {
@@ -167,40 +156,22 @@ def run_train_cloud(
         "recipe_name": recipe_name,
         **hp,
     }
+    if epochs is not None:
+        train_config["epochs"] = epochs
     # W&B tracking config passthrough
     for k in ("wandb_project", "wandb_entity"):
         if k in params_dict:
             train_config[k] = params_dict[k]
+    if wandb_project is not None:
+        train_config["wandb_project"] = wandb_project
 
-    accelerator_type = scaling_cfg.get("accelerator_type", "A6000")
-    num_workers = int(scaling_cfg.get("num_workers", 2))
-    use_gpu = num_workers > 0 and torch.cuda.is_available()
-
-    scaling = ScalingConfig(
-        num_workers=num_workers,
-        use_gpu=use_gpu,
-        **({"accelerator_type": accelerator_type} if accelerator_type else {}),
+    best_state, metrics = run_torch_trainer(
+        train_loop_per_worker,
+        train_config,
+        scaling_cfg=scaling_cfg,
+        launcher=launcher,
+        out_dir=out_dir,
     )
-
-    storage_path = str(out_dir / "ray_results")
-    run_cfg = RunConfig(storage_path=storage_path)
-
-    init_ray(cast(Literal["attach", "slurm", "standalone"], launcher))
-
-    trainer = TorchTrainer(
-        train_loop_per_worker=train_loop_per_worker,
-        train_loop_config=train_config,
-        scaling_config=scaling,
-        run_config=run_cfg,
-    )
-    result = trainer.fit()
-
-    # Restore best checkpoint.
-    # Ray 2.x uses directory-based checkpoints; load model.pt from the checkpoint dir.
-    checkpoint = result.checkpoint
-    assert checkpoint is not None, "Training produced no checkpoint"
-    with checkpoint.as_directory() as ckpt_dir:
-        best_state = torch.load(Path(ckpt_dir) / "model.pt", map_location="cpu", weights_only=True)
 
     model = CloudDetection()
     model.load_state_dict(best_state)
@@ -218,15 +189,6 @@ def run_train_cloud(
         },
     )
 
-    started_at = now_utc()
-    software = capture_software()
-    raw_metrics: dict[str, Any] = result.metrics or {}
-    metrics = {k: float(v) for k, v in raw_metrics.items() if isinstance(v, (int, float))}
-
-    # Suppress unused variable warning — feat_history is read for provenance context
-    # but not directly embedded in TrainingProvenance (kept as ProcessingStep chain).
-    _ = feat_history
-
     prov = TrainingProvenance(
         step_name="train_cloud",
         step_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
@@ -234,8 +196,8 @@ def run_train_cloud(
         recipe_hash=recipe_hash,
         params={**hp, "scaling": scaling_cfg},
         input_checksums=[feat_cksum],
-        timestamp_utc=started_at,
-        software=software,
+        timestamp_utc=now_utc(),
+        software=capture_software(),
         metrics=metrics,
     )
 

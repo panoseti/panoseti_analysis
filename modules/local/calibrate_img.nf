@@ -20,6 +20,7 @@ process CALIBRATE_IMG {
         --adc-to-pe ${params.img_adc_to_pe} \\
         --codec ${params.codec} \\
         --level ${params.level} \\
+        --shard-factor ${params.shard_factor_l1} \\
         --lineage-out ${out_lineage}
     """
 }

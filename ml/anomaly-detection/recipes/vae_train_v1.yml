@@ -1,0 +1,24 @@
+name: vae_train_v1
+# PH BetaVAE training recipe
+# W&B: set wandb_project to enable online tracking (entity is optional). Without a
+# project, trainers fall back to TensorBoard, then a no-op tracker.
+wandb_project: "panoseti-ph-vae"
+wandb_entity: "nraultwang-mit-massachusetts-institute-of-technology"
+latent_dim: 32
+hidden_dim: 64
+beta: 4.0e-9
+sparsity_weight: 0.0
+split:
+  test_prop: 0.15
+  val_prop: 0.10
+  boundary_prop: 0.20
+  seed: 1984
+hyperparams:
+  lr: 0.001
+  batch_size: 256
+  epochs: 100
+  weight_decay: 0.0
+scaling:
+  num_workers: 2
+  accelerator_type: "G"
+model_out_dir: "models/vae_v1"

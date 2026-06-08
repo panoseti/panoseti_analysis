@@ -46,7 +46,9 @@ def _make_l1_img_store(tmp_path: Path, *, n_frames: int = 200, module: str = "1"
     return store_path
 
 
-def _write_test_recipe(path: Path, *, epochs: int = 2, batch_size: int = 8, num_workers: int = 1) -> None:
+def _write_test_recipe(
+    path: Path, *, epochs: int = 2, batch_size: int = 8, num_workers: int = 1
+) -> None:
     """Write a minimal cloud_train recipe YAML to *path*."""
     content = f"""\
 name: cloud_train_test
@@ -70,9 +72,31 @@ scaling:
     path.write_text(content)
 
 
+def _write_label_csv(
+    path: Path,
+    *,
+    module: str,
+    t_start_ns: int,
+    t_end_ns: int,
+    block_ns: int = 120_000_000_000,
+    width_ns: int = 60_000_000_000,
+) -> None:
+    """Write a (module, t_start_ns, t_end_ns, label) CSV that labels every other 60 s
+    block as cloudy (1); unlabelled windows default to clear (0). Spreading both classes
+    across the whole timeline keeps the temporal train/val split non-degenerate.
+    """
+    rows = ["module,t_start_ns,t_end_ns,label"]
+    t = t_start_ns
+    while t < t_end_ns:
+        rows.append(f"{module},{t},{t + width_ns},1")
+        t += block_ns
+    path.write_text("\n".join(rows) + "\n")
+
+
 # ---------------------------------------------------------------------------
 # Test 2 (fast, no Ray) — save_classifier / load_classifier round-trip
 # ---------------------------------------------------------------------------
+
 
 def test_train_cloud_save_classifier_load_classifier_roundtrip(tmp_path: Path) -> None:
     """Unit test: save_classifier + load_classifier must round-trip a CloudDetection model."""
@@ -139,6 +163,7 @@ def test_train_cloud_save_classifier_load_classifier_roundtrip(tmp_path: Path) -
 # Test 1 (slow, requires Ray Train) — end-to-end checkpoint round-trip
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.slow
 def test_train_cloud_checkpoint_round_trip(tmp_path: Path) -> None:
     """Integration test: run_train_cloud must produce a valid loadable checkpoint.
@@ -162,18 +187,28 @@ def test_train_cloud_checkpoint_round_trip(tmp_path: Path) -> None:
         ray.shutdown()
 
     try:
-        # 1. Build a synthetic L1 img store (200 s at 1 Hz → ~3 features at 60 s cadence)
+        # 1. Build a synthetic L1 img store (3600 s at 1 Hz → ~60 features at 60 s cadence,
+        #    enough for a non-degenerate train/val/test split with both classes present).
         l1_dir = tmp_path / "l1"
         l1_dir.mkdir()
-        l1_store = _make_l1_img_store(l1_dir, n_frames=200)
+        n_frames = 3600
+        l1_store = _make_l1_img_store(l1_dir, n_frames=n_frames)
 
         # 2. Write a test recipe pointing to the features adapter
         features_recipe = tmp_path / "cloud_v1.yml"
         _write_test_recipe(features_recipe, epochs=2, batch_size=2, num_workers=1)
 
-        # 3. Materialise a tiny feature cache
+        # 3. Materialise a feature cache WITH labels (a label CSV — without one every sample
+        #    is labelled -1 and cross-entropy rejects it).
+        label_csv = tmp_path / "labels.csv"
+        _write_label_csv(
+            label_csv,
+            module="1",
+            t_start_ns=_EPOCH_NS,
+            t_end_ns=_EPOCH_NS + (n_frames - 1) * 1_000_000_000,
+        )
         feature_cache = tmp_path / "features.zarr"
-        run_features_cloud([l1_store], feature_cache, features_recipe)
+        run_features_cloud([l1_store], feature_cache, features_recipe, label_csv=label_csv)
 
         # 4. Write the train recipe (same file, num_workers=1, few epochs)
         train_recipe = tmp_path / "cloud_train.yml"
