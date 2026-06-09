@@ -20,6 +20,7 @@ _OBS = Path(__file__).parents[1] / "data" / "obs_TEST.pffd"
 
 # ── shared fixtures ───────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="module")
 def l0_stores(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, list[StoreLineage]]:
     """Run convert once per module; return (out_dir, records)."""
@@ -42,16 +43,21 @@ def dummy_model_path(tmp_path: Path) -> Path:
 
     sha = compute_sha256(model_path)
     json_path = model_path.with_suffix(".json")
-    json_path.write_text(json.dumps({
-        "model_name": "dummy",
-        "model_version": "1.0",
-        "checksum": f"sha256:{sha}",
-        "input_spec": {},
-    }))
+    json_path.write_text(
+        json.dumps(
+            {
+                "model_name": "dummy",
+                "model_version": "1.0",
+                "checksum": f"sha256:{sha}",
+                "input_spec": {},
+            }
+        )
+    )
     return model_path
 
 
 # ── test 1: convert stamps processing_history into L0 ────────────────────────
+
 
 def test_convert_stamps_processing_history_into_l0(tmp_path: Path) -> None:
     records = run_convert(_OBS, tmp_path)
@@ -75,6 +81,7 @@ def test_convert_stamps_processing_history_into_l0(tmp_path: Path) -> None:
 
 # ── test 2: calibrate chains L0 history ──────────────────────────────────────
 
+
 def test_calibrate_chains_l0_history(tmp_path: Path) -> None:
     l0_dir = tmp_path / "l0"
     l0_records = run_convert(_OBS, l0_dir)
@@ -89,7 +96,9 @@ def test_calibrate_chains_l0_history(tmp_path: Path) -> None:
     ds_l1 = open_store(l1_store)
     history = read_history(dict(ds_l1.attrs))
 
-    assert len(history) == 2, f"Expected 2 steps, got {len(history)}: {[s.step_name for s in history]}"
+    assert len(history) == 2, (
+        f"Expected 2 steps, got {len(history)}: {[s.step_name for s in history]}"
+    )
     assert history[0].step_name == "convert"
     assert history[1].step_name.startswith("calibrate_")
 
@@ -108,6 +117,7 @@ def test_calibrate_chains_l0_history(tmp_path: Path) -> None:
 
 # ── test 3: hk returns list[StoreLineage] (empty for obs_TEST) ───────────────
 
+
 def test_hk_returns_store_lineages_when_stores_written(tmp_path: Path) -> None:
     # obs_TEST has no hk.pff -> empty list
     result = run_hk(_OBS, tmp_path / "hk")
@@ -124,6 +134,7 @@ def test_hk_without_hk_file_returns_empty_list_type(tmp_path: Path) -> None:
 
 
 # ── test 4: nextflow classify chains convert -> calibrate -> classify ─────────
+
 
 def test_nextflow_classify_chains_history(dummy_model_path: Path, tmp_path: Path) -> None:
     """Full provenance chain: convert -> calibrate -> classify_cloud (3 steps)."""
@@ -155,7 +166,9 @@ def test_nextflow_classify_chains_history(dummy_model_path: Path, tmp_path: Path
     ds_l2 = open_store(l2_store)
     history = read_history(dict(ds_l2.attrs))
 
-    assert len(history) == 3, f"Expected 3 steps, got {len(history)}: {[s.step_name for s in history]}"
+    assert len(history) == 3, (
+        f"Expected 3 steps, got {len(history)}: {[s.step_name for s in history]}"
+    )
     assert history[0].step_name == "convert"
     assert history[1].step_name.startswith("calibrate_")
     assert history[2].step_name == "classify_cloud"
@@ -175,6 +188,7 @@ def test_nextflow_classify_chains_history(dummy_model_path: Path, tmp_path: Path
 
 
 # ── test 5: ray lineage is JSON array, not JSONL ─────────────────────────────
+
 
 def test_ray_lineage_is_json_array_not_jsonl(tmp_path: Path) -> None:
     """Verify the fixed Ray lineage writer emits a JSON array parseable by json.loads."""
@@ -204,9 +218,7 @@ def test_ray_lineage_is_json_array_not_jsonl(tmp_path: Path) -> None:
 
     lineage_out = tmp_path / "lineage.json"
     # Replicate the fixed Ray writer logic
-    lineage_out.write_text(
-        json.dumps([r.model_dump(mode="json") for r in records], indent=2)
-    )
+    lineage_out.write_text(json.dumps([r.model_dump(mode="json") for r in records], indent=2))
 
     # Must parse as a JSON array (not JSONL)
     parsed = json.loads(lineage_out.read_text())
@@ -217,6 +229,7 @@ def test_ray_lineage_is_json_array_not_jsonl(tmp_path: Path) -> None:
 
 
 # ── test 6: convert lineage JSON has checksum + processing_history ────────────
+
 
 def test_convert_lineage_json_has_checksum_and_history(tmp_path: Path) -> None:
     lineage_out = tmp_path / "l0_lineage.json"
@@ -230,7 +243,9 @@ def test_convert_lineage_json_has_checksum_and_history(tmp_path: Path) -> None:
         assert rec["checksum"] is not None
         assert rec["checksum"].startswith("sha256:")
 
-        assert "processing_history" in rec, f"processing_history missing from record: {rec.get('store')}"
+        assert "processing_history" in rec, (
+            f"processing_history missing from record: {rec.get('store')}"
+        )
         assert isinstance(rec["processing_history"], list)
         assert len(rec["processing_history"]) >= 1
 

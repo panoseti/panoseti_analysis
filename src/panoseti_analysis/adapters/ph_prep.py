@@ -80,8 +80,8 @@ def run_prep_ph(
 
         # Fill NaN (masked pixels from sigma-clip) with zero before log-normalizing
         arr_filled = np.nan_to_num(arr.astype(np.float32), nan=0.0)
-        X_norm = _log_norm_to_unit(arr_filled)      # (T, H, W)
-        X_norm = X_norm[:, np.newaxis, :, :]        # (T, 1, H, W)
+        X_norm = _log_norm_to_unit(arr_filled)  # (T, H, W)
+        X_norm = X_norm[:, np.newaxis, :, :]  # (T, 1, H, W)
         all_X.append(X_norm)
         all_t.append(t)
         all_module.extend([module] * len(t))

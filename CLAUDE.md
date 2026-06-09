@@ -34,6 +34,39 @@ Supporting: `io/` (filesystem boundary: open/write/checksum/pack/pff/quicklook),
 `config/` (versions, `data_level` registry, Pydantic models). The `ray` adapter is a
 sibling of Layer B — same kernel call, different transport — so Layer A never changes.
 
+### Design principles
+
+These apply across all layers and cut through YAGNI, readability, and correctness:
+
+**Fail loudly.** Boundaries validate immediately with precise error messages. Use
+`ds.pano.validate(level=..., kind=...)` at every adapter entry point — never let a
+missing variable surface as an obscure downstream crash.
+
+**Single chokepoints.** One place owns each cross-cutting concern:
+
+- `ds.pano.stamp()` is the sole writer of `data_level`, `storage_version`, `calibration`,
+  `timestamp_qc`, and `qc` attrs. Never write these keys directly.
+- `adapters/_common.build_provenance_step()` is the sole constructor of `ProcessingStep`
+  chains. Do not repeat the `read_history → now_utc → capture_software` pattern.
+- `CalibrationResolver.resolve()` is the sole source of calibration params. Do not
+  construct `ImgCalibParams` / `PhCalibParams` with hard-coded values outside of this
+  seam and the default fallbacks in `io/calibration_source.py`.
+
+**QC metrics alongside products.** Every L1 store carries a `qc` attrs block (stamped
+by `io/qc.stamp_qc`) and an optional `.qc.json` sidecar written by the calibrate adapter.
+New calibration kernels must call `run_qc` before writing. QC checks belong in
+`algorithms/qc.py` (Layer A); writers belong in `io/qc.py` (Layer B).
+
+**Anti-framework guardrail for the dev driver.** `adapters/recipe_driver.py` is a flat
+~130-line function (`run_pipeline`) that calls `run_convert → run_hk → run_calibrate →
+run_classify → run_manifest` in order. It is a readable statement of step sequence —
+**not** a second DAG engine. No scheduling, no resume, no parallelism. Nextflow
+remains the only Layer C and the production orchestrator.
+
+**Simplest possible implementation.** Three similar lines beat a premature abstraction.
+Do not add features, fallbacks, or design patterns for hypothetical future requirements.
+Explicit over clever.
+
 ### Ray Integration Principle
 
 **Ray is a payload, not a substrate.** The default execution model is Nextflow-process-with-typer-CLI.

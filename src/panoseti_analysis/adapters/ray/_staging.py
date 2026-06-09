@@ -4,6 +4,7 @@ Copies a compact feature cache from BeeGFS (slow 1 GbE) to the local SSD
 (fast local storage) before training begins. Idempotent: skips if the local
 copy's checksum matches the source.
 """
+
 from __future__ import annotations
 
 import shutil

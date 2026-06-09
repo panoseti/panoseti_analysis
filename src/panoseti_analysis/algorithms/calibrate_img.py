@@ -10,14 +10,7 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 
-from panoseti_analysis.config import levels
 from panoseti_analysis.config.models import ImgCalibParams
-from panoseti_analysis.config.versions import (
-    CALIBRATION_KEY,
-    DATA_LEVEL_KEY,
-    PANOSETI_ANALYSIS_STORAGE_VERSION,
-    STORAGE_VERSION_KEY,
-)
 
 
 def calibrate_img(ds: xr.Dataset, params: ImgCalibParams) -> xr.Dataset:
@@ -50,10 +43,8 @@ def calibrate_img(ds: xr.Dataset, params: ImgCalibParams) -> xr.Dataset:
     out = xr.Dataset(
         {"median_subtracted": calibrated, "hot_pixel_mask": hot, "dead_pixel_mask": dead, **carried}
     )
-    out.attrs = {
-        **ds.attrs,
-        DATA_LEVEL_KEY: levels.validate_level("L1"),
-        STORAGE_VERSION_KEY: PANOSETI_ANALYSIS_STORAGE_VERSION,
-        CALIBRATION_KEY: {"kind": "img", **params.model_dump()},
-    }
-    return out
+    return out.pano.stamp(
+        data_level="L1",
+        calibration={"kind": "img", **params.model_dump()},
+        carry_from=ds,
+    )

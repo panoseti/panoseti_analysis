@@ -103,16 +103,14 @@ def test_no_hardcoded_cuda_device() -> None:
         for pattern in _CUDA_PATTERNS:
             if pattern in src:
                 offenders.append(f"{path.name}: contains {pattern!r}")
-    assert not offenders, "Layer A must not hard-code CUDA device placement:\n" + "\n".join(offenders)
+    assert not offenders, "Layer A must not hard-code CUDA device placement:\n" + "\n".join(
+        offenders
+    )
 
 
 def test_follow_the_model_pattern_not_flagged(tmp_path: Path) -> None:
     """The follow-the-model pattern must not be flagged as a cuda violation."""
-    code = (
-        "import torch\n"
-        "device = next(model.parameters()).device\n"
-        "tensor = x.to(device)\n"
-    )
+    code = "import torch\ndevice = next(model.parameters()).device\ntensor = x.to(device)\n"
     src = code
     for pattern in _CUDA_PATTERNS:
         assert pattern not in src, f"Pattern {pattern!r} incorrectly present in legitimate code"

@@ -52,9 +52,11 @@ def write_summary_json(payload: dict[str, Any], out_path: str | Path) -> None:
     """Write a quick-look summary JSON (e.g. ``Stats.to_json()`` merged with extras)."""
     Path(out_path).write_text(json.dumps(payload, indent=2))
 
+
 def generate_cloud_quicklook(ds_l2: xr.Dataset, out_path: str | Path) -> None:
     """Generate a diagnostic quicklook for cloud detection results."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -92,13 +94,13 @@ def generate_cloud_quicklook(ds_l2: xr.Dataset, out_path: str | Path) -> None:
     ax_fft = fig.add_subplot(gs[1, 0])
     im1 = ax_fft.imshow(fft, cmap="viridis")
     ax_fft.set_title(f"Raw FFT @ t={t_s[max_idx]:.1f}s\nScore: {max_score:.2f}")
-    ax_fft.axis('off')
+    ax_fft.axis("off")
     fig.colorbar(im1, ax=ax_fft, fraction=0.046, pad=0.04)
 
     ax_deriv = fig.add_subplot(gs[1, 1])
     im2 = ax_deriv.imshow(deriv_fft, cmap="viridis")
     ax_deriv.set_title(f"Deriv FFT @ t={t_s[max_idx]:.1f}s")
-    ax_deriv.axis('off')
+    ax_deriv.axis("off")
     fig.colorbar(im2, ax=ax_deriv, fraction=0.046, pad=0.04)
 
     plt.tight_layout()

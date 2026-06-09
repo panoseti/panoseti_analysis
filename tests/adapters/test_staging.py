@@ -1,4 +1,5 @@
 """Tests for the SSD pre-staging helper (adapters/ray/_staging.py)."""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -32,12 +32,15 @@ def dummy_l1_store(tmp_path: Path) -> Path:
     t_arr = np.arange(t0_ns, t0_ns + n_frames * cadence_ns, cadence_ns, dtype=np.int64)
     img_data = np.random.randn(n_frames, 32, 32).astype(np.float32) * 10.0
 
+    mask = np.zeros((32, 32), dtype=np.uint8)
     ds = xr.Dataset(
         data_vars={
             "median_subtracted": (["T", "H", "W"], img_data),
-            "unix_t_ns": (["T"], t_arr)
+            "unix_t_ns": (["T"], t_arr),
+            "hot_pixel_mask": (["H", "W"], mask),
+            "dead_pixel_mask": (["H", "W"], mask),
         },
-        attrs={"data_product": "img16", "module": "1", "run_id": "obs_TEST"}
+        attrs={"data_product": "img16", "module": "1", "run_id": "obs_TEST"},
     )
 
     ds.to_zarr(store_path)
@@ -57,24 +60,25 @@ def dummy_model_path(tmp_path: Path) -> Path:
 
     json_path = model_path.with_suffix(".json")
     from panoseti_analysis.io.checksum import compute_sha256
+
     sha = compute_sha256(model_path)
 
     with json_path.open("w") as f:
-        json.dump({
-            "model_name": "dummy",
-            "model_version": "1.0",
-            "checksum": f"sha256:{sha}",
-            "input_spec": {}
-        }, f)
+        json.dump(
+            {
+                "model_name": "dummy",
+                "model_version": "1.0",
+                "checksum": f"sha256:{sha}",
+                "input_spec": {},
+            },
+            f,
+        )
 
     return model_path
 
 
 def test_ray_vs_cli_equivalence(
-    ray_local_mode,
-    dummy_l1_store: Path,
-    dummy_model_path: Path,
-    tmp_path: Path
+    ray_local_mode, dummy_l1_store: Path, dummy_model_path: Path, tmp_path: Path
 ) -> None:
     """Test that the Nextflow-CLI and Ray adapters produce identical output."""
     torch.use_deterministic_algorithms(True)
@@ -92,11 +96,12 @@ def test_ray_vs_cli_equivalence(
         l2_store=l2_store_cli,
         model_path=dummy_model_path,
         cadence_s=60.0,
-        threshold=0.5
+        threshold=0.5,
     )
 
     # 2. Run Ray adapter
     from panoseti_analysis.io.models import load_classifier
+
     model, bundle = load_classifier(dummy_model_path)
 
     params = CloudInferParams(cadence_s=60.0, threshold=0.5)
@@ -109,7 +114,7 @@ def test_ray_vs_cli_equivalence(
         bundle_dict=bundle.model_dump(),
         params=params,
         codec="zstd",
-        level=5
+        level=5,
     )
 
     l2_store_ray, _record_ray = ray.get(future)
@@ -119,7 +124,9 @@ def test_ray_vs_cli_equivalence(
     ds_ray = xr.open_zarr(l2_store_ray, consolidated=False)
 
     np.testing.assert_array_equal(ds_cli["cloud_score"].values, ds_ray["cloud_score"].values)
-    np.testing.assert_array_equal(ds_cli["feature_raw_fft"].values, ds_ray["feature_raw_fft"].values)
+    np.testing.assert_array_equal(
+        ds_cli["feature_raw_fft"].values, ds_ray["feature_raw_fft"].values
+    )
 
     assert ds_cli.attrs["data_level"] == "L2"
     assert ds_ray.attrs["data_level"] == "L2"
@@ -146,6 +153,7 @@ def test_ray_vs_cli_meta_parity(
     )
 
     from panoseti_analysis.io.models import load_classifier
+
     model, bundle = load_classifier(dummy_model_path)
     params = CloudInferParams()
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
@@ -15,7 +15,9 @@ from panoseti_analysis.adapters._common import (
 )
 from panoseti_analysis.algorithms.calibrate_img import calibrate_img
 from panoseti_analysis.algorithms.calibrate_ph import calibrate_ph
+from panoseti_analysis.algorithms.qc import run_qc
 from panoseti_analysis.algorithms.timestamps import repair_timestamps
+from panoseti_analysis.config.calibration import CalibrationResolution
 from panoseti_analysis.config.levels import infer_kind
 from panoseti_analysis.config.models import (
     ImgCalibParams,
@@ -24,9 +26,15 @@ from panoseti_analysis.config.models import (
     StoreLineage,
     TimestampQCStatus,
 )
-from panoseti_analysis.config.versions import PANOSETI_ANALYSIS_STORAGE_VERSION, TIMESTAMP_QC_KEY
+from panoseti_analysis.config.versions import (
+    CALIBRATION_KEY,
+    PANOSETI_ANALYSIS_STORAGE_VERSION,
+    TIMESTAMP_QC_KEY,
+)
+from panoseti_analysis.io.calibration_source import FileCalibrationResolver
 from panoseti_analysis.io.checksum import checksum_store
 from panoseti_analysis.io.provenance import append_step, capture_software, now_utc, read_history
+from panoseti_analysis.io.qc import stamp_qc, write_qc_sidecar
 from panoseti_analysis.io.stores import open_l0, write_store
 
 app = typer.Typer(add_completion=False, help="Calibrate one L0 store to L1.")
@@ -48,11 +56,39 @@ def run_calibrate(
     codec: str = "zstd",
     level: int = 5,
     shard_factor: int = 0,
+    recipe: Path | None = None,
+    qc_out: Path | None = None,
 ) -> StoreLineage:
-    """Open L0, repair timestamps (single QC call), calibrate, write L1 + lineage."""
+    """Open L0, repair timestamps (single QC call), calibrate, write L1 + lineage.
+
+    When ``recipe`` is given, a ``FileCalibrationResolver`` derives the calibration
+    params from the YAML file (overriding the CLI-arg defaults) and stamps a
+    ``CalibrationResolution`` record into ``ds.attrs["calibration"]["resolution"]``.
+    """
     ds = open_l0(l0_store)
     data_product = str(ds.attrs["data_product"])
     resolved_kind = kind or infer_kind(data_product)
+
+    # Build optional resolver (None = use CLI args as before).
+    resolver = FileCalibrationResolver(recipe) if recipe is not None else None
+    resolution: CalibrationResolution | None = None
+    context: dict[str, Any] = {
+        "run_id": str(ds.attrs.get("run_id", l0_store.stem.split(".")[0])),
+        "data_product": data_product,
+        "module": str(ds.attrs.get("module", "?")),
+    }
+
+    if resolver is not None:
+        resolution = resolver.resolve(resolved_kind, context)
+        p = resolution.params
+        if resolved_kind == "ph":
+            sigma = float(p.get("sigma_threshold", sigma))
+            offset = int(p.get("baseline_offset", offset))
+            ph_stride = int(p.get("frame_stride", ph_stride))
+        else:
+            img_stride = int(p.get("frame_stride", img_stride))
+            block = int(p.get("block_size", block))
+            adc_to_pe = float(p.get("adc_to_pe", adc_to_pe))
 
     l0_history = read_history(dict(ds.attrs))
     l0_input_cksum = l0_history[-1].output_checksum if l0_history else None
@@ -61,9 +97,7 @@ def run_calibrate(
 
     cadence_ns = infer_cadence_ns(ds)
     suspect_ns = derive_suspect_displacement_ns(cadence_ns)
-    ds_sorted, qc = repair_timestamps(
-        ds, cadence_ns=cadence_ns, suspect_displacement_ns=suspect_ns
-    )
+    ds_sorted, qc = repair_timestamps(ds, cadence_ns=cadence_ns, suspect_displacement_ns=suspect_ns)
     if qc.status is TimestampQCStatus.SUSPECT and fail_on_suspect:
         raise SuspectTimestamps(
             f"{l0_store.name}: corruption-grade timestamps (status=suspect); "
@@ -77,17 +111,25 @@ def run_calibrate(
         )
     else:
         out = calibrate_img(
-            ds_sorted, ImgCalibParams(frame_stride=img_stride, block_size=block, adc_to_pe=adc_to_pe)
+            ds_sorted,
+            ImgCalibParams(frame_stride=img_stride, block_size=block, adc_to_pe=adc_to_pe),
         )
+
+    step_params: dict[str, Any] = {
+        "sigma": sigma,
+        "offset": offset,
+        "ph_stride": ph_stride,
+        "img_stride": img_stride,
+        "block": block,
+        "adc_to_pe": adc_to_pe,
+    }
+    if resolution is not None:
+        step_params["resolution"] = resolution.model_dump(mode="json")
 
     calib_step = ProcessingStep(
         step_name=f"calibrate_{resolved_kind}",
         step_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
-        params={
-            "sigma": sigma, "offset": offset,
-            "ph_stride": ph_stride, "img_stride": img_stride,
-            "block": block, "adc_to_pe": adc_to_pe,
-        },
+        params=step_params,
         input_checksums=[l0_input_cksum] if l0_input_cksum else [],
         timestamp_utc=started_at,
         software=software,
@@ -95,7 +137,28 @@ def run_calibrate(
     new_history = append_step(l0_history, calib_step)
 
     out.attrs[TIMESTAMP_QC_KEY] = qc.model_dump(mode="json")
-    write_store(out, l1_store, codec=codec, level=level, processing_history=new_history, shard_factor=shard_factor)
+
+    if resolution is not None:
+        cal = {
+            **dict(out.attrs.get(CALIBRATION_KEY, {})),
+            "resolution": resolution.model_dump(mode="json"),
+        }
+        out = out.pano.stamp(data_level="L1", calibration=cal)
+
+    # QC: run checks and stamp report into attrs; write sidecar if requested.
+    qc_report = run_qc(out, level="L1", kind=resolved_kind)
+    out = stamp_qc(out, qc_report)
+    if qc_out is not None:
+        write_qc_sidecar(qc_report, qc_out)
+
+    write_store(
+        out,
+        l1_store,
+        codec=codec,
+        level=level,
+        processing_history=new_history,
+        shard_factor=shard_factor,
+    )
 
     l1_checksum = checksum_store(l1_store)
 
@@ -134,17 +197,34 @@ def main(
     lineage_out: Path | None = typer.Option(None),
     codec: str = typer.Option("zstd"),
     level: int = typer.Option(5),
-    shard_factor: Annotated[int, typer.Option(
-        "--shard-factor",
-        help="Inner chunks per shard (0 = no sharding). Use 8 for BeeGFS/Expanse.",
-    )] = 0,
+    shard_factor: Annotated[
+        int,
+        typer.Option(
+            "--shard-factor",
+            help="Inner chunks per shard (0 = no sharding). Use 8 for BeeGFS/Expanse.",
+        ),
+    ] = 0,
+    recipe: Path | None = typer.Option(None, help="YAML recipe with calibration params."),
+    qc_out: Path | None = typer.Option(None, "--qc-out", help="Path for QC sidecar JSON."),
 ) -> None:
     try:
         run_calibrate(
-            l0_store, l1_store, kind=kind, sigma=sigma, offset=offset, ph_stride=ph_stride,
-            img_stride=img_stride, block=block, adc_to_pe=adc_to_pe,
-            fail_on_suspect=fail_on_suspect, lineage_out=lineage_out, codec=codec, level=level,
+            l0_store,
+            l1_store,
+            kind=kind,
+            sigma=sigma,
+            offset=offset,
+            ph_stride=ph_stride,
+            img_stride=img_stride,
+            block=block,
+            adc_to_pe=adc_to_pe,
+            fail_on_suspect=fail_on_suspect,
+            lineage_out=lineage_out,
+            codec=codec,
+            level=level,
             shard_factor=shard_factor,
+            recipe=recipe,
+            qc_out=qc_out,
         )
     except SuspectTimestamps as exc:
         typer.echo(str(exc), err=True)

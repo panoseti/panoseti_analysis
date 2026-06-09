@@ -52,6 +52,7 @@ def stamp_history(store: str | Path, history: list[ProcessingStep]) -> None:
     Used when the store was written by an external writer (pypff) rather than write_store.
     """
     import zarr
+
     root = zarr.open_group(str(store), mode="r+", zarr_format=3)
     attrs = dict(root.attrs)
     attrs["processing_history"] = [s.model_dump() for s in history]
@@ -95,9 +96,7 @@ def write_store(
     if shard_factor > 0:
         shard_frames = _TIME_CHUNK * shard_factor
         time_chunks: dict[str, int] = {
-            str(d): min(int(ds.sizes[d]), shard_frames)
-            for d in ds.dims
-            if d in _TIME_DIMS
+            str(d): min(int(ds.sizes[d]), shard_frames) for d in ds.dims if d in _TIME_DIMS
         }
     else:
         time_chunks = {

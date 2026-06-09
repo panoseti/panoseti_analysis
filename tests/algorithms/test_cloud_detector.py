@@ -4,6 +4,7 @@ CONTRACT tests: stable across model swaps — output schema, dtypes, shapes, mon
 MODEL-SPECIFIC tests: tied to the current CloudDetection v1.0 architecture.
   Update these when retraining; they are intentionally brittle for that class of change.
 """
+
 from pathlib import Path
 
 import numpy as np
@@ -43,36 +44,34 @@ def dummy_model() -> CloudDetection:
     return model
 
 
-@pytest.fixture
-def synthetic_l1_dataset() -> xr.Dataset:
-    """60-second L1 img dataset at 1 Hz cadence → 1 window at cadence_s=60."""
-    n_frames = 60
+def _make_l1_img(n_frames: int, seed: int) -> xr.Dataset:
+    """Construct a minimal but schema-valid L1 img Dataset for testing."""
     t0_ns = 1_700_000_000_000_000_000
     t_arr = np.arange(t0_ns, t0_ns + n_frames * 1_000_000_000, 1_000_000_000, dtype=np.int64)
-    np.random.seed(42)
+    np.random.seed(seed)
     img_data = np.random.randn(n_frames, 32, 32).astype(np.float32) * 10.0
+    mask = np.zeros((32, 32), dtype=np.uint8)
     return xr.Dataset(
         {
             "median_subtracted": (["T", "H", "W"], img_data),
             "unix_t_ns": (["T"], t_arr),
-        }
+            "hot_pixel_mask": (["H", "W"], mask),
+            "dead_pixel_mask": (["H", "W"], mask),
+        },
+        attrs={"data_product": "img16"},
     )
+
+
+@pytest.fixture
+def synthetic_l1_dataset() -> xr.Dataset:
+    """60-second L1 img dataset at 1 Hz cadence → 1 window at cadence_s=60."""
+    return _make_l1_img(60, seed=42)
 
 
 @pytest.fixture
 def multi_window_l1_dataset() -> xr.Dataset:
     """120-second dataset → 2 windows at cadence_s=60."""
-    n_frames = 120
-    t0_ns = 1_700_000_000_000_000_000
-    t_arr = np.arange(t0_ns, t0_ns + n_frames * 1_000_000_000, 1_000_000_000, dtype=np.int64)
-    np.random.seed(99)
-    img_data = np.random.randn(n_frames, 32, 32).astype(np.float32)
-    return xr.Dataset(
-        {
-            "median_subtracted": (["T", "H", "W"], img_data),
-            "unix_t_ns": (["T"], t_arr),
-        }
-    )
+    return _make_l1_img(120, seed=99)
 
 
 # ── CONTRACT TESTS (stable across model swaps) ────────────────────────────────
@@ -85,7 +84,13 @@ class TestOutputContract:
         self, synthetic_l1_dataset: xr.Dataset, model_under_test: CloudDetection
     ) -> None:
         out = predict_cloud_score(synthetic_l1_dataset, model_under_test, CloudInferParams())
-        for var in ["cloud_score", "cloud_label", "feature_raw_fft", "feature_deriv_fft", "unix_t_ns"]:
+        for var in [
+            "cloud_score",
+            "cloud_label",
+            "feature_raw_fft",
+            "feature_deriv_fft",
+            "unix_t_ns",
+        ]:
             assert var in out, f"Missing output variable: {var}"
 
     def test_output_dtypes(
@@ -101,14 +106,18 @@ class TestOutputContract:
     def test_output_shape_single_window(
         self, synthetic_l1_dataset: xr.Dataset, model_under_test: CloudDetection
     ) -> None:
-        out = predict_cloud_score(synthetic_l1_dataset, model_under_test, CloudInferParams(cadence_s=60.0))
+        out = predict_cloud_score(
+            synthetic_l1_dataset, model_under_test, CloudInferParams(cadence_s=60.0)
+        )
         assert out.sizes["T_l2"] == 1
         assert out["feature_raw_fft"].shape == (1, 32, 32)
 
     def test_unix_t_ns_monotonic(
         self, multi_window_l1_dataset: xr.Dataset, model_under_test: CloudDetection
     ) -> None:
-        out = predict_cloud_score(multi_window_l1_dataset, model_under_test, CloudInferParams(cadence_s=60.0))
+        out = predict_cloud_score(
+            multi_window_l1_dataset, model_under_test, CloudInferParams(cadence_s=60.0)
+        )
         t_ns = out["unix_t_ns"].values
         assert np.all(np.diff(t_ns) >= 0), "unix_t_ns must be monotonic-non-decreasing"
 
@@ -159,8 +168,12 @@ class TestModelArchitecture:
         params = CloudInferParams(cadence_s=60.0)
         out1 = predict_cloud_score(multi_window_l1_dataset, model, params)
         out2 = predict_cloud_score(multi_window_l1_dataset, model, params)
-        np.testing.assert_array_equal(out1["feature_raw_fft"].values, out2["feature_raw_fft"].values)
-        np.testing.assert_array_equal(out1["feature_deriv_fft"].values, out2["feature_deriv_fft"].values)
+        np.testing.assert_array_equal(
+            out1["feature_raw_fft"].values, out2["feature_raw_fft"].values
+        )
+        np.testing.assert_array_equal(
+            out1["feature_deriv_fft"].values, out2["feature_deriv_fft"].values
+        )
         assert out1.sizes["T_l2"] == 2
 
     @pytest.mark.skipif(not CHECKPOINT_PATH.exists(), reason="checkpoint not present in repo")
@@ -236,6 +249,7 @@ class TestCloudInferParamsFlow:
         diffs = np.diff(t_centers)
         expected_ns = int(10.0 * 1e9)
         np.testing.assert_array_equal(
-            diffs, expected_ns,
+            diffs,
+            expected_ns,
             err_msg="Window centre timestamps must be spaced exactly cadence_s apart",
         )

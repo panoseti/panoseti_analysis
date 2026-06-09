@@ -12,7 +12,9 @@ from panoseti_analysis.io.checksum import compute_sha256
 __all__ = ["load_classifier", "load_vae", "save_classifier"]
 
 
-def load_classifier(model_path: Path) -> tuple[torch.nn.Module, ClassifierBundle]:
+def load_classifier(
+    model_path: Path, model: None | torch.nn.Module = None
+) -> tuple[torch.nn.Module, ClassifierBundle]:
     """Load a PyTorch model and its metadata sidecar.
 
     Verifies the model file's SHA256 checksum against the sidecar before loading.
@@ -35,11 +37,14 @@ def load_classifier(model_path: Path) -> tuple[torch.nn.Module, ClassifierBundle
     # Verify checksum
     actual_sha = f"sha256:{compute_sha256(model_path)}"
     if actual_sha != bundle.checksum:
-        raise ValueError(f"Model checksum mismatch for {model_path}. Expected {bundle.checksum}, got {actual_sha}")
+        raise ValueError(
+            f"Model checksum mismatch for {model_path}. Expected {bundle.checksum}, got {actual_sha}"
+        )
 
     # The .pt file is a state_dict (OrderedDict)
     state_dict = torch.load(model_path, map_location="cpu", weights_only=True)
-    model = CloudDetection()
+    if model is None:
+        model = CloudDetection()
     model.load_state_dict(state_dict)
 
     return model, bundle
@@ -125,8 +130,7 @@ def load_vae(
     actual_sha = f"sha256:{compute_sha256(model_path)}"
     if actual_sha != bundle.checksum:
         raise ValueError(
-            f"Checksum mismatch for {model_path}. "
-            f"Expected {bundle.checksum}, got {actual_sha}"
+            f"Checksum mismatch for {model_path}. Expected {bundle.checksum}, got {actual_sha}"
         )
 
     ld: int | str = bundle.input_spec.get("latent_dim", latent_dim)

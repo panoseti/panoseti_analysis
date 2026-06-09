@@ -3,6 +3,7 @@
 Pure Layer A module: nn.Module definitions + loss function only.
 No device placement, no I/O, no Ray.
 """
+
 from __future__ import annotations
 
 import torch
@@ -69,8 +70,8 @@ class BetaVAE(nn.Module):
 
         # Encoder: 1->hidden_dim->hidden_dim*2 with downsampling
         self.encoder = nn.Sequential(
-            DownBlock(1, hidden_dim),              # (N, hidden_dim, 8, 8)
-            DownBlock(hidden_dim, hidden_dim * 2), # (N, hidden_dim*2, 4, 4)
+            DownBlock(1, hidden_dim),  # (N, hidden_dim, 8, 8)
+            DownBlock(hidden_dim, hidden_dim * 2),  # (N, hidden_dim*2, 4, 4)
         )
         flat_dim = hidden_dim * 2 * 4 * 4  # 4x4 spatial after two MaxPool2d(2)
         self.fc_mu = nn.Linear(flat_dim, latent_dim)
@@ -79,7 +80,7 @@ class BetaVAE(nn.Module):
         # Decoder
         self.fc_decode = nn.Linear(latent_dim, flat_dim)
         self.decoder = nn.Sequential(
-            UpBlock(hidden_dim * 2, hidden_dim),   # (N, hidden_dim, 8, 8)
+            UpBlock(hidden_dim * 2, hidden_dim),  # (N, hidden_dim, 8, 8)
             UpBlock(hidden_dim, hidden_dim // 2),  # (N, hidden_dim//2, 16, 16)
         )
         self.out_conv = nn.Conv2d(hidden_dim // 2, 1, kernel_size=1)
@@ -103,9 +104,7 @@ class BetaVAE(nn.Module):
         h = self.decoder(h)
         return self.out_conv(h)
 
-    def forward(
-        self, x: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         recon = self.decode(z)

@@ -15,6 +15,7 @@ from panoseti_analysis.io.stores import open_l0, open_store, write_store
 
 # ── helper ────────────────────────────────────────────────────────────────────
 
+
 def _make_step(**overrides: Any) -> ProcessingStep:
     defaults: dict[str, Any] = {
         "step_name": "convert",
@@ -74,6 +75,7 @@ def test_write_store_handles_nonuniform_dask_chunks(tmp_path: Path) -> None:
 
 # ── processing_history stamping ───────────────────────────────────────────────
 
+
 class TestWriteStoreProcessingHistory:
     def test_stamps_processing_history_into_root_attrs(
         self, l0_ph_ds: xr.Dataset, tmp_path: Path
@@ -125,9 +127,7 @@ class TestWriteStoreProcessingHistory:
         z = zarr.open(str(out), mode="r")
         assert "processing_history" not in z.attrs
 
-    def test_processing_history_multiple_steps(
-        self, l0_ph_ds: xr.Dataset, tmp_path: Path
-    ) -> None:
+    def test_processing_history_multiple_steps(self, l0_ph_ds: xr.Dataset, tmp_path: Path) -> None:
         """Multiple steps all appear in the root attrs in order."""
         out = tmp_path / "s.zarr"
         steps = [
@@ -142,9 +142,7 @@ class TestWriteStoreProcessingHistory:
         assert history[0]["step_name"] == "convert"
         assert history[1]["step_name"] == "calibrate_ph"
 
-    def test_does_not_mutate_input_dataset(
-        self, l0_ph_ds: xr.Dataset, tmp_path: Path
-    ) -> None:
+    def test_does_not_mutate_input_dataset(self, l0_ph_ds: xr.Dataset, tmp_path: Path) -> None:
         """write_store must not add processing_history to the caller's Dataset attrs."""
         out = tmp_path / "s.zarr"
         original_attrs = dict(l0_ph_ds.attrs)
@@ -176,7 +174,10 @@ class TestWriteStoreSharding:
     ) -> None:
         """shard_factor=4 must produce fewer zarr files than shard_factor=0."""
         import panoseti_analysis.io.stores as _stores
-        monkeypatch.setattr(_stores, "_TIME_CHUNK", 8)  # makes 60-frame fixture span multiple chunks
+
+        monkeypatch.setattr(
+            _stores, "_TIME_CHUNK", 8
+        )  # makes 60-frame fixture span multiple chunks
         out_un = tmp_path / "unsharded.zarr"
         out_sh = tmp_path / "sharded.zarr"
         write_store(l0_img_ds, out_un, shard_factor=0)
@@ -198,12 +199,8 @@ class TestWriteStoreSharding:
         out = tmp_path / "s.zarr"
         write_store(l0_img_ds, out, shard_factor=4)
         back = open_store(out)
-        np.testing.assert_array_equal(
-            back["images"].values, l0_img_ds["images"].values
-        )
-        np.testing.assert_array_equal(
-            back["unix_t_ns"].values, l0_img_ds["unix_t_ns"].values
-        )
+        np.testing.assert_array_equal(back["images"].values, l0_img_ds["images"].values)
+        np.testing.assert_array_equal(back["unix_t_ns"].values, l0_img_ds["unix_t_ns"].values)
 
     def test_shard_factor_zero_no_sharding(self, l0_img_ds: xr.Dataset, tmp_path: Path) -> None:
         """shard_factor=0 must not introduce ShardingCodec."""

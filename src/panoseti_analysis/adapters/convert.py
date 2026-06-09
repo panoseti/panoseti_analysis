@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -26,6 +27,7 @@ def run_convert(
     codec: str = "zstd",
     level: int = 5,
     time_chunk: int = 0,
+    shard_factor: int = 0,
     lineage_out: Path | None = None,
 ) -> list[StoreLineage]:
     """Convert via pypff, then enumerate the emitted L0 stores into lineage records."""
@@ -34,7 +36,14 @@ def run_convert(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     # Stores are written flat; the level-major L0/ dir is created at publish time.
-    convert_run(read_pff_run(obs_dir), out_dir, codec=codec, level=level, time_chunk=time_chunk or None)
+    convert_run(
+        read_pff_run(obs_dir),
+        out_dir,
+        codec=codec,
+        level=level,
+        time_chunk=time_chunk or None,
+        shard_factor=shard_factor,
+    )
 
     started_at = now_utc()
     software = capture_software()
@@ -52,7 +61,12 @@ def run_convert(
         step = ProcessingStep(
             step_name="convert",
             step_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
-            params={"codec": codec, "level": level, "time_chunk": time_chunk},
+            params={
+                "codec": codec,
+                "level": level,
+                "time_chunk": time_chunk,
+                "shard_factor": shard_factor,
+            },
             output_checksum=output_cksum,
             timestamp_utc=started_at,
             software=software,
@@ -88,10 +102,23 @@ def main(
     codec: str = typer.Option("zstd"),
     level: int = typer.Option(5),
     time_chunk: int = typer.Option(0, help="0 = auto-sized by pypff"),
+    shard_factor: Annotated[
+        int,
+        typer.Option(
+            "--shard-factor",
+            help="Inner chunks per shard (0 = no sharding). Use 16 for BeeGFS/Expanse.",
+        ),
+    ] = 0,
     lineage_out: Path | None = typer.Option(None),
 ) -> None:
     run_convert(
-        obs_dir, out_dir, codec=codec, level=level, time_chunk=time_chunk, lineage_out=lineage_out
+        obs_dir,
+        out_dir,
+        codec=codec,
+        level=level,
+        time_chunk=time_chunk,
+        shard_factor=shard_factor,
+        lineage_out=lineage_out,
     )
 
 

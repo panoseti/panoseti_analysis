@@ -16,7 +16,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
-from panoseti_analysis.algorithms.cloud_detector import CloudDetection
+from panoseti_analysis.algorithms.cloud_detector import CloudDetectionV2
 from panoseti_analysis.algorithms.training import TrainResult, fit
 
 
@@ -124,7 +124,7 @@ def cloud_val_predictions(
     """
     import numpy as np
 
-    model = CloudDetection().to(device)
+    model = CloudDetectionV2().to(device)
     model.load_state_dict(state_dict)
     model.eval()
     with torch.no_grad():
@@ -173,7 +173,7 @@ def fit_cloud_detector(
     hooks but wires ``fit`` itself (so it can DDP-wrap the model first).
     """
     if model is None:
-        model = CloudDetection().to(device)
+        model = CloudDetectionV2().to(device)
     batch_size = int(hp.get("batch_size", 128))
     epochs = int(hp.get("epochs", 50))
     train_loader: DataLoader[Any] = DataLoader(

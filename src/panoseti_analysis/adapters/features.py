@@ -128,9 +128,9 @@ def run_features_cloud(
     if not all_X:
         raise ValueError("No img L1 stores with 'median_subtracted' found in the provided list.")
 
-    X_cat = np.concatenate(all_X, axis=0)         # (N_total, 2, H, W)
-    t_cat = np.concatenate(all_t, axis=0)         # (N_total,)
-    y_cat = np.concatenate(all_y, axis=0)         # (N_total,)
+    X_cat = np.concatenate(all_X, axis=0)  # (N_total, 2, H, W)
+    t_cat = np.concatenate(all_t, axis=0)  # (N_total,)
+    y_cat = np.concatenate(all_y, axis=0)  # (N_total,)
     module_arr = np.array(all_module, dtype=str)  # (N_total,)
 
     # Temporal split indices
@@ -210,7 +210,9 @@ def main(
     ),
     out_path: Path = typer.Argument(..., help="Output feature cache .zarr path"),
     recipe: Path = typer.Option(..., help="Recipe YAML (must contain feature_cadence_s)"),
-    label_csv: Path | None = typer.Option(None, help="Label CSV (module,t_start_ns,t_end_ns,label)"),
+    label_csv: Path | None = typer.Option(
+        None, help="Label CSV (module,t_start_ns,t_end_ns,label)"
+    ),
     lineage_out: Path | None = typer.Option(None),
 ) -> None:
     with stores_list_file.open() as f:

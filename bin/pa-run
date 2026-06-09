@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+"""Shim for the pa-run dev-loop pipeline driver."""
+
+from panoseti_analysis.adapters.recipe_driver import app
+
+app()

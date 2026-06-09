@@ -70,6 +70,7 @@ def _write_test_recipe(tmp_path: Path) -> Path:
 
 # ── unit test: save + load VAE roundtrip (no Ray) ─────────────────────────────
 
+
 def test_train_vae_save_load_roundtrip(tmp_path: Path) -> None:
     """save_classifier + load_vae must produce a consistent checkpoint."""
     model = BetaVAE(latent_dim=4, hidden_dim=8)
@@ -107,6 +108,7 @@ def test_train_vae_save_load_roundtrip(tmp_path: Path) -> None:
 
     # .json must have a real sha256 checksum (not placeholder)
     import json as _json
+
     meta = _json.loads(json_path.read_text())
     assert meta["checksum"].startswith("sha256:")
     assert meta["checksum"] != "sha256:placeholder"
@@ -130,6 +132,7 @@ def test_train_vae_save_load_roundtrip(tmp_path: Path) -> None:
 
 
 # ── slow integration test: end-to-end via Ray Train ──────────────────────────
+
 
 @pytest.mark.slow
 def test_train_vae_checkpoint_roundtrip(tmp_path: Path) -> None:

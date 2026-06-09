@@ -32,9 +32,7 @@ def pack_zipstore(store: str | Path, out_path: str | Path) -> Path:
     """
     store = Path(store)
     out_path = Path(out_path)
-    with zipfile.ZipFile(
-        out_path, mode="w", compression=zipfile.ZIP_STORED, allowZip64=True
-    ) as zf:
+    with zipfile.ZipFile(out_path, mode="w", compression=zipfile.ZIP_STORED, allowZip64=True) as zf:
         for path in sorted(p for p in store.rglob("*") if p.is_file()):
             zf.write(path, arcname=path.relative_to(store).as_posix())
     return out_path

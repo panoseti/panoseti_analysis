@@ -40,20 +40,33 @@ def test_timestamp_qc_status_serializes_to_string() -> None:
 
 def test_manifest_round_trip() -> None:
     qc = TimestampQC(
-        status=TimestampQCStatus.CLEAN, monotonic=True, n_frames=3,
-        t_start_ns=1000, t_end_ns=3000,
+        status=TimestampQCStatus.CLEAN,
+        monotonic=True,
+        n_frames=3,
+        t_start_ns=1000,
+        t_end_ns=3000,
     )
     entry = StoreLineage(
-        dp="ph256", module="1", level="L1", kind="ph",
-        store="run.dp_ph256.module_1.zarr", n_frames=3, time_range=(1000, 3000),
-        checksum="sha256:abc", source_store="L0/run.dp_ph256.module_1.zarr",
-        calibration_params={"kind": "ph", "sigma_threshold": 5.0}, timestamp_qc=qc,
+        dp="ph256",
+        module="1",
+        level="L1",
+        kind="ph",
+        store="run.dp_ph256.module_1.zarr",
+        n_frames=3,
+        time_range=(1000, 3000),
+        checksum="sha256:abc",
+        source_store="L0/run.dp_ph256.module_1.zarr",
+        calibration_params={"kind": "ph", "sigma_threshold": 5.0},
+        timestamp_qc=qc,
     )
     man = Manifest(
         panoseti_analysis_storage_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
         manifest_schema_version=MANIFEST_SCHEMA_VERSION,
-        run_id="run", level="L1", created_utc="2026-05-28T00:00:00Z",
-        seed_manifest_version="1.0", stores=[entry],
+        run_id="run",
+        level="L1",
+        created_utc="2026-05-28T00:00:00Z",
+        seed_manifest_version="1.0",
+        stores=[entry],
     )
     blob = man.model_dump_json()
     restored = Manifest.model_validate_json(blob)

@@ -11,14 +11,7 @@ from __future__ import annotations
 
 import xarray as xr
 
-from panoseti_analysis.config import levels
 from panoseti_analysis.config.models import PhCalibParams
-from panoseti_analysis.config.versions import (
-    CALIBRATION_KEY,
-    DATA_LEVEL_KEY,
-    PANOSETI_ANALYSIS_STORAGE_VERSION,
-    STORAGE_VERSION_KEY,
-)
 
 
 def _fix_ph1024_quabo_order(images: xr.DataArray) -> xr.DataArray:
@@ -59,10 +52,8 @@ def calibrate_ph(ds: xr.Dataset, params: PhCalibParams) -> xr.Dataset:
     out = xr.Dataset(
         {"pedestal_subtracted": above, "hot_pixel_mask": hot, "dead_pixel_mask": dead, **carried}
     )
-    out.attrs = {
-        **ds.attrs,
-        DATA_LEVEL_KEY: levels.validate_level("L1"),
-        STORAGE_VERSION_KEY: PANOSETI_ANALYSIS_STORAGE_VERSION,
-        CALIBRATION_KEY: {"kind": "ph", **params.model_dump()},
-    }
-    return out
+    return out.pano.stamp(
+        data_level="L1",
+        calibration={"kind": "ph", **params.model_dump()},
+        carry_from=ds,
+    )
