@@ -9,7 +9,10 @@ torch = pytest.importorskip("torch")
 import torch.nn.functional as F  # noqa: E402
 from torch.utils.data import DataLoader, TensorDataset  # noqa: E402
 
-from panoseti_analysis.algorithms.cloud_detector import CloudDetection  # noqa: E402
+from panoseti_analysis.algorithms.cloud_detector import (  # noqa: E402
+    CloudDetection,
+    CloudDetectionV2,
+)
 from panoseti_analysis.algorithms.cloud_train import (  # noqa: E402
     binary_classification_metrics,
     cloud_val_predictions,
@@ -100,8 +103,8 @@ def test_fit_cloud_detector_smoke() -> None:
     last = result.history[-1]
     for key in ("val_loss", "val_acc", "val_precision", "val_recall", "val_f1", "val_ap"):
         assert key in last, f"missing metric {key}"
-    # best_state must load cleanly into a fresh model.
-    CloudDetection().load_state_dict(result.best_state)
+    # best_state must load cleanly into a fresh model (default arch is cloud_detector_v2).
+    CloudDetectionV2().load_state_dict(result.best_state)
 
 
 def test_binary_classification_metrics() -> None:

@@ -16,8 +16,27 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
-from panoseti_analysis.algorithms.cloud_detector import CloudDetectionV2
+import panoseti_analysis.algorithms.cloud_detector  # noqa: F401 — register CloudDetection + V2
+from panoseti_analysis.algorithms.classification_metrics import (
+    binary_classification_metrics,
+    confusion_counts,
+    pr_curve_points,
+)
+from panoseti_analysis.algorithms.optim import build_optimizer, build_scheduler
+from panoseti_analysis.algorithms.registry import build_model
 from panoseti_analysis.algorithms.training import TrainResult, fit
+
+# Re-export for back-compat (callers that imported these from cloud_train still work).
+__all__ = [
+    "binary_classification_metrics",
+    "build_cloud_optimizer",
+    "cloud_loss_fn",
+    "cloud_val_predictions",
+    "confusion_counts",
+    "fit_cloud_detector",
+    "make_cloud_val_eval",
+    "pr_curve_points",
+]
 
 
 def cloud_loss_fn(model: torch.nn.Module, batch: Any) -> tuple[torch.Tensor, dict[str, float]]:
@@ -46,71 +65,6 @@ def make_cloud_val_eval(
     return val_eval
 
 
-def binary_classification_metrics(y_true: Any, y_pred: Any, y_score: Any) -> dict[str, float]:
-    """Precision/recall/F1 + average precision for the positive (cloudy) class.
-
-    Pure-numpy so it stays Layer-A-clean (no sklearn). ``y_score`` is P(cloudy).
-    """
-    import numpy as np
-
-    y_true = np.asarray(y_true).astype(int)
-    y_pred = np.asarray(y_pred).astype(int)
-    tp = int(((y_pred == 1) & (y_true == 1)).sum())
-    fp = int(((y_pred == 1) & (y_true == 0)).sum())
-    fn = int(((y_pred == 0) & (y_true == 1)).sum())
-    precision = tp / (tp + fp) if (tp + fp) else 0.0
-    recall = tp / (tp + fn) if (tp + fn) else 0.0
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
-
-    # Average precision = area under the precision-recall curve (step interpolation).
-    order = np.argsort(-np.asarray(y_score))
-    y_sorted = y_true[order]
-    total_pos = int(y_sorted.sum())
-    ap = 0.0
-    if total_pos:
-        cum_tp = np.cumsum(y_sorted)
-        cum_fp = np.cumsum(1 - y_sorted)
-        prec = cum_tp / np.maximum(cum_tp + cum_fp, 1)
-        rec = cum_tp / total_pos
-        rec_prev = np.concatenate([[0.0], rec[:-1]])
-        ap = float(np.sum((rec - rec_prev) * prec))
-    return {"val_precision": precision, "val_recall": recall, "val_f1": f1, "val_ap": ap}
-
-
-def confusion_counts(y_true: Any, y_pred: Any) -> list[list[int]]:
-    """2x2 confusion matrix ``[[tn, fp], [fn, tp]]`` for binary (clear/cloudy) labels."""
-    import numpy as np
-
-    y_true = np.asarray(y_true).astype(int)
-    y_pred = np.asarray(y_pred).astype(int)
-    tn = int(((y_pred == 0) & (y_true == 0)).sum())
-    fp = int(((y_pred == 1) & (y_true == 0)).sum())
-    fn = int(((y_pred == 0) & (y_true == 1)).sum())
-    tp = int(((y_pred == 1) & (y_true == 1)).sum())
-    return [[tn, fp], [fn, tp]]
-
-
-def pr_curve_points(y_true: Any, y_score: Any, *, n_points: int = 50) -> dict[str, list[float]]:
-    """Precision/recall points along descending-score thresholds, down-sampled to n_points.
-
-    Pure numpy (no sklearn) so it stays Layer-A-clean. ``y_score`` is P(cloudy).
-    """
-    import numpy as np
-
-    y_true = np.asarray(y_true).astype(int)
-    order = np.argsort(-np.asarray(y_score))
-    y_sorted = y_true[order]
-    total_pos = int(y_sorted.sum())
-    if total_pos == 0:
-        return {"recall": [], "precision": []}
-    cum_tp = np.cumsum(y_sorted)
-    cum_fp = np.cumsum(1 - y_sorted)
-    precision = cum_tp / np.maximum(cum_tp + cum_fp, 1)
-    recall = cum_tp / total_pos
-    idx = np.linspace(0, len(recall) - 1, num=min(n_points, len(recall))).astype(int)
-    return {"recall": recall[idx].tolist(), "precision": precision[idx].tolist()}
-
-
 def cloud_val_predictions(
     state_dict: dict[str, torch.Tensor],
     X_val: torch.Tensor,
@@ -124,7 +78,9 @@ def cloud_val_predictions(
     """
     import numpy as np
 
-    model = CloudDetectionV2().to(device)
+    # Infer arch from the state_dict keys: V2 has "conv_lift" prefix; legacy CNN does not.
+    arch = "cloud_detector_v2" if any("conv_lift" in k for k in state_dict) else "cloud_detector"
+    model = build_model(arch).to(device)
     model.load_state_dict(state_dict)
     model.eval()
     with torch.no_grad():
@@ -138,20 +94,13 @@ def cloud_val_predictions(
 def build_cloud_optimizer(
     model: torch.nn.Module, hp: dict[str, Any]
 ) -> tuple[torch.optim.Optimizer, Callable[[float], None]]:
-    """AdamW + ExponentialLR + ReduceLROnPlateau, matching the production schedule."""
-    lr = float(hp.get("lr", 1e-3))
-    weight_decay = float(hp.get("weight_decay", 1e-5))
-    gamma = float(hp.get("gamma", 0.9))
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler_exp = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
-    scheduler_plateau = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", patience=5, factor=0.5
-    )
+    """AdamW + ExponentialLR + ReduceLROnPlateau (backward-compat wrapper).
 
-    def step_schedulers(val_loss: float) -> None:
-        scheduler_exp.step()
-        scheduler_plateau.step(val_loss)
-
+    Delegates to the generic ``algorithms.optim`` registry so behaviour is identical.
+    New callers should use ``build_optimizer`` / ``build_scheduler`` directly.
+    """
+    optimizer = build_optimizer(model.parameters(), hp)
+    step_schedulers = build_scheduler(optimizer, hp)
     return optimizer, step_schedulers
 
 
@@ -173,7 +122,8 @@ def fit_cloud_detector(
     hooks but wires ``fit`` itself (so it can DDP-wrap the model first).
     """
     if model is None:
-        model = CloudDetectionV2().to(device)
+        arch = str(hp.get("arch", "cloud_detector_v2"))
+        model = build_model(arch).to(device)
     batch_size = int(hp.get("batch_size", 128))
     epochs = int(hp.get("epochs", 50))
     train_loader: DataLoader[Any] = DataLoader(

@@ -18,7 +18,7 @@ Example
     # In a second shell, run the streaming pipeline:
     pa-stream-cloud \\
         --model-path assets/models/cloud_detector_v1.pt \\
-        --recipe recipes/stream_cloud_v1.yml \\
+        --recipe recipes/ml/stream_cloud_v1.yml \\
         --grpc-host localhost \\
         --archive-dir /mnt/beegfs/streams/
 """

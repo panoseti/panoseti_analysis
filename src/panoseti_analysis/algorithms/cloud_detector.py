@@ -10,9 +10,11 @@ import torch.nn as nn
 import xarray as xr
 from torchvision.models import ConvNeXt_Tiny_Weights, convnext_tiny
 
+from panoseti_analysis.algorithms.registry import register_model
 from panoseti_analysis.config.models import CloudInferParams
 
 
+@register_model("cloud_detector_v2")
 class CloudDetectionV2(nn.Module):
     input_shape = (2, 32, 32)
 
@@ -43,8 +45,9 @@ class CloudDetectionV2(nn.Module):
         return out
 
 
+@register_model("cloud_detector")
 class CloudDetection(nn.Module):
-    """The CNN architecture trained for cloud detection."""
+    """The CNN architecture trained for cloud detection (legacy v1 CNN)."""
 
     input_shape = (2, 32, 32)
 

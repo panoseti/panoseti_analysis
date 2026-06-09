@@ -5,7 +5,9 @@ from pathlib import Path
 
 import torch
 
-from panoseti_analysis.algorithms.cloud_detector import CloudDetection
+import panoseti_analysis.algorithms.cloud_detector
+import panoseti_analysis.algorithms.ph_vae  # noqa: F401 — register BetaVAE
+from panoseti_analysis.algorithms.registry import get_model
 from panoseti_analysis.config.models import ClassifierBundle, TrainingProvenance
 from panoseti_analysis.io.checksum import compute_sha256
 
@@ -13,14 +15,19 @@ __all__ = ["load_classifier", "load_vae", "save_classifier"]
 
 
 def load_classifier(
-    model_path: Path, model: None | torch.nn.Module = None
+    model_path: Path, model: torch.nn.Module | None = None
 ) -> tuple[torch.nn.Module, ClassifierBundle]:
     """Load a PyTorch model and its metadata sidecar.
 
-    Verifies the model file's SHA256 checksum against the sidecar before loading.
+    The model class is resolved from the ``arch`` field of the ClassifierBundle
+    via the model registry — no hard-coded class reference.  Legacy sidecars
+    without an ``arch`` field default to ``"cloud_detector"`` (the original CNN),
+    which keeps backwards compatibility.
 
     Args:
         model_path: Path to the .pt or .pth file.
+        model: Optional pre-built model instance to load weights into (skips
+            registry resolution; useful for testing).
 
     Returns:
         The loaded PyTorch module and its validated ClassifierBundle.
@@ -44,7 +51,10 @@ def load_classifier(
     # The .pt file is a state_dict (OrderedDict)
     state_dict = torch.load(model_path, map_location="cpu", weights_only=True)
     if model is None:
-        model = CloudDetection()
+        # Resolve via the registry — works for any registered arch, not just CloudDetection.
+        # Legacy bundles without an "arch" field use the ClassifierBundle default
+        # ("cloud_detector") so old .json sidecars still load the original CNN unchanged.
+        model = get_model(bundle.arch)()
     model.load_state_dict(state_dict)
 
     return model, bundle
@@ -85,6 +95,7 @@ def save_classifier(
             model_version=bundle.model_version,
             checksum=actual_checksum,
             input_spec=bundle.input_spec,
+            arch=bundle.arch,
         )
 
     json_path.write_text(bundle.model_dump_json(indent=2))

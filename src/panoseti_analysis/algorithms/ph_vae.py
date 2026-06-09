@@ -10,6 +10,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from panoseti_analysis.algorithms.registry import register_model
+
 
 class ConvBlock(nn.Module):
     def __init__(self, in_ch: int, out_ch: int, kernel_size: int = 3) -> None:
@@ -57,6 +59,7 @@ class UpBlock(nn.Module):
         return self.block(x)
 
 
+@register_model("beta_vae")
 class BetaVAE(nn.Module):
     """BetaVAE for 16x16 single-channel PANOSETI pulse-height frames.
 

@@ -46,7 +46,8 @@ def _move(batch: Batch, device: torch.device) -> Batch:
 def _clone_state(model: torch.nn.Module) -> dict[str, torch.Tensor]:
     # Unwrap DDP (torch wraps the model and prefixes keys with "module.").
     raw = getattr(model, "module", model)
-    return {k: v.detach().clone() for k, v in raw.state_dict().items()}
+    # Move to CPU so the checkpoint is device-agnostic and doesn't pin GPU memory.
+    return {k: v.detach().cpu().clone() for k, v in raw.state_dict().items()}
 
 
 def fit(
@@ -59,6 +60,7 @@ def fit(
     device: torch.device,
     val_eval: ValEval | None = None,
     step_schedulers: Callable[[float], None] | None = None,
+    on_epoch_start: Callable[[int], None] | None = None,
     on_epoch: Callable[[int, dict[str, float]], None] | None = None,
     monitor: str = "val_loss",
     minimize: bool = True,
@@ -75,12 +77,17 @@ def fit(
         val_eval: Optional per-epoch validation; its dict is merged into the metrics
             and should contain ``monitor`` (e.g. ``"val_loss"``).
         step_schedulers: Optional callback stepping LR schedulers with the monitored value.
+        on_epoch_start: Optional callback ``(epoch)`` invoked at the *start* of each epoch
+            **before** iterating the loader.  The Ray adapter uses this to call
+            ``train_loader.sampler.set_epoch(epoch)`` for correct multi-GPU shuffle
+            (see ``adapters/ray/train_cloud.py``).  Framework-free: the callback is a
+            plain Python callable, so Layer A stays pure.
         on_epoch: Optional callback ``(epoch, metrics)`` for logging / ``ray.train.report``.
         monitor: Metric key used to select the best checkpoint.
         minimize: Whether lower ``monitor`` is better.
 
     Returns:
-        A :class:`TrainResult` with the best (DDP-unwrapped) state dict and full history.
+        A :class:`TrainResult` with the best (DDP-unwrapped, CPU) state dict and full history.
     """
     best_value = float("inf") if minimize else float("-inf")
     best_state: dict[str, torch.Tensor] = {}
@@ -90,6 +97,8 @@ def fit(
         return value < best_value if minimize else value > best_value
 
     for epoch in range(epochs):
+        if on_epoch_start is not None:
+            on_epoch_start(epoch)
         model.train()
         sums: dict[str, float] = {}
         n_batches = 0

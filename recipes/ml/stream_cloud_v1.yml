@@ -1,6 +1,6 @@
 # stream_cloud_v1.yml — Real-time cloud detection streaming recipe
 #
-# Used by pa-stream-cloud --recipe recipes/stream_cloud_v1.yml
+# Used by pa-stream-cloud --recipe recipes/ml/stream_cloud_v1.yml
 #
 # Science parameters (WHAT):
 #   feature_cadence_s — how often to emit a scored window (seconds)

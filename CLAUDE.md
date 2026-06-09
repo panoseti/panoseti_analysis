@@ -132,7 +132,7 @@ pseti-grpc server                                   # or: pseti-grpc server --co
 # 3. Run the streaming pipeline (gaming GPU, 60s cadence):
 pa-stream-cloud \
     --model-path assets/models/cloud_detector_v1.pt \
-    --recipe recipes/stream_cloud_v1.yml \
+    --recipe recipes/ml/stream_cloud_v1.yml \
     --grpc-host localhost \
     --archive-dir /mnt/beegfs/streams/
 
@@ -179,19 +179,19 @@ nextflow run . -profile ral --steps ingest -params-file recipes/ingest_subset.ym
 
 # 2. Materialize features (runs standalone, reads L1 from BeeGFS):
 pa-features-cloud --stores /mnt/beegfs/runs/*/L1/*.zarr \
-  --out /mnt/beegfs/features/ --recipe recipes/cloud_v1.yml \
+  --out /mnt/beegfs/features/ --recipe recipes/ml/cloud_v1.yml \
   --label-csv /mnt/beegfs/labels/cloud_labels.csv
 
 # 3. Train cloud detector (attaches to user's running Ray cluster):
-pa-train-cloud --launcher attach --recipe recipes/cloud_v1.yml \
+pa-train-cloud --launcher attach --recipe recipes/ml/cloud_v1.yml \
   --feature-cache /mnt/beegfs/features/features.<hash>.zarr \
   --out /mnt/beegfs/models/ \
   --local-cache-dir /local/scratch
 
 # 4. Train BetaVAE:
 pa-prep-ph --stores /mnt/beegfs/runs/*/L1/*.dp_ph256.*.zarr \
-  --out /mnt/beegfs/features/ --recipe recipes/vae_train_v1.yml
-pa-train-vae --launcher attach --recipe recipes/vae_train_v1.yml \
+  --out /mnt/beegfs/features/ --recipe recipes/ml/vae_train_v1.yml
+pa-train-vae --launcher attach --recipe recipes/ml/vae_train_v1.yml \
   --feature-cache /mnt/beegfs/features/features.<hash>.zarr \
   --out /mnt/beegfs/models/ --local-cache-dir /local/scratch
 
@@ -204,7 +204,8 @@ nextflow run . -profile laptop --steps ml \
 
 **Recipes vs Profiles:**
 
-- `recipes/*.yml` — WHAT SCIENCE (feature params, split ratios, hyperparams, scaling, model_out, label_csv). Passed via `--recipe` to training CLIs or `-params-file` to Nextflow.
+- `recipes/ml/*.yml` — ML training recipes (WHAT SCIENCE: feature params, split ratios, hyperparams, scaling). Passed via `--recipe` to training CLIs (`pa-train-cloud`, `pa-tune-cloud`, etc.). Dev variants (notebook-friendly hyperparams): `*_dev.yml`. Template for new models: `my_model_v1_template.yml`.
+- `recipes/*.yml` — non-ML pipeline recipes (calibration defaults, ingest subsets). Passed via `-params-file` to Nextflow.
 - `-profile` — WHERE/HOW (executor, container, resource limits). Never embed science params here.
 
 The `recipe_hash` (sha256 of the YAML bytes) is stamped into every `ProcessingStep` and `TrainingProvenance` record, so every produced artifact is traceable to an exact science configuration.
