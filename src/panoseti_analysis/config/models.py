@@ -114,6 +114,7 @@ class ProcessingStep(_Base):
     )
     software: dict[str, str] = Field(default_factory=dict)  # IVOA wasAssociatedWith Agent
     nextflow_lineage_id: str | None = None  # external execution ref (lid://); NF 26.04 lineage
+    duration_s: float | None = None  # wall-clock elapsed seconds for this step
 
 
 class TrainingProvenance(_Base):

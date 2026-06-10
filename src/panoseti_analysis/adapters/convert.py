@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Annotated
 
@@ -38,6 +39,9 @@ def run_convert(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     # Stores are written flat; the level-major L0/ dir is created at publish time.
+    started_at = now_utc()
+    software = capture_software()
+    _t0 = time.perf_counter()
     convert_run(
         read_pff_run(obs_dir),
         out_dir,
@@ -48,9 +52,7 @@ def run_convert(
         use_tensorstore=use_tensorstore,
         max_workers=max_workers,
     )
-
-    started_at = now_utc()
-    software = capture_software()
+    duration_s = time.perf_counter() - _t0
 
     records: list[StoreLineage] = []
     for store_path in sorted(out_dir.glob("*.zarr")):
@@ -74,6 +76,7 @@ def run_convert(
             output_checksum=output_cksum,
             timestamp_utc=started_at,
             software=software,
+            duration_s=duration_s,
         )
         stamp_history(store_path, [step])
 
@@ -114,8 +117,12 @@ def main(
         ),
     ] = 0,
     lineage_out: Path | None = typer.Option(None),
-    use_tensorstore: bool = typer.Option(False, "--use-tensorstore", help="Use tensorstore backend for faster conversion"),
-    max_workers: int | None = typer.Option(None, "--max-workers", help="Max parallel workers for data products"),
+    use_tensorstore: bool = typer.Option(
+        False, "--use-tensorstore", help="Use tensorstore backend for faster conversion"
+    ),
+    max_workers: int | None = typer.Option(
+        None, "--max-workers", help="Max parallel workers for data products"
+    ),
 ) -> None:
     run_convert(
         obs_dir,

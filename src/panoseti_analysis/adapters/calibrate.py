@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -104,6 +105,7 @@ def run_calibrate(
             "re-run with --no-fail-on-suspect to override"
         )
 
+    _t0 = time.perf_counter()
     if resolved_kind == "ph":
         out = calibrate_ph(
             ds_sorted,
@@ -126,16 +128,6 @@ def run_calibrate(
     if resolution is not None:
         step_params["resolution"] = resolution.model_dump(mode="json")
 
-    calib_step = ProcessingStep(
-        step_name=f"calibrate_{resolved_kind}",
-        step_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
-        params=step_params,
-        input_checksums=[l0_input_cksum] if l0_input_cksum else [],
-        timestamp_utc=started_at,
-        software=software,
-    )
-    new_history = append_step(l0_history, calib_step)
-
     out.attrs[TIMESTAMP_QC_KEY] = qc.model_dump(mode="json")
 
     if resolution is not None:
@@ -151,6 +143,19 @@ def run_calibrate(
     if qc_out is not None:
         write_qc_sidecar(qc_report, qc_out)
 
+    # Stop timer after kernel + QC (before write); duration reflects algorithmic cost.
+    duration_s = time.perf_counter() - _t0
+
+    calib_step = ProcessingStep(
+        step_name=f"calibrate_{resolved_kind}",
+        step_version=PANOSETI_ANALYSIS_STORAGE_VERSION,
+        params=step_params,
+        input_checksums=[l0_input_cksum] if l0_input_cksum else [],
+        timestamp_utc=started_at,
+        software=software,
+        duration_s=duration_s,
+    )
+    new_history = append_step(l0_history, calib_step)
     write_store(
         out,
         l1_store,
