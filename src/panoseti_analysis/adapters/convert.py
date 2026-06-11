@@ -32,6 +32,7 @@ def run_convert(
     lineage_out: Path | None = None,
     use_tensorstore: bool = False,
     max_workers: int | None = None,
+    checksum: bool = False,
 ) -> list[StoreLineage]:
     """Convert via pypff, then enumerate the emitted L0 stores into lineage records."""
     from pypff.zarr import convert_run  # local import: keeps Layer B free of import-time pypff cost
@@ -58,11 +59,17 @@ def run_convert(
     for store_path in sorted(out_dir.glob("*.zarr")):
         ds = open_store(store_path)
         data_product = str(ds.attrs["data_product"])
-        t = ds["unix_t_ns"].values
-        time_range = (int(t.min()), int(t.max())) if t.size else None
 
         # Compute checksum of the pypff-written store (before stamping provenance).
-        output_cksum = checksum_store(store_path)
+        # Skipped by default (R&D mode) to avoid a full second I/O pass over the store.
+        output_cksum = checksum_store(store_path) if checksum else None
+
+        # time_range is omitted when checksumming is off (R&D mode) to avoid a redundant
+        # disk read of the full unix_t_ns array; the calibrate step can populate it from L0.
+        time_range: tuple[int, int] | None = None
+        if checksum:
+            t = ds["unix_t_ns"].values
+            time_range = (int(t.min()), int(t.max())) if t.size else None
 
         step = ProcessingStep(
             step_name="convert",
@@ -123,6 +130,12 @@ def main(
     max_workers: int | None = typer.Option(
         None, "--max-workers", help="Max parallel workers for data products"
     ),
+    checksum: bool = typer.Option(
+        False,
+        "--checksum/--no-checksum",
+        help="Compute sha256 checksum of each L0 store after writing (adds a full I/O pass). "
+        "Enable for production; leave off for R&D.",
+    ),
 ) -> None:
     run_convert(
         obs_dir,
@@ -134,6 +147,7 @@ def main(
         lineage_out=lineage_out,
         use_tensorstore=use_tensorstore,
         max_workers=max_workers,
+        checksum=checksum,
     )
 
 
