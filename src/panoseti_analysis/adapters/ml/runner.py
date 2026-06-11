@@ -72,6 +72,9 @@ def _init_ray_with_env(launcher: str) -> None:
                 "NCCL_IB_GID_INDEX": os.environ.get("NCCL_IB_GID_INDEX", "3"),
                 "NCCL_SOCKET_IFNAME": os.environ.get("NCCL_SOCKET_IFNAME", "eno2"),
                 "NCCL_DEBUG": os.environ.get("NCCL_DEBUG", "INFO"),
+                # Required when Ray forks worker processes: ibverbs is not fork-safe by default
+                # and can deadlock or corrupt state in child processes without this guard.
+                "RDMAV_FORK_SAFE": os.environ.get("RDMAV_FORK_SAFE", "1"),
             }
         )
     init_ray(
