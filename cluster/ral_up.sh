@@ -91,7 +91,11 @@ payload_guard() {
 start_node() {
   local i="$1"
   local role="${ROLES[$i]}" ip="${IPS[$i]}" gpus="${GPUS[$i]}" env="${ENVS[$i]}" label="${LABELS[$i]}"
-  local res="" pre="source $CONDA_SH && conda activate $env"
+  # NCCL/RoCE v2 config for the 400G ConnectX-7 NICs (mlx5_0 on both GPU nodes).
+  # Each var is overridable by setting it in the caller's environment before running ral_up.sh.
+  local nccl_env="export NCCL_IB_DISABLE=${NCCL_IB_DISABLE:-0} NCCL_IB_HCA=${NCCL_IB_HCA:-mlx5_0} NCCL_IB_GID_INDEX=${NCCL_IB_GID_INDEX:-3} NCCL_SOCKET_IFNAME=${NCCL_SOCKET_IFNAME:-eno2} NCCL_DEBUG=${NCCL_DEBUG:-INFO}"
+  local res=""
+  local pre="source $CONDA_SH && conda activate $env && $nccl_env"
   # JSON is escaped so it survives the local shell -> ssh -> remote shell hops.
   [[ "$label" != "-" ]] && res="--resources={\\\"accelerator_type:$label\\\":$gpus}"
   if [[ "$role" == "head" ]]; then

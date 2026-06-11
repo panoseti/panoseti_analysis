@@ -1,5 +1,7 @@
 # ⚠️  DEPRECATED — superseded by cluster/ral_up.sh (explicit, config-driven bring-up).
 # The Docker variant is unused; node labels here are stale (see docs/training_ral.md).
+# Current topology: 2× GPU nodes (1× RTX A6000 each, accelerator_type:A6000) + 3 CPU nodes.
+# The GAMING label no longer exists on any node.
 #
 # PANOSETI RAL Ray Cluster — 5-node on-premises configuration
 #

@@ -10,14 +10,19 @@ checkpointing, and SSD-staging details.
 
 | Node                | Specs                                                         | Role                                         |
 | ------------------- | ------------------------------------------------------------- | -------------------------------------------- |
-| `digilab-receiver`  | 2× RTX A6000 48 GB + 1 TB NVMe SSD (`accelerator_type:A6000`) | Head node; training; Ray + Grafana dashboard |
-| `digilab-transmit`  | RTX 5070 + RTX 4070 (`accelerator_type:GAMING`)               | Ray Serve inference                          |
+| `digilab-receiver`  | 1× RTX A6000 48 GB + 1 TB NVMe SSD (`accelerator_type:A6000`) | Head node; training; Ray + Grafana dashboard |
+| `digilab-transmit`  | 1× RTX A6000 48 GB (`accelerator_type:A6000`)                 | Ray Serve inference; 2-node DDP partner      |
 | `panoseti-dfs0/1/2` | CPU-only                                                      | BeeGFS storage nodes                         |
 
-GPU resource labels (`accelerator_type:A6000` for training, `accelerator_type:GAMING` for
-serving) are **custom resources set explicitly by `cluster/ral_up.sh`** — not Ray's
-auto-detected types. Recipes pin training to `A6000`; `serve_app.py` pins inference to
-`GAMING`. This keeps the A6000s free for training.
+Both GPU nodes carry the same `accelerator_type:A6000` label, set explicitly by
+`cluster/ral_up.sh` — not Ray's auto-detection. The two nodes are connected by a 400G
+RDMA fabric (Mellanox ConnectX-7, `mlx5_0`, RoCE v2), enabling multi-node DDP.
+
+**GPU placement strategy:**
+
+- Cloud-detector training → `num_workers: 1, accelerator_type: "A6000"` (single node; comms overhead dominates for small models)
+- Large-model training (VAE, DINO) → `num_workers: 2, accelerator_type: "A6000"` with `allow_multinode: true` (2-node DDP over 400G RDMA)
+- Ray Serve inference → `accelerator_type: "A6000"` (either node; use `--gpu-node-ip 10.0.1.34` to pin to digilab-transmit and keep digilab-receiver free for training)
 
 BeeGFS at `/mnt/beegfs`. ML artifacts: `/mnt/beegfs/models/`, `/mnt/beegfs/features/`,
 `/mnt/beegfs/runs/`.
@@ -25,7 +30,7 @@ BeeGFS at `/mnt/beegfs`. ML artifacts: `/mnt/beegfs/models/`, `/mnt/beegfs/featu
 ## Starting the cluster
 
 ```bash
-bash cluster/ral_up.sh             # start all 5 nodes with correct GPU labels
+bash cluster/ral_up.sh             # start all 5 nodes with NCCL/RDMA env + GPU labels
 bash cluster/ral_up.sh --no-sync   # restart Ray only (skip source rsync)
 bash cluster/ral_down.sh           # ray stop on every node
 ray status                         # verify all 5 nodes connected

@@ -1,4 +1,6 @@
 # ⚠️  DEPRECATED — do NOT use `ray up` for RAL. Use `cluster/ral_up.sh` instead.
+# Node labels here are stale. Current topology: 2× A6000 GPU nodes + 3 CPU nodes.
+# The GAMING label no longer exists. See docs/training_ral.md for current topology.
 #
 # Ray's local provider gives the head + workers ONE shared node type and caps its worker
 # quota at len(worker_ips), so the head consumes a slot and only len(worker_ips)-1 workers

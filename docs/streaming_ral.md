@@ -20,7 +20,7 @@ pseti-grpc server                                   # or: pseti-grpc server --co
 # 2. (Optional) For replay from archived PFF, configure simulate_daq_cfg in server.toml
 #    and point movie_pff_path to a file under /mnt/beegfs/data/L0/
 
-# 3. Run the streaming pipeline (gaming GPU on digilab-transmit, 60s cadence):
+# 3. Run the streaming pipeline (A6000 GPU; use --gpu-node-ip 10.0.1.34 to pin to digilab-transmit):
 pa-stream-cloud \
     --model-path assets/models/cloud_detector_v1.pt \
     --recipe recipes/ml/stream_cloud_v1.yml \
@@ -38,13 +38,14 @@ with MLInferenceClient() as c:
 
 ## GPU placement
 
-| Node               | GPU                                             | Role                                            |
-| ------------------ | ----------------------------------------------- | ----------------------------------------------- |
-| `digilab-transmit` | RTX 5070 + RTX 4070 (`accelerator_type:GAMING`) | Ray Serve inference replica (serving)           |
-| `digilab-receiver` | 2× RTX A6000 (`accelerator_type:A6000`)         | Training — **reserved, do not use for serving** |
+| Node               | GPU                                          | Role                                       |
+| ------------------ | -------------------------------------------- | ------------------------------------------ |
+| `digilab-transmit` | 1× RTX A6000 48GB (`accelerator_type:A6000`) | Ray Serve inference (recommended)          |
+| `digilab-receiver` | 1× RTX A6000 48GB (`accelerator_type:A6000`) | Training (head node; reserve for training) |
 
-`pa-stream-cloud` pins `CloudInferDeployment` to `digilab-transmit` with
-`ray_actor_options={"num_gpus": 1, "resources": {"accelerator_type:GAMING": 0.001}}`.
+`pa-stream-cloud` uses `accelerator_type:A6000` by default (either GPU node). To reserve
+`digilab-receiver` for training, pass `--gpu-node-ip 10.0.1.34` to pin inference to
+`digilab-transmit`.
 
 ## Shutdown behaviour
 

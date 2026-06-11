@@ -61,6 +61,19 @@ def _init_ray_with_env(launcher: str) -> None:
     env_vars: dict[str, str] = {}
     if "WANDB_API_KEY" in os.environ:
         env_vars["WANDB_API_KEY"] = os.environ["WANDB_API_KEY"]
+    if launcher != "standalone":
+        # Propagate NCCL/RoCE v2 config to Ray Train workers (400G ConnectX-7, mlx5_0).
+        # Workers are spawned as fresh processes; without this they'd miss the cluster-level exports.
+        # Each var is overridable by setting it in the environment before launching training.
+        env_vars.update(
+            {
+                "NCCL_IB_DISABLE": os.environ.get("NCCL_IB_DISABLE", "0"),
+                "NCCL_IB_HCA": os.environ.get("NCCL_IB_HCA", "mlx5_0"),
+                "NCCL_IB_GID_INDEX": os.environ.get("NCCL_IB_GID_INDEX", "3"),
+                "NCCL_SOCKET_IFNAME": os.environ.get("NCCL_SOCKET_IFNAME", "eno2"),
+                "NCCL_DEBUG": os.environ.get("NCCL_DEBUG", "INFO"),
+            }
+        )
     init_ray(
         cast(Literal["attach", "slurm", "standalone"], launcher),
         runtime_env={"env_vars": env_vars},
