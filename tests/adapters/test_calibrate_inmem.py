@@ -152,3 +152,36 @@ def test_skip_l0_materialize_with_mock(make_img, tmp_path: Path) -> None:
 
     l0_dir = out_dir / "L0"
     assert not list(l0_dir.glob("*.zarr")), "No L0 .zarr stores expected"
+
+
+# ── Test 4: read_stride reduces output frame count ────────────────────────────
+
+
+def test_run_calibrate_read_stride_reduces_frames(make_img, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
+    """run_calibrate with read_stride=5 on a 50-frame L0 produces L1 with ~10 frames."""
+    ds_l0 = make_img(n=50, size=32, data_product="img16")
+    l0_path = tmp_path / "l0.zarr"
+    from panoseti_analysis.io.stores import write_store
+
+    write_store(ds_l0, l0_path)
+
+    l1_path = tmp_path / "l1.zarr"
+    rec = run_calibrate(l0_path, l1_path, img_stride=5, read_stride=5)
+
+    out = open_store(l1_path)
+    assert out.sizes["time"] == 10, f"Expected 10 frames, got {out.sizes['time']}"
+    assert rec.n_frames == 10
+    assert out.attrs["data_level"] == "L1"
+
+
+def test_run_calibrate_inmem_read_stride_reduces_frames(make_ph, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
+    """run_calibrate_inmem with read_stride=3 on a 30-frame L0 produces L1 with 10 frames."""
+    ds_l0 = make_ph(n=30, size=16, data_product="ph256")
+    l1_path = tmp_path / "l1.zarr"
+
+    rec = run_calibrate_inmem(ds_l0, l1_path, ph_stride=5, read_stride=3)
+
+    out = open_store(l1_path)
+    assert out.sizes["time"] == 10, f"Expected 10 frames, got {out.sizes['time']}"
+    assert rec.n_frames == 10
+    assert out.attrs["data_level"] == "L1"

@@ -67,6 +67,7 @@ def _calibrate_ds(
     fail_on_suspect: bool = True,
     recipe: Path | None = None,
     store_name_for_err: str = "<in-memory>",
+    read_stride: int = 1,
 ) -> _CalibrateResult:
     """Core calibration logic: repair timestamps, calibrate, run QC.
 
@@ -88,7 +89,11 @@ def _calibrate_ds(
         fail_on_suspect:    Raise ``SuspectTimestamps`` when QC status is SUSPECT.
         recipe:             Optional YAML recipe file; overrides explicit calib params.
         store_name_for_err: Display name used in ``SuspectTimestamps`` error messages.
+        read_stride:        Subsample every Nth frame before calibration (1 = no subsampling).
     """
+    if read_stride > 1:
+        ds = ds.isel(time=slice(None, None, read_stride))
+
     data_product = str(ds.attrs["data_product"])
     resolved_kind = kind or infer_kind(data_product)
 
@@ -169,6 +174,7 @@ def run_calibrate(
     shard_factor: int = 0,
     recipe: Path | None = None,
     qc_out: Path | None = None,
+    read_stride: int = 1,
 ) -> StoreLineage:
     """Open L0, repair timestamps (single QC call), calibrate, write L1 + lineage.
 
@@ -194,6 +200,7 @@ def run_calibrate(
         fail_on_suspect=fail_on_suspect,
         recipe=recipe,
         store_name_for_err=l0_store.name,
+        read_stride=read_stride,
     )
 
     if qc_out is not None:
@@ -262,6 +269,7 @@ def run_calibrate_inmem(
     shard_factor: int = 0,
     recipe: Path | None = None,
     qc_out: Path | None = None,
+    read_stride: int = 1,
 ) -> StoreLineage:
     """Calibrate an already-loaded L0 Dataset to L1; write L1 to ``l1_store``.
 
@@ -286,10 +294,14 @@ def run_calibrate_inmem(
         shard_factor: Inner chunks per shard (0 = no sharding).
         recipe:       Optional YAML recipe file for calibration params.
         qc_out:       Optional path to write the QC sidecar JSON.
+        read_stride:  Subsample every Nth frame before calibration (1 = no subsampling).
 
     Returns:
         ``StoreLineage`` record for the produced L1 store.
     """
+    if read_stride > 1:
+        ds_l0 = ds_l0.isel(time=slice(None, None, read_stride))
+
     dp_for_err = str(ds_l0.attrs.get("data_product", "?"))
     started_at = now_utc()
     software = capture_software()
@@ -379,6 +391,11 @@ def main(
     ] = 0,
     recipe: Path | None = typer.Option(None, help="YAML recipe with calibration params."),
     qc_out: Path | None = typer.Option(None, "--qc-out", help="Path for QC sidecar JSON."),
+    read_stride: int = typer.Option(
+        1,
+        "--read-stride",
+        help="Subsample every Nth frame from L0 before calibration (1=no subsampling). Reduces output L1 size.",
+    ),
 ) -> None:
     try:
         run_calibrate(
@@ -398,6 +415,7 @@ def main(
             shard_factor=shard_factor,
             recipe=recipe,
             qc_out=qc_out,
+            read_stride=read_stride,
         )
     except SuspectTimestamps as exc:
         typer.echo(str(exc), err=True)
