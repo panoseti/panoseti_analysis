@@ -134,7 +134,7 @@
                     "description": "Shards per L1 Zarr chunk; 0 = no sharding."
                 },
                 "use_tensorstore": {
-                    "type": "boolean",
+                    "type": ["boolean", "string"],
                     "default": false,
                     "description": "Use Tensorstore backend for faster Zarr writing."
                 },
