@@ -1,5 +1,5 @@
 name: cloud_v2
-# Cloud detector v2 — PRODUCTION recipe. Full training: 50 epochs, A6000 GPUs (accelerator_type:A6000).
+# Cloud detector v2 — PRODUCTION recipe. Full training: 50 epochs, single A6000 GPU.
 # Labels come from pa-prep-cloud-labels (batch ZIPs → interval CSV).
 # For quick notebook iteration use: ml/cloud-detection/recipes/cloud_v2.yml
 feature_cadence_s: 10.0 # match original batch-builder 10s sampling resolution
@@ -20,7 +20,7 @@ hyperparams:
   weight_decay: 0.00001
   gamma: 0.9
 scaling:
-  num_workers: 2
+  num_workers: 1
   accelerator_type: "A6000"
 model_out_dir: "models/cloud_v2"
 cloud_model_pt: null

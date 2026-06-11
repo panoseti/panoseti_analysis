@@ -18,9 +18,8 @@ hyperparams:
   weight_decay: 0.00001
   gamma: 0.9
 scaling:
-  num_workers: 2
-  # A6000 pins training to digilab-receiver (A6000s), where the local feature
-  # cache zarr lives. (Serving uses "GAMING" = digilab-transmit.)
+  num_workers: 1
+  # A6000 pins training to the A6000-equipped node where the local feature cache zarr lives.
   accelerator_type: "A6000"
 model_out_dir: "models/cloud_v1"
 cloud_model_pt: null # filled at inference time pointing to BeeGFS bundle

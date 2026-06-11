@@ -20,7 +20,7 @@ hyperparams:
   weight_decay: 0.00001
   gamma: 0.9
 scaling:
-  num_workers: 2
+  num_workers: 1
   accelerator_type: "A6000"
 wandb_entity: "nraultwang-mit-massachusetts-institute-of-technology"
 model_out_dir: "models/cloud_v2"

@@ -72,6 +72,18 @@ class TrainConfig(_IgnoreExtra):
     minimize: bool = True
 
 
+class TrainingScalingConfig(_IgnoreExtra):
+    """Typed, validated surface for the recipe ``scaling:`` block.
+
+    ``num_workers > 1`` requires 2-node NCCL DDP setup (see docs/training_ral.md).
+    Set ``allow_multinode: true`` in the recipe scaling block to opt in explicitly.
+    """
+
+    num_workers: int = 1
+    accelerator_type: str | None = None
+    allow_multinode: bool = False
+
+
 class ClassifierBundle(_Base):
     """Metadata describing an ML model checkpoint and its input expectations."""
 
