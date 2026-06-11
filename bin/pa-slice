@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+"""Nextflow $PATH shim for the pa-slice adapter."""
+
+from panoseti_analysis.adapters.slice_driver import app
+
+app()
