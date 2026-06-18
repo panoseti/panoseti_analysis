@@ -1,7 +1,7 @@
 # PANOSETI Analysis Storage Spec
 
 Storage conventions for `panoseti_analysis`. Complements pypff's L0 array spec
-(`pypff/docs/zarr_v3_spec.md`), which this builds on.
+([`pypff/docs/zarr_v3_spec.md`](../pypff/docs/zarr_v3_spec.md)), which this builds on.
 
 ## §0 Versioning
 
@@ -84,11 +84,11 @@ dramatically reducing inode counts on parallel filesystems.
 
 **Recommended shard factors by platform:**
 
-| Platform | `shard_factor_l0` | `shard_factor_l1` | L0 files (img16, 13.6M frames) |
-|---|---|---|---|
-| Laptop / test | 0 | 0 | ~38K |
-| RAL (BeeGFS) | 16 | 8 | ~468 |
-| Expanse (SDSC) | 16 | 8 | ~468 (required: 2M inode quota) |
+| Platform       | `shard_factor_l0` | `shard_factor_l1` | L0 files (img16, 13.6M frames)  |
+| -------------- | ----------------- | ----------------- | ------------------------------- |
+| Laptop / test  | 0                 | 0                 | ~38K                            |
+| RAL (BeeGFS)   | 16                | 8                 | ~468                            |
+| Expanse (SDSC) | 16                | 8                 | ~468 (required: 2M inode quota) |
 
 Sharding is transparent to readers: `xr.open_zarr`, `zarr.open_group`, and all zarr-python
 ≥3.0 readers access sharded and unsharded stores identically. Feature caches (produced by

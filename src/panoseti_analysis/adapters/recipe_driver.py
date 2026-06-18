@@ -17,13 +17,14 @@ from pathlib import Path
 
 import typer
 
-from panoseti_analysis.adapters.calibrate import run_calibrate
+from panoseti_analysis.adapters.calibrate import run_calibrate, run_calibrate_inmem
 from panoseti_analysis.adapters.convert import run_convert
 from panoseti_analysis.adapters.hk import run_hk
 from panoseti_analysis.adapters.manifest import run_manifest
 from panoseti_analysis.adapters.nextflow.classify_cloud import run_classify
 from panoseti_analysis.config.levels import infer_kind
 from panoseti_analysis.config.models import Manifest, StoreLineage
+from panoseti_analysis.io.pff import read_pff_run
 from panoseti_analysis.io.stores import open_store
 
 
@@ -49,6 +50,7 @@ def run_pipeline(
     codec: str = "zstd",
     level: int = 5,
     shard_factor: int = 0,
+    skip_l0_materialize: bool = False,
 ) -> RunOutputs:
     """Run the full ingest + ML pipeline for one observation directory.
 
@@ -62,15 +64,20 @@ def run_pipeline(
     6.  L2 manifest
 
     Args:
-        obs_dir:       Path to an ``.pffd`` observation directory.
-        out_dir:       Root output dir; ``L0/``, ``L1/``, ``L2/`` subdirs are created.
-        model_path:    Path to a ``.pt`` model bundle for cloud classification.
-                       Required when any img L1 stores are produced.
-        calib_recipe:  Optional YAML recipe for calibration params (see
-                       ``FileCalibrationResolver``).  Defaults reproduce current values.
-        codec:         Zarr compression codec (default ``"zstd"``).
-        level:         Compression level (default ``5``).
-        shard_factor:  Inner chunks per shard (``0`` = no sharding).
+        obs_dir:               Path to an ``.pffd`` observation directory.
+        out_dir:               Root output dir; ``L0/``, ``L1/``, ``L2/`` subdirs are created.
+        model_path:            Path to a ``.pt`` model bundle for cloud classification.
+                               Required when any img L1 stores are produced.
+        calib_recipe:          Optional YAML recipe for calibration params (see
+                               ``FileCalibrationResolver``).  Defaults reproduce current values.
+        codec:                 Zarr compression codec (default ``"zstd"``).
+        level:                 Compression level (default ``5``).
+        shard_factor:          Inner chunks per shard (``0`` = no sharding).
+        skip_l0_materialize:   When ``True``, skip ``run_convert`` and ``run_hk`` entirely.
+                               PFF sequences are read directly into memory via
+                               ``sequence_to_dataset`` and fed to ``run_calibrate_inmem``.
+                               ``outputs.l0_stores`` will be empty (no L0 on disk).
+                               When ``False`` (default) behaviour is unchanged.
     """
     obs_dir = Path(obs_dir)
     out_dir = Path(out_dir)
@@ -83,39 +90,70 @@ def run_pipeline(
 
     outputs = RunOutputs()
 
-    # ── 1. Convert: PFF → L0 ─────────────────────────────────────────────────
-    outputs.l0_stores = run_convert(obs_dir, l0_dir, codec=codec, level=level)
-
-    # ── 2. HK (parallel branch in Nextflow; sequential here) ─────────────────
-    outputs.hk_stores = run_hk(obs_dir, l0_dir, codec=codec, level=level)
-
-    # ── 3. L0 → L1: calibrate each store ─────────────────────────────────────
     run_id: str = ""
     l1_lineage_files: list[Path] = []
-    for rec in outputs.l0_stores:
-        l0_path = l0_dir / rec.store
-        kind = infer_kind(rec.dp)
-        l1_name = rec.store.replace(".zarr", ".L1.zarr")
-        l1_path = l1_dir / l1_name
-        lineage_file = l1_dir / l1_name.replace(".zarr", ".lineage.json")
-        l1_rec = run_calibrate(
-            l0_path,
-            l1_path,
-            kind=kind,
-            codec=codec,
-            level=level,
-            shard_factor=shard_factor,
-            recipe=calib_recipe,
-            lineage_out=lineage_file,
+
+    if skip_l0_materialize:
+        # ── In-memory path: PFF → in-memory L0 Dataset → L1 ─────────────────
+        # Local import keeps import-time cost low (pypff.zarr is heavy).
+        from pypff.zarr import (
+            sequence_to_dataset,  # local import: keeps Layer B free of import-time pypff cost
         )
-        outputs.l1_stores.append(l1_rec)
-        l1_lineage_files.append(lineage_file)
-        if not run_id:
-            ds = open_store(l0_path)
-            run_id = str(ds.attrs.get("run_id", obs_dir.name))
+
+        pff_run = read_pff_run(obs_dir)
+        run_id = run_id or obs_dir.name
+        for dp in pff_run.list_products():
+            seq = pff_run.get_product(dp)
+            ds_l0 = sequence_to_dataset(seq)
+            # Use the data_product attr (e.g. "img16") set by pypff, not the full dp key.
+            kind = infer_kind(str(ds_l0.attrs["data_product"]))
+            l1_name = f"{obs_dir.name}.{dp}.L1.zarr"
+            l1_path = l1_dir / l1_name
+            lineage_file = l1_dir / l1_name.replace(".zarr", ".lineage.json")
+            l1_rec = run_calibrate_inmem(
+                ds_l0,
+                l1_path,
+                kind=kind,
+                codec=codec,
+                level=level,
+                shard_factor=shard_factor,
+                recipe=calib_recipe,
+                lineage_out=lineage_file,
+            )
+            outputs.l1_stores.append(l1_rec)
+            l1_lineage_files.append(lineage_file)
+    else:
+        # ── 1. Convert: PFF → L0 ─────────────────────────────────────────────
+        outputs.l0_stores = run_convert(obs_dir, l0_dir, codec=codec, level=level)
+
+        # ── 2. HK (parallel branch in Nextflow; sequential here) ─────────────
+        outputs.hk_stores = run_hk(obs_dir, l0_dir, codec=codec, level=level)
+
+        # ── 3. L0 → L1: calibrate each store ─────────────────────────────────
+        for rec in outputs.l0_stores:
+            l0_path = l0_dir / rec.store
+            kind = infer_kind(rec.dp)
+            l1_name = rec.store.replace(".zarr", ".L1.zarr")
+            l1_path = l1_dir / l1_name
+            lineage_file = l1_dir / l1_name.replace(".zarr", ".lineage.json")
+            l1_rec = run_calibrate(
+                l0_path,
+                l1_path,
+                kind=kind,
+                codec=codec,
+                level=level,
+                shard_factor=shard_factor,
+                recipe=calib_recipe,
+                lineage_out=lineage_file,
+            )
+            outputs.l1_stores.append(l1_rec)
+            l1_lineage_files.append(lineage_file)
+            if not run_id:
+                ds = open_store(l0_path)
+                run_id = str(ds.attrs.get("run_id", obs_dir.name))
 
     # ── 4. Manifests: L0 + L1 ────────────────────────────────────────────────
-    # L0 lineage: write a combined file from run_convert's records
+    # L0 lineage: write a combined file from run_convert's records (empty when skip_l0_materialize).
     l0_lineage_file = l0_dir / "l0_stores.lineage.json"
     l0_lineage_file.write_text(
         json.dumps([r.model_dump(mode="json") for r in outputs.l0_stores], indent=2)

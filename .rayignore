@@ -36,3 +36,10 @@ tests/data/
 
 # Lock files and large metadata
 uv.lock
+
+# Large model/cache artefacts (also gitignored, but listed here so the streaming
+# working_dir package stays small regardless of git state). The small inference
+# bundle assets/models/*.pt is intentionally NOT excluded — Serve ships it.
+ml/*/models/
+ml/*/cache/
+assets/models/cloud-detection-training/

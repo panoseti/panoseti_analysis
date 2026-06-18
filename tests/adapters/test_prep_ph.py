@@ -14,7 +14,7 @@ from panoseti_analysis.config.models import StoreLineage
 from panoseti_analysis.io.provenance import read_history
 from panoseti_analysis.io.stores import open_store
 
-_RECIPE = Path(__file__).parents[2] / "recipes" / "vae_train_v1.yml"
+_RECIPE = Path(__file__).parents[2] / "recipes" / "ml" / "vae_train_v1.yml"
 _EPOCH_NS = 1_700_000_000_000_000_000
 
 

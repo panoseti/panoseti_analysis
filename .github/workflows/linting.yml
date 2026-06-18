@@ -18,6 +18,9 @@ jobs:
       - name: Install Nextflow
         uses: nf-core/setup-nextflow@b4ec1bc7c16a94435159de94a05253542fddf6ef # v3
 
+      - name: Setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
       - name: Run prek (pre-commit)
         uses: j178/prek-action@6ad80277337ad479fe43bd70701c3f7f8aa74db3 # v2
 

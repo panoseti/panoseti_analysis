@@ -89,8 +89,9 @@ def main(
         typer.Option(
             "--gpu-node-ip",
             help=(
-                "Pin the Serve inference replica to this specific node IP. "
-                "Default: use accelerator_type:RTX (digilab-transmit)."
+                "Pin the Serve inference replica to this specific node IP (e.g. '10.0.1.34' "
+                "to pin to digilab-transmit and keep digilab-receiver free for training). "
+                "Default: use accelerator_type:A6000 (either GPU node)."
             ),
         ),
     ] = None,
@@ -113,8 +114,8 @@ def main(
     """
     Run the real-time cloud-detection streaming pipeline.
 
-    Attaches to the RAL Ray cluster, deploys CloudInferDeployment on the
-    gaming GPU node, and consumes the DaqData.StreamImages feed until
+    Attaches to the RAL Ray cluster, deploys CloudInferDeployment on an
+    A6000 GPU node, and consumes the DaqData.StreamImages feed until
     interrupted (Ctrl-C) or frame_limit is reached.
     """
     logging.basicConfig(
@@ -143,7 +144,7 @@ def main(
             raise typer.Exit(1) from exc
 
     # --- Init Ray (attach mode with runtime_env) ----------------------------
-    # The source must be shipped to remote workers (e.g. gaming node) at init time.
+    # The source must be shipped to remote workers (e.g. digilab-transmit) at init time.
     # Ray 2.55+ requires working_dir at job level (ray.init), NOT per-actor.
     from panoseti_analysis.adapters.ray.launcher import init_ray
 

@@ -132,6 +132,41 @@ class TestProcessingStep:
             step = _make_step(step_name=name)
             assert step.step_name == name
 
+    # ── duration_s field ──────────────────────────────────────────────────────
+
+    def test_duration_s_defaults_to_none(self) -> None:
+        step = _make_step()
+        assert step.duration_s is None
+
+    def test_duration_s_accepts_float(self) -> None:
+        step = _make_step(duration_s=1.5)
+        assert step.duration_s == pytest.approx(1.5)
+
+    def test_duration_s_json_round_trip_with_value(self) -> None:
+        step = _make_step(duration_s=1.5)
+        blob = step.model_dump_json()
+        restored = ProcessingStep.model_validate_json(blob)
+        assert restored == step
+        assert restored.duration_s == pytest.approx(1.5)
+
+    def test_duration_s_json_round_trip_without_value(self) -> None:
+        step = _make_step()
+        blob = step.model_dump_json()
+        restored = ProcessingStep.model_validate_json(blob)
+        assert restored == step
+        assert restored.duration_s is None
+
+    def test_old_json_without_duration_s_loads(self) -> None:
+        """Backwards-compat: JSON written before duration_s was added still loads."""
+        old_json = """{
+            "step_name": "convert",
+            "step_version": "1.0",
+            "params": {},
+            "timestamp_utc": "2026-01-01T00:00:00Z"
+        }"""
+        step = ProcessingStep.model_validate_json(old_json)
+        assert step.duration_s is None
+
 
 # ── TrainingProvenance ─────────────────────────────────────────────────────────
 

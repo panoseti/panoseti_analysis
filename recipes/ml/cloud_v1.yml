@@ -1,5 +1,5 @@
 name: cloud_v1
-# Cloud detector — PRODUCTION recipe.  Full training: 50 epochs, A6000 GPUs (accelerator_type:G).
+# Cloud detector — PRODUCTION recipe.  Full training: 50 epochs, A6000 GPUs (accelerator_type:A6000).
 # For quick notebook iteration use: ml/cloud-detection/recipes/cloud_v1.yml
 feature_cadence_s: 60.0
 threshold: 0.5
@@ -17,8 +17,8 @@ hyperparams:
   weight_decay: 0.00001
   gamma: 0.9
 scaling:
-  num_workers: 2
-  # accelerator_type: "G"
+  num_workers: 1
+  accelerator_type: "A6000" # pin to digilab-receiver's A6000s (training GPUs)
 model_out_dir: "models/cloud_v1"
 cloud_model_pt: null # filled at inference time pointing to BeeGFS bundle
 cloud_model_json: null

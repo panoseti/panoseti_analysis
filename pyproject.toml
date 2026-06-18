@@ -47,6 +47,7 @@ pa-stream-cloud = "panoseti_analysis.adapters.stream.cli:app"
 pa-prep-cloud-legacy = "panoseti_analysis.adapters.cloud.prep_legacy:app"
 pa-prep-cloud-labels = "panoseti_analysis.adapters.cloud.prep_labels:app"
 pa-run = "panoseti_analysis.adapters.recipe_driver:app"
+pa-slice = "panoseti_analysis.adapters.slice_driver:app"
 
 # ── uv workspace ──────────────────────────────────────────────────────────────
 # The repo root is both the workspace root and the `panoseti_analysis` package.
@@ -77,6 +78,9 @@ packages = ["src/panoseti_analysis"]
 [tool.ruff]
 target-version = "py314"
 line-length = 100
+# Notebooks are exploratory code; linting them adds no value and produces false positives
+# (cross-cell variable references, intentional re-imports, long magic-command lines, etc.).
+extend-exclude = ["*.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "UP", "B", "I", "ASYNC", "RUF", "SIM"]
@@ -90,13 +94,7 @@ ignore = [
     "RUF003", # ambiguous unicode char in comment
 ]
 
-# Notebooks: relax import/cell-order rules that fight interactive editing.
 [tool.ruff.lint.per-file-ignores]
-"*.ipynb" = [
-    "E402",   # imports not at top of cell — common and fine in notebooks
-    "F401",   # unused imports — exploratory cells keep handy imports around
-    "E501",   # long lines (already globally ignored, explicit for clarity)
-]
 # The Tracker ABC intentionally ships empty optional hooks (log_image/table/artifact) as
 # no-ops so non-W&B backends satisfy the interface without overriding them — that *is* the
 # design, so B027 (empty method in ABC) does not apply here.

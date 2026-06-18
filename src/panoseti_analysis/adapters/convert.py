@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Annotated
 
@@ -29,6 +30,9 @@ def run_convert(
     time_chunk: int = 0,
     shard_factor: int = 0,
     lineage_out: Path | None = None,
+    use_tensorstore: bool = False,
+    max_workers: int | None = None,
+    checksum: bool = False,
 ) -> list[StoreLineage]:
     """Convert via pypff, then enumerate the emitted L0 stores into lineage records."""
     from pypff.zarr import convert_run  # local import: keeps Layer B free of import-time pypff cost
@@ -36,6 +40,9 @@ def run_convert(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     # Stores are written flat; the level-major L0/ dir is created at publish time.
+    started_at = now_utc()
+    software = capture_software()
+    _t0 = time.perf_counter()
     convert_run(
         read_pff_run(obs_dir),
         out_dir,
@@ -43,20 +50,26 @@ def run_convert(
         level=level,
         time_chunk=time_chunk or None,
         shard_factor=shard_factor,
+        use_tensorstore=use_tensorstore,
+        max_workers=max_workers,
     )
-
-    started_at = now_utc()
-    software = capture_software()
+    duration_s = time.perf_counter() - _t0
 
     records: list[StoreLineage] = []
     for store_path in sorted(out_dir.glob("*.zarr")):
         ds = open_store(store_path)
         data_product = str(ds.attrs["data_product"])
-        t = ds["unix_t_ns"].values
-        time_range = (int(t.min()), int(t.max())) if t.size else None
 
         # Compute checksum of the pypff-written store (before stamping provenance).
-        output_cksum = checksum_store(store_path)
+        # Skipped by default (R&D mode) to avoid a full second I/O pass over the store.
+        output_cksum = checksum_store(store_path) if checksum else None
+
+        # time_range is omitted when checksumming is off (R&D mode) to avoid a redundant
+        # disk read of the full unix_t_ns array; the calibrate step can populate it from L0.
+        time_range: tuple[int, int] | None = None
+        if checksum:
+            t = ds["unix_t_ns"].values
+            time_range = (int(t.min()), int(t.max())) if t.size else None
 
         step = ProcessingStep(
             step_name="convert",
@@ -70,6 +83,7 @@ def run_convert(
             output_checksum=output_cksum,
             timestamp_utc=started_at,
             software=software,
+            duration_s=duration_s,
         )
         stamp_history(store_path, [step])
 
@@ -110,6 +124,18 @@ def main(
         ),
     ] = 0,
     lineage_out: Path | None = typer.Option(None),
+    use_tensorstore: bool = typer.Option(
+        False, "--use-tensorstore", help="Use tensorstore backend for faster conversion"
+    ),
+    max_workers: int | None = typer.Option(
+        None, "--max-workers", help="Max parallel workers for data products"
+    ),
+    checksum: bool = typer.Option(
+        False,
+        "--checksum/--no-checksum",
+        help="Compute sha256 checksum of each L0 store after writing (adds a full I/O pass). "
+        "Enable for production; leave off for R&D.",
+    ),
 ) -> None:
     run_convert(
         obs_dir,
@@ -119,6 +145,9 @@ def main(
         time_chunk=time_chunk,
         shard_factor=shard_factor,
         lineage_out=lineage_out,
+        use_tensorstore=use_tensorstore,
+        max_workers=max_workers,
+        checksum=checksum,
     )
 
 

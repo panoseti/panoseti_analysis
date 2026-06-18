@@ -273,3 +273,6 @@ assets/models/cloud-detection-training/*.tar.gz
 
 # VSCode
 .vscode/*
+
+# data dirs
+**/data/**

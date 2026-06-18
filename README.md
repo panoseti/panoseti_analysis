@@ -9,19 +9,20 @@ architecture with an **nf-core**-templated Nextflow pipeline.
 
 ## Where to find things
 
-| Goal | Start here |
-|------|------------|
-| Run the ingest pipeline (PFF → L1) | [Quick start](#quick-start) below |
-| Understand the data format | [`docs/storage_spec.md`](docs/storage_spec.md) |
-| Cloud detection inference demo | [`ml/cloud-detection/notebooks/01_inference_demo.ipynb`](ml/cloud-detection/notebooks/01_inference_demo.ipynb) |
-| Reproduce cloud detector training | [`ml/cloud-detection/README.md`](ml/cloud-detection/README.md) |
-| ML architecture & execution models | [`docs/ml_architecture.md`](docs/ml_architecture.md) |
-| Real-time streaming pipeline | [`CLAUDE.md` § Real-time streaming](CLAUDE.md) |
-| VAE anomaly detection | [`ml/anomaly-detection/README.md`](ml/anomaly-detection/README.md) |
-| Provenance & reproducibility | [`docs/provenance.md`](docs/provenance.md) |
-| gRPC services (DAQ, ML inference) | [`grpc/README.md`](grpc/README.md) |
-| W&B experiment tracking setup | [`docs/wandb.md`](docs/wandb.md) |
-| All ML projects index | [`ml/README.md`](ml/README.md) |
+| Goal                               | Start here                                                                                                     |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Run the ingest pipeline (PFF → L1) | [Quick start](#quick-start) below                                                                              |
+| Understand the data format         | [`docs/storage_spec.md`](docs/storage_spec.md)                                                                 |
+| Cloud detection inference demo     | [`ml/cloud-detection/notebooks/01_inference_demo.ipynb`](ml/cloud-detection/notebooks/01_inference_demo.ipynb) |
+| Reproduce cloud detector training  | [`ml/cloud-detection/README.md`](ml/cloud-detection/README.md)                                                 |
+| ML architecture & execution models | [`docs/ml_architecture.md`](docs/ml_architecture.md)                                                           |
+| Real-time streaming pipeline (RAL) | [`docs/streaming_ral.md`](docs/streaming_ral.md)                                                               |
+| Train models on RAL                | [`docs/training_ral.md`](docs/training_ral.md)                                                                 |
+| VAE anomaly detection              | [`ml/anomaly-detection/README.md`](ml/anomaly-detection/README.md)                                             |
+| Provenance & reproducibility       | [`docs/provenance.md`](docs/provenance.md)                                                                     |
+| gRPC services (DAQ, ML inference)  | [`grpc/README.md`](grpc/README.md)                                                                             |
+| W&B experiment tracking setup      | [`docs/wandb.md`](docs/wandb.md)                                                                               |
+| All ML projects index              | [`ml/README.md`](ml/README.md)                                                                                 |
 
 ## Layout
 

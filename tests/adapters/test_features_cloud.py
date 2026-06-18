@@ -16,7 +16,7 @@ from panoseti_analysis.io.provenance import read_history
 from panoseti_analysis.io.stores import open_store
 
 _EPOCH_NS = 1_700_000_000_000_000_000  # arbitrary fixed base for reproducible timestamps
-_RECIPE = Path(__file__).parents[2] / "recipes" / "cloud_v1.yml"
+_RECIPE = Path(__file__).parents[2] / "recipes" / "ml" / "cloud_v1.yml"
 
 
 def _make_l1_img_store(tmp_path: Path, *, n_frames: int = 180, module: str = "1") -> Path:

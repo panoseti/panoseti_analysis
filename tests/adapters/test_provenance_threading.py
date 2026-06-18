@@ -60,7 +60,7 @@ def dummy_model_path(tmp_path: Path) -> Path:
 
 
 def test_convert_stamps_processing_history_into_l0(tmp_path: Path) -> None:
-    records = run_convert(_OBS, tmp_path)
+    records = run_convert(_OBS, tmp_path, checksum=True)
     assert len(records) >= 1
 
     for rec in records:
@@ -233,7 +233,7 @@ def test_ray_lineage_is_json_array_not_jsonl(tmp_path: Path) -> None:
 
 def test_convert_lineage_json_has_checksum_and_history(tmp_path: Path) -> None:
     lineage_out = tmp_path / "l0_lineage.json"
-    run_convert(_OBS, tmp_path / "stores", lineage_out=lineage_out)
+    run_convert(_OBS, tmp_path / "stores", lineage_out=lineage_out, checksum=True)
 
     arr = json.loads(lineage_out.read_text())
     assert len(arr) >= 1
