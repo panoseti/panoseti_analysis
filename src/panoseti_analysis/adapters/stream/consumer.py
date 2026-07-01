@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -131,7 +131,7 @@ class StreamConsumer:
                 timeout=timeout,
             ):
                 # parse_pano_images=True ⇒ the client always yields parsed dicts here.
-                await self._dispatch(parsed)  # type: ignore[arg-type]
+                await self._dispatch(cast(dict[str, Any], parsed))
                 self._total_frames += 1
                 if frame_limit > 0 and self._total_frames >= frame_limit:
                     logger.info("Frame limit %d reached; stopping consumer", frame_limit)
