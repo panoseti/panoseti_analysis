@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Nextflow $PATH shim for the pa-features-cloud adapter."""
+
 from panoseti_analysis.adapters.features import app
 
 app()

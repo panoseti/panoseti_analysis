@@ -12,13 +12,14 @@
 
 ## Motivation (numbers from reference dataset)
 
-| Store | Current files | After fix | Reduction |
-|---|---|---|---|
-| L0 img16 (13.6M frames, cloudy_demo) | 38,294 | **468** | 82× |
-| L0 img16 (104M frames, full sci run) | 281,224 | **~3,600** | 78× |
-| 8 labeled obs × 96 zarr stores total | ~27M | **~347K** | 78× |
+| Store                                | Current files | After fix  | Reduction |
+| ------------------------------------ | ------------- | ---------- | --------- |
+| L0 img16 (13.6M frames, cloudy_demo) | 38,294        | **468**    | 82×       |
+| L0 img16 (104M frames, full sci run) | 281,224       | **~3,600** | 78×       |
+| 8 labeled obs × 96 zarr stores total | ~27M          | **~347K**  | 78×       |
 
 Root causes fixed:
+
 - `ts_chunk = C * 2 = 8192` for all 1D arrays regardless of dtype → for int64 that is 64 KB/chunk (target is 8 MB). Fix: `max(C, min(65536, 8_MB // 8))` = **65536** for all current scalar dtypes (8× more frames per chunk).
 - No sharding → every inner chunk is a separate file. With `shard_factor=16`: 16 inner chunks per shard file.
 
@@ -28,34 +29,35 @@ Root causes fixed:
 
 ### pypff submodule (new branch `feat/sharding` from HEAD `d807bc4`)
 
-| File | Change |
-|---|---|
-| `pypff/src/pypff/zarr/__init__.py` | (1) fix `ts_chunk`; (2) add `shards=` to `ZarrWriter` Protocol + `ZarrPythonWriter.create_array`; (3) add `shard_factor` to `PFFToZarrConverter.__init__` and `convert`; (4) add `shard_factor` to `convert_run`; (5) bump `panoseti_pff_zarr_version` to `"1.1"` |
-| `pypff/src/pypff/_cli/zarr.py` | Add `--shard-factor N` option (default 0) |
-| `pypff/docs/zarr_v3_spec.md` | Update §9 (chunk/shard rules), §12 (version history) |
-| `pypff/src/ci/tier2_logic/test_zarr_roundtrip.py` | Add `TestSharding` class with 5 tests |
+| File                                              | Change                                                                                                                                                                                                                                                            |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pypff/src/pypff/zarr/__init__.py`                | (1) fix `ts_chunk`; (2) add `shards=` to `ZarrWriter` Protocol + `ZarrPythonWriter.create_array`; (3) add `shard_factor` to `PFFToZarrConverter.__init__` and `convert`; (4) add `shard_factor` to `convert_run`; (5) bump `panoseti_pff_zarr_version` to `"1.1"` |
+| `pypff/src/pypff/_cli/zarr.py`                    | Add `--shard-factor N` option (default 0)                                                                                                                                                                                                                         |
+| `pypff/docs/zarr_v3_spec.md`                      | Update §9 (chunk/shard rules), §12 (version history)                                                                                                                                                                                                              |
+| `pypff/src/ci/tier2_logic/test_zarr_roundtrip.py` | Add `TestSharding` class with 5 tests                                                                                                                                                                                                                             |
 
 ### panoseti_analysis (current branch `feature/ml-replication`)
 
-| File | Change |
-|---|---|
-| `src/panoseti_analysis/adapters/features.py` | **Commit pending chunk fix** (already edited) |
-| `src/panoseti_analysis/io/stores.py` | Add `shard_factor: int = 0` to `write_store`; compute shard shapes and pass `safe_chunks=False` |
-| `src/panoseti_analysis/adapters/calibrate.py` | Add `shard_factor` param + `--shard-factor` CLI option |
-| `modules/local/pff_to_zarr.nf` | Add `--shard-factor ${params.shard_factor_l0}` |
-| `modules/local/calibrate_img.nf` | Add `--shard-factor ${params.shard_factor_l1}` |
-| `modules/local/calibrate_ph.nf` | Add `--shard-factor ${params.shard_factor_l1}` |
-| `nextflow.config` | Add `shard_factor_l0 = 0`, `shard_factor_l1 = 0` defaults |
-| `conf/ral.config` | Add `params.shard_factor_l0 = 16`, `params.shard_factor_l1 = 8` |
-| `conf/hpc_slurm.config` | Same as ral.config |
-| `docs/storage_spec.md` | Add sharding section; note Expanse file count implications |
-| `tests/io/test_stores.py` | Add `TestWriteStoreSharding` class with 4 tests |
+| File                                          | Change                                                                                          |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `src/panoseti_analysis/adapters/features.py`  | **Commit pending chunk fix** (already edited)                                                   |
+| `src/panoseti_analysis/io/stores.py`          | Add `shard_factor: int = 0` to `write_store`; compute shard shapes and pass `safe_chunks=False` |
+| `src/panoseti_analysis/adapters/calibrate.py` | Add `shard_factor` param + `--shard-factor` CLI option                                          |
+| `modules/local/pff_to_zarr.nf`                | Add `--shard-factor ${params.shard_factor_l0}`                                                  |
+| `modules/local/calibrate_img.nf`              | Add `--shard-factor ${params.shard_factor_l1}`                                                  |
+| `modules/local/calibrate_ph.nf`               | Add `--shard-factor ${params.shard_factor_l1}`                                                  |
+| `nextflow.config`                             | Add `shard_factor_l0 = 0`, `shard_factor_l1 = 0` defaults                                       |
+| `conf/ral.config`                             | Add `params.shard_factor_l0 = 16`, `params.shard_factor_l1 = 8`                                 |
+| `conf/hpc_slurm.config`                       | Same as ral.config                                                                              |
+| `docs/storage_spec.md`                        | Add sharding section; note Expanse file count implications                                      |
+| `tests/io/test_stores.py`                     | Add `TestWriteStoreSharding` class with 4 tests                                                 |
 
 ---
 
 ## Task 1 — Create pypff branch and fix dtype-aware 1D chunk sizes
 
 **Files:**
+
 - Modify: `pypff/src/pypff/zarr/__init__.py`
 - Test: `pypff/src/ci/tier2_logic/test_zarr_roundtrip.py`
 
@@ -114,11 +116,13 @@ Expected: `FAILED test_1d_scalar_chunk_is_at_least_65536` (chunk is 8192, not �
 - [ ] **Step 4: Apply the fix in `pypff/src/pypff/zarr/__init__.py`**
 
 In `PFFToZarrConverter.convert()`, find the line:
+
 ```python
 ts_chunk = C * 2
 ```
 
 Replace it with:
+
 ```python
 # Target ~8 MB per 1D chunk, floored at C (image chunk) for stride alignment.
 # For all current dtypes (uint8–int64), max(C, min(65536, 8MB//8)) = 65536.
@@ -158,6 +162,7 @@ Reduces scalar array chunk files 8× for img16 (8,192 frames/chunk → 65,536)."
 ## Task 2 — Add sharding to `ZarrPythonWriter` and `PFFToZarrConverter`
 
 **Files:**
+
 - Modify: `pypff/src/pypff/zarr/__init__.py`
 - Test: `pypff/src/ci/tier2_logic/test_zarr_roundtrip.py`
 
@@ -434,6 +439,7 @@ File count for img16 (13.6M frames):
 ## Task 3 — Update pypff CLI and spec doc
 
 **Files:**
+
 - Modify: `pypff/src/pypff/_cli/zarr.py`
 - Modify: `pypff/docs/zarr_v3_spec.md`
 
@@ -494,12 +500,12 @@ Replace the entire Section 9 with:
 
 Chunks span time only: `(C, H, W)` where C is auto-sized to ~8 MB pre-compression:
 
-| Data product | Frame bytes | Auto C | Chunk size |
-|---|---|---|---|
-| `ph256` (16×16 int16) | 512 B | 16384 | 8 MB |
-| `img16` (32×32 int16) | 2 KB | 4096 | 8 MB |
-| `ph1024` (32×32 int16) | 2 KB | 4096 | 8 MB |
-| `img8` (32×32 uint8) | 1 KB | 8192 | 8 MB |
+| Data product           | Frame bytes | Auto C | Chunk size |
+| ---------------------- | ----------- | ------ | ---------- |
+| `ph256` (16×16 int16)  | 512 B       | 16384  | 8 MB       |
+| `img16` (32×32 int16)  | 2 KB        | 4096   | 8 MB       |
+| `ph1024` (32×32 int16) | 2 KB        | 4096   | 8 MB       |
+| `img8` (32×32 uint8)   | 1 KB        | 8192   | 8 MB       |
 
 Override via `convert_run(time_chunk=N)`.
 
@@ -517,18 +523,18 @@ Prior to v1.1, `ts_chunk = C * 2` (e.g., 8192 for img16) produced 64 KB chunks �
 When `convert_run(shard_factor=N)` with N > 0, a `ShardingCodec` wraps each array so
 that N inner chunks are stored in one physical shard file:
 
-| Array | Inner chunk | Shard (N=16) | Shard size (img16) |
-|---|---|---|---|
-| `images` | `(C, H, W)` | `(C×N, H, W)` | ~128 MB pre-compression |
-| 1-D arrays | `(ts_chunk,)` | `(ts_chunk×N,)` | ~8 MB |
+| Array      | Inner chunk   | Shard (N=16)    | Shard size (img16)      |
+| ---------- | ------------- | --------------- | ----------------------- |
+| `images`   | `(C, H, W)`   | `(C×N, H, W)`   | ~128 MB pre-compression |
+| 1-D arrays | `(ts_chunk,)` | `(ts_chunk×N,)` | ~8 MB                   |
 
 **Recommended values:**
 
-| Platform | `shard_factor_l0` | Effect on img16 (13.6M frames) |
-|---|---|---|
-| Laptop / test | 0 (no sharding) | ~38K files (fine for local NVMe) |
-| BeeGFS / RAL | 16 | ~468 files (78× fewer) |
-| Expanse (SDSC) | 16 | ~468 files (required: 2M file quota) |
+| Platform       | `shard_factor_l0` | Effect on img16 (13.6M frames)       |
+| -------------- | ----------------- | ------------------------------------ |
+| Laptop / test  | 0 (no sharding)   | ~38K files (fine for local NVMe)     |
+| BeeGFS / RAL   | 16                | ~468 files (78× fewer)               |
+| Expanse (SDSC) | 16                | ~468 files (required: 2M file quota) |
 
 The `shard_factor` value is stamped into root attrs under the key `"shard_factor"`.
 Readers do not need to read this attr — zarr-python handles sharding transparently.
@@ -568,6 +574,7 @@ sharding in zarr_v3_spec.md §9 with platform-specific recommendations."
 **Context:** `src/panoseti_analysis/adapters/features.py` was already edited in the previous session to pin feature cache chunks to `(N, 2, 32, 32)`. The edit is on disk but was never committed (the Claude classifier was temporarily unavailable). This task commits it before adding sharding changes.
 
 **Files:**
+
 - Modify (already done): `src/panoseti_analysis/adapters/features.py:184`
 
 - [ ] **Step 1: Verify the edit is present**
@@ -614,6 +621,7 @@ so each sample is self-contained in one zarr chunk."
 ## Task 5 — Add `shard_factor` to `write_store` in panoseti_analysis
 
 **Files:**
+
 - Modify: `src/panoseti_analysis/io/stores.py`
 - Test: `tests/io/test_stores.py`
 
@@ -801,6 +809,7 @@ the write path is fully controlled so there is no race hazard."
 ## Task 6 — Wire `shard_factor` through `pa-calibrate` adapter
 
 **Files:**
+
 - Modify: `src/panoseti_analysis/adapters/calibrate.py`
 - Test: `tests/adapters/test_calibrate.py`
 
@@ -902,6 +911,7 @@ git commit -m "feat(calibrate): add --shard-factor CLI option for L1 sharding"
 ## Task 7 — Wire `shard_factor` into Nextflow modules and config
 
 **Files:**
+
 - Modify: `modules/local/pff_to_zarr.nf`
 - Modify: `modules/local/calibrate_img.nf`
 - Modify: `modules/local/calibrate_ph.nf`
@@ -990,6 +1000,7 @@ nextflow config . -profile ral | grep shard
 ```
 
 Expected output includes:
+
 ```
 params.shard_factor_l0 = 16
 params.shard_factor_l1 = 8
@@ -1012,6 +1023,7 @@ Expanse inode budget: ~347K files per full 8-run L0 ingest (vs ~27M without shar
 ## Task 8 — Update pypff submodule pointer and panoseti_analysis storage docs
 
 **Files:**
+
 - Modify: `pypff` (submodule commit pointer)
 - Modify: `docs/storage_spec.md`
 
@@ -1043,11 +1055,11 @@ shard file on disk, dramatically reducing file counts on parallel filesystems.
 
 **Recommended shard factors by platform:**
 
-| Platform | `shard_factor_l0` | `shard_factor_l1` | L0 files (img16, 13.6M frames) |
-|---|---|---|---|
-| Laptop / test | 0 | 0 | ~38K |
-| RAL (BeeGFS) | 16 | 8 | ~468 |
-| Expanse (SDSC) | 16 | 8 | ~468 (required: 2M inode quota) |
+| Platform       | `shard_factor_l0` | `shard_factor_l1` | L0 files (img16, 13.6M frames)  |
+| -------------- | ----------------- | ----------------- | ------------------------------- |
+| Laptop / test  | 0                 | 0                 | ~38K                            |
+| RAL (BeeGFS)   | 16                | 8                 | ~468                            |
+| Expanse (SDSC) | 16                | 8                 | ~468 (required: 2M inode quota) |
 
 Sharding is transparent to readers: `xr.open_zarr`, `zarr.open_group`, and all
 other zarr-python ≥ 3.0 readers access sharded and unsharded stores identically.
@@ -1084,18 +1096,18 @@ shard factors per platform and the file-count implications for Expanse."
 
 ### Spec coverage
 
-| Requirement | Task |
-|---|---|
-| Add sharding to L0 (pypff) | Tasks 2, 3 |
-| Add sharding to L1 (write_store) | Task 5 |
-| dtype-aware 1D chunk sizes | Task 1 |
-| CLI exposure (pypff) | Task 3 |
-| CLI exposure (pa-calibrate) | Task 6 |
-| Nextflow wiring with per-profile defaults | Task 7 |
-| Spec doc update (zarr_v3_spec.md) | Task 3 |
-| Storage spec doc update | Task 8 |
-| Commit pending features.py fix | Task 4 |
-| pypff submodule pointer update | Task 8 |
+| Requirement                               | Task       |
+| ----------------------------------------- | ---------- |
+| Add sharding to L0 (pypff)                | Tasks 2, 3 |
+| Add sharding to L1 (write_store)          | Task 5     |
+| dtype-aware 1D chunk sizes                | Task 1     |
+| CLI exposure (pypff)                      | Task 3     |
+| CLI exposure (pa-calibrate)               | Task 6     |
+| Nextflow wiring with per-profile defaults | Task 7     |
+| Spec doc update (zarr_v3_spec.md)         | Task 3     |
+| Storage spec doc update                   | Task 8     |
+| Commit pending features.py fix            | Task 4     |
+| pypff submodule pointer update            | Task 8     |
 
 ### Known limitations (not in scope)
 

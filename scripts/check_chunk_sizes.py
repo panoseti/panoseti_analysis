@@ -21,11 +21,7 @@ _MiB = 1024 * 1024
 
 def _chunk_sizes(array_dir: Path) -> list[int]:
     # Zarr v3 stores chunks under "<array>/c/...". Exclude metadata (zarr.json).
-    return [
-        p.stat().st_size
-        for p in array_dir.rglob("*")
-        if p.is_file() and p.name != "zarr.json"
-    ]
+    return [p.stat().st_size for p in array_dir.rglob("*") if p.is_file() and p.name != "zarr.json"]
 
 
 def main() -> int:

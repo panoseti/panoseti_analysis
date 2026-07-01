@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Shim for the pa-stream-cloud real-time streaming adapter."""
+
 from panoseti_analysis.adapters.stream.cli import app
 
 app()

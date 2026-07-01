@@ -6,19 +6,19 @@ and model documentation. Shared kernels and adapters live in
 
 ## Projects
 
-| Project | Description | Status |
-|---------|-------------|--------|
-| [cloud-detection/](cloud-detection/) | Binary sky-condition classifier (clear vs. cloudy) from 32×32 img16 frames | Production (v1 model deployed) |
-| [anomaly-detection/](anomaly-detection/) | β-VAE for pulse-height anomaly detection and latent-space exploration | Prototype |
+| Project                                  | Description                                                                | Status                         |
+| ---------------------------------------- | -------------------------------------------------------------------------- | ------------------------------ |
+| [cloud-detection/](cloud-detection/)     | Binary sky-condition classifier (clear vs. cloudy) from 32×32 img16 frames | Production (v1 model deployed) |
+| [anomaly-detection/](anomaly-detection/) | β-VAE for pulse-height anomaly detection and latent-space exploration      | Prototype                      |
 
 ## Shared library layer
 
-| Layer | Path | Purpose |
-|-------|------|---------|
-| Kernels (Layer A) | `src/panoseti_analysis/algorithms/` | `calibrate_img`, `extract_cloud_features`, `predict_cloud_score`, `BetaVAE` |
-| Adapters (Layer B) | `src/panoseti_analysis/adapters/ray/` | `pa-train-cloud`, `pa-train-vae`, `pa-features-cloud`, `pa-classify-cloud` |
-| Streaming | `src/panoseti_analysis/adapters/stream/` | `pa-stream-cloud` (real-time inference via Ray Serve) |
-| I/O | `src/panoseti_analysis/io/` | `load_classifier`, `save_classifier`, `write_store`, `checksum_store` |
+| Layer              | Path                                     | Purpose                                                                     |
+| ------------------ | ---------------------------------------- | --------------------------------------------------------------------------- |
+| Kernels (Layer A)  | `src/panoseti_analysis/algorithms/`      | `calibrate_img`, `extract_cloud_features`, `predict_cloud_score`, `BetaVAE` |
+| Adapters (Layer B) | `src/panoseti_analysis/adapters/ray/`    | `pa-train-cloud`, `pa-train-vae`, `pa-features-cloud`, `pa-classify-cloud`  |
+| Streaming          | `src/panoseti_analysis/adapters/stream/` | `pa-stream-cloud` (real-time inference via Ray Serve)                       |
+| I/O                | `src/panoseti_analysis/io/`              | `load_classifier`, `save_classifier`, `write_store`, `checksum_store`       |
 
 ## Migrating notebooks from `~/panoseti/`
 
@@ -37,6 +37,7 @@ git subtree add --prefix=ml/cloud-detection/legacy \
 ```
 
 For reference during development, create a local symlink (gitignored):
+
 ```bash
 ln -s ~/panoseti/cloud-detection ml/cloud-detection/legacy-src
 ln -s ~/panoseti/anomaly-detection ml/anomaly-detection/legacy-src

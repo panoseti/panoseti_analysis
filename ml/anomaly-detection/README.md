@@ -9,32 +9,32 @@ backgrounds; high reconstruction error or unusual latent positions indicate anom
 
 ## Model: `ph_vae_v1` (prototype)
 
-| Field | Value |
-|-------|-------|
-| Architecture | β-VAE with 2D convolutional encoder/decoder |
-| Input | `(1, 16, 16)` float32 — log-normalized pedestal-subtracted PH frames (dp_ph256) |
-| Latent dim | 32 (configurable) |
-| Hidden dim | 64 (configurable) |
-| Loss | MSE reconstruction + β·KL + sparsity·L1(μ) |
+| Field        | Value                                                                           |
+| ------------ | ------------------------------------------------------------------------------- |
+| Architecture | β-VAE with 2D convolutional encoder/decoder                                     |
+| Input        | `(1, 16, 16)` float32 — log-normalized pedestal-subtracted PH frames (dp_ph256) |
+| Latent dim   | 32 (configurable)                                                               |
+| Hidden dim   | 64 (configurable)                                                               |
+| Loss         | MSE reconstruction + β·KL + sparsity·L1(μ)                                      |
 
 ## Feature Specification
 
-| Step | Description |
-|------|-------------|
-| Input | L1 `pedestal_subtracted` (16×16 int16) from `pa-calibrate ph` |
-| Preprocessing | log-norm to unit range: `log(x - min + 1) / log(max - min + 1)` |
-| Output | Latent code μ (32-dim), reconstruction, anomaly score (reconstruction MSE) |
+| Step          | Description                                                                |
+| ------------- | -------------------------------------------------------------------------- |
+| Input         | L1 `pedestal_subtracted` (16×16 int16) from `pa-calibrate ph`              |
+| Preprocessing | log-norm to unit range: `log(x - min + 1) / log(max - min + 1)`            |
+| Output        | Latent code μ (32-dim), reconstruction, anomaly score (reconstruction MSE) |
 
 ## Recipes
 
-| Recipe | Purpose |
-|--------|---------|
+| Recipe                                                 | Purpose                  |
+| ------------------------------------------------------ | ------------------------ |
 | [`recipes/vae_train_v1.yml`](recipes/vae_train_v1.yml) | Training hyperparameters |
 
 ## Notebooks
 
-| Notebook | Purpose |
-|----------|---------|
+| Notebook                                                           | Purpose                                                  |
+| ------------------------------------------------------------------ | -------------------------------------------------------- |
 | [`notebooks/01_ph_vae_demo.ipynb`](notebooks/01_ph_vae_demo.ipynb) | Latent space exploration + anomaly scoring (coming soon) |
 
 Original prototype notebooks: `~/panoseti/anomaly-detection/ph_vae_model.ipynb`,
