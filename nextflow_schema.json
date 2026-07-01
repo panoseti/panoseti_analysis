@@ -183,6 +183,27 @@
                     "type": "string",
                     "default": "shared",
                     "description": "SLURM queue/partition (hpc_slurm profile)."
+                },
+                "ray_launcher": {
+                    "type": "string",
+                    "default": "slurm",
+                    "description": "Launcher for Ray cluster (e.g. slurm)."
+                },
+                "slurm_gpu_queue": {
+                    "type": "string",
+                    "description": "SLURM queue for GPU jobs."
+                },
+                "ml_container": {
+                    "type": "string",
+                    "description": "Container image for ML inference."
+                },
+                "cloud_model_pt": {
+                    "type": "string",
+                    "description": "Path to Cloud Model PyTorch weights."
+                },
+                "cloud_model_json": {
+                    "type": "string",
+                    "description": "Path to Cloud Model configuration JSON."
                 }
             }
         }
@@ -197,23 +218,5 @@
         {
             "$ref": "#/$defs/panoseti_options"
         }
-    ],
-    "properties": {
-        "ray_launcher": {
-            "type": "string",
-            "default": "slurm"
-        },
-        "slurm_gpu_queue": {
-            "type": "string"
-        },
-        "ml_container": {
-            "type": "string"
-        },
-        "cloud_model_pt": {
-            "type": "string"
-        },
-        "cloud_model_json": {
-            "type": "string"
-        }
-    }
+    ]
 }

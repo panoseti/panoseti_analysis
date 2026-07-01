@@ -3,6 +3,13 @@ repository_type: pipeline
 nf_core_version: 4.0.2
 
 lint:
+  meta_yml_exists: false
+  subworkflow_include: false
+  main_nf_include_used: false
+  subworkflow_version: false
+  local_component_structure: false
+  template_strings:
+    - docs/plans/nextflow-modernization.md
   files_unchanged:
     - CODE_OF_CONDUCT.md
     - assets/nf-core-analysis_logo_light.png
