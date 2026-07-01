@@ -117,7 +117,11 @@
                     "enum": ["zstd", "none"],
                     "description": "Zarr compression codec."
                 },
-                "level": { "type": "integer", "default": 5, "description": "Compression level." },
+                "level": {
+                    "type": "integer",
+                    "default": 5,
+                    "description": "Compression level."
+                },
                 "time_chunk": {
                     "type": "integer",
                     "default": 0,
@@ -135,10 +139,13 @@
                 },
                 "use_tensorstore": {
                     "type": ["boolean", "string"],
-                    "default": false,
                     "description": "Use Tensorstore backend for faster Zarr writing."
                 },
-                "ph_sigma": { "type": "number", "default": 5.0, "description": "n-sigma pulse-height threshold." },
+                "ph_sigma": {
+                    "type": "number",
+                    "default": 5.0,
+                    "description": "n-sigma pulse-height threshold."
+                },
                 "ph_offset": {
                     "type": "integer",
                     "default": 800,
@@ -154,18 +161,49 @@
                     "default": 200,
                     "description": "Frame stride for block-median sampling."
                 },
-                "img_block": { "type": "integer", "default": 8, "description": "Spatial block size (pixels)." },
-                "img_adc_to_pe": { "type": "number", "default": 1.5, "description": "ADC counts per photoelectron." },
+                "img_block": {
+                    "type": "integer",
+                    "default": 8,
+                    "description": "Spatial block size (pixels)."
+                },
+                "img_adc_to_pe": {
+                    "type": "number",
+                    "default": 1.5,
+                    "description": "ADC counts per photoelectron."
+                },
                 "use_ray": {
                     "type": "boolean",
-                    "default": false,
                     "description": "Run ML inference distributed via Ray cluster."
                 },
-                "slurm_account": { "type": "string", "description": "SLURM account (hpc_slurm profile)." },
+                "slurm_account": {
+                    "type": "string",
+                    "description": "SLURM account (hpc_slurm profile)."
+                },
                 "slurm_queue": {
                     "type": "string",
                     "default": "shared",
                     "description": "SLURM queue/partition (hpc_slurm profile)."
+                },
+                "ray_launcher": {
+                    "type": "string",
+                    "default": "slurm",
+                    "description": "Launcher for Ray cluster (e.g. slurm)."
+                },
+                "slurm_gpu_queue": {
+                    "type": "string",
+                    "description": "SLURM queue for GPU jobs."
+                },
+                "ml_container": {
+                    "type": "string",
+                    "description": "Container image for ML inference."
+                },
+                "cloud_model_pt": {
+                    "type": "string",
+                    "description": "Path to Cloud Model PyTorch weights."
+                },
+                "cloud_model_json": {
+                    "type": "string",
+                    "description": "Path to Cloud Model configuration JSON."
                 }
             }
         }

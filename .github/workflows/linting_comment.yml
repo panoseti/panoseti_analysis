@@ -1,6 +1,7 @@
 name: nf-core linting comment
-# Posts the nf-core lint results as a sticky PR comment after the linting workflow completes.
-# This runs in the base-repo context so it can post comments on fork PRs.
+# This workflow is triggered after the linting action is complete
+# It posts an automated comment to the PR, even if the PR is coming from a fork
+
 on:
   workflow_run:
     workflows: ["nf-core linting"]

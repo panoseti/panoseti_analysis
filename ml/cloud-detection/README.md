@@ -5,25 +5,25 @@
 Binary sky-condition classifier that scores each 60-second observing window as
 **clear** (0) or **cloudy** (1) from PANOSETI 32×32 img16 movie-mode frames.
 
-| Field | Value |
-|-------|-------|
-| Model file | `assets/models/cloud_detector_v1.pt` |
-| Architecture | 2-channel CNN (see [CNN Architecture](#cnn-architecture)) |
-| Input | `(2, 32, 32)` float32 — [deriv-fft, raw-fft] |
-| Output | `cloud_score` ∈ [0, 1] per 60-second window |
-| Threshold | 0.5 (configurable via `CloudInferParams.threshold`) |
-| Training data | 8 observing runs, 8,804 labeled samples (50/50 clear/cloudy) |
-| Val accuracy | ~96% (from original training; see `model_summary.txt` in legacy repo) |
-| Trained | 2024-03-01, original `~/panoseti/cloud-detection/` repo |
+| Field         | Value                                                                 |
+| ------------- | --------------------------------------------------------------------- |
+| Model file    | `assets/models/cloud_detector_v1.pt`                                  |
+| Architecture  | 2-channel CNN (see [CNN Architecture](#cnn-architecture))             |
+| Input         | `(2, 32, 32)` float32 — [deriv-fft, raw-fft]                          |
+| Output        | `cloud_score` ∈ [0, 1] per 60-second window                           |
+| Threshold     | 0.5 (configurable via `CloudInferParams.threshold`)                   |
+| Training data | 8 observing runs, 8,804 labeled samples (50/50 clear/cloudy)          |
+| Val accuracy  | ~96% (from original training; see `model_summary.txt` in legacy repo) |
+| Trained       | 2024-03-01, original `~/panoseti/cloud-detection/` repo               |
 
 ## Feature Specification
 
 Cloud detection uses **two feature channels** computed over a 60-second rolling window:
 
-| Channel | Name | Description |
-|---------|------|-------------|
-| 0 | `feature_deriv_fft` | 2D FFT of the 60-second time derivative (current − 60s-ago frame), with Hann window |
-| 1 | `feature_raw_fft` | 2D FFT of the current integrated frame (10 × 100µs frames = 1ms integration), with Hann window |
+| Channel | Name                | Description                                                                                    |
+| ------- | ------------------- | ---------------------------------------------------------------------------------------------- |
+| 0       | `feature_deriv_fft` | 2D FFT of the 60-second time derivative (current − 60s-ago frame), with Hann window            |
+| 1       | `feature_raw_fft`   | 2D FFT of the current integrated frame (10 × 100µs frames = 1ms integration), with Hann window |
 
 Both channels use log-magnitude scaling: `log(|FFT| + ε)`.
 
@@ -51,34 +51,34 @@ Parameters: see assets/models/cloud_detector_v1.json (ClassifierBundle)
 Pre-computed features and labels are packaged in
 `assets/models/cloud-detection-training/` (not extracted; gitignored when extracted).
 
-| Batch | Run | Conditions | Samples |
-|-------|-----|-----------|---------|
-| 0 | 2023-08-15 | Partially cloudy, Moon 0% | 2,051 |
-| 1 | 2023-08-01 | Mostly cloudy, Moon 100% | 3,758 |
-| 2 | 2023-09-13 | Likely clear, Moon 0% | 753 |
-| 3 | 2023-10-12 | Likely clear, Moon 11% | 423 |
-| 4 | 2023-09-09 | Likely clear, Moon 30% | 483 |
-| 5 | 2023-10-05 | Likely clear, Moon 70% | 418 |
-| 6 | 2023-08-29 | Clear, Moon 90% | 522 |
-| 7 | 2023-09-28 | Likely clear, Moon 95% | 396 |
-| **Total** | | | **8,804** |
+| Batch     | Run        | Conditions                | Samples   |
+| --------- | ---------- | ------------------------- | --------- |
+| 0         | 2023-08-15 | Partially cloudy, Moon 0% | 2,051     |
+| 1         | 2023-08-01 | Mostly cloudy, Moon 100%  | 3,758     |
+| 2         | 2023-09-13 | Likely clear, Moon 0%     | 753       |
+| 3         | 2023-10-12 | Likely clear, Moon 11%    | 423       |
+| 4         | 2023-09-09 | Likely clear, Moon 30%    | 483       |
+| 5         | 2023-10-05 | Likely clear, Moon 70%    | 418       |
+| 6         | 2023-08-29 | Clear, Moon 90%           | 522       |
+| 7         | 2023-09-28 | Likely clear, Moon 95%    | 396       |
+| **Total** |            |                           | **8,804** |
 
 Label distribution: `clear_night_sky` 4,357 (49.5%), `not_clear_cloudy` 4,447 (50.5%),
 `unsure` 5 (skipped during training).
 
 ## Recipes
 
-| Recipe | Purpose |
-|--------|---------|
-| [`recipes/cloud_v1.yml`](recipes/cloud_v1.yml) | Batch training hyperparameters |
+| Recipe                                                       | Purpose                               |
+| ------------------------------------------------------------ | ------------------------------------- |
+| [`recipes/cloud_v1.yml`](recipes/cloud_v1.yml)               | Batch training hyperparameters        |
 | [`recipes/stream_cloud_v1.yml`](recipes/stream_cloud_v1.yml) | Real-time streaming cadence/threshold |
 
 ## Notebooks
 
-| Notebook | Purpose |
-|----------|---------|
-| [`notebooks/01_inference_demo.ipynb`](notebooks/01_inference_demo.ipynb) | End-to-end demo: L1 Zarr → cloud scores + visualizations |
-| [`notebooks/02_train_legacy_features.ipynb`](notebooks/02_train_legacy_features.ipynb) | Replicate training from pre-packaged features + labels |
+| Notebook                                                                               | Purpose                                                  |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| [`notebooks/01_inference_demo.ipynb`](notebooks/01_inference_demo.ipynb)               | End-to-end demo: L1 Zarr → cloud scores + visualizations |
+| [`notebooks/02_train_legacy_features.ipynb`](notebooks/02_train_legacy_features.ipynb) | Replicate training from pre-packaged features + labels   |
 
 ## Reproducing Training
 

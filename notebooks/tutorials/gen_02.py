@@ -1,0 +1,111 @@
+import json
+
+notebook = {
+    "cells": [
+        {
+            "cell_type": "markdown",
+            "id": "intro",
+            "metadata": {},
+            "source": [
+                "# Tutorial 2: Ray Real-Time Streaming Pipeline\n",
+                "\n",
+                "This notebook demonstrates how to connect to a Ray cluster to run ML jobs, and specifically how to simulate a real-time data ingestion and processing pipeline in a streaming fashion.",
+            ],
+        },
+        {
+            "cell_type": "markdown",
+            "id": "part1",
+            "metadata": {},
+            "source": [
+                "## Part 1: Connecting to Ray\n",
+                "Initialize Ray to connect to a local or remote cluster.",
+            ],
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "id": "p1_code",
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "import ray\n",
+                "import xarray as xr\n",
+                "import time\n",
+                "from panoseti_analysis.adapters.ray.launcher import init_ray\n",
+                "\n",
+                "# Connect to Ray\n",
+                'init_ray(launcher="attach")\n',
+                'print("Ray connected!", ray.cluster_resources())',
+            ],
+        },
+        {
+            "cell_type": "markdown",
+            "id": "part2",
+            "metadata": {},
+            "source": [
+                "## Part 2: Streaming Data Processing\n",
+                "\n",
+                "We can simulate data arriving in a streaming fashion (e.g. from an observatory) and process it asynchronously using Ray remote functions.",
+            ],
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "id": "p2_code1",
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "@ray.remote\n",
+                "def process_data_chunk(chunk_id, data_chunk):\n",
+                '    """Simulate processing a single chunk of data asynchronously."""\n',
+                "    # Simulate compute time\n",
+                "    time.sleep(1)\n",
+                "    # Perform dummy calculation\n",
+                "    mean_val = float(data_chunk.mean())\n",
+                '    return f"Processed chunk {chunk_id} | Mean: {mean_val:.3f}"',
+            ],
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "id": "p2_code2",
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# Let's load the test L1 store to act as our data source\n",
+                'l1_path = "results_tutorial/L1/obs_TEST.dp_img16.module_1.L1.zarr"\n',
+                "ds = xr.open_zarr(l1_path, consolidated=False)\n",
+                'img_data = ds["median_subtracted"].values\n',
+                "\n",
+                "# Simulate streaming 5 frames of data\n",
+                "futures = []\n",
+                "for i in range(5):\n",
+                '    print(f"Stream received frame {i}...")\n',
+                "    chunk = img_data[i]\n",
+                "    # Dispatch to Ray cluster asynchronously\n",
+                "    fut = process_data_chunk.remote(i, chunk)\n",
+                "    futures.append(fut)\n",
+                "\n",
+                "# Wait for all real-time processing to finish\n",
+                "results = ray.get(futures)\n",
+                "for res in results:\n",
+                "    print(res)",
+            ],
+        },
+    ],
+    "metadata": {
+        "kernelspec": {
+            "display_name": "Python 3 (ipykernel)",
+            "language": "python",
+            "name": "python3",
+        },
+        "language_info": {"name": "python", "version": "3.11.0"},
+    },
+    "nbformat": 4,
+    "nbformat_minor": 5,
+}
+
+with open(
+    "/Users/nico/panoseti/panoseti_analysis/notebooks/tutorials/02_ray_realtime_demo.ipynb", "w"
+) as f:
+    json.dump(notebook, f, indent=1)

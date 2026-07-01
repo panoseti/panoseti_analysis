@@ -19,6 +19,7 @@ WANDB_ENTITY=your_wandb_username_or_team
 ```
 
 The training notebooks and CLIs load `.env` automatically:
+
 ```python
 # Pattern used in notebooks:
 from pathlib import Path
@@ -29,6 +30,7 @@ for line in Path('.env').read_text().splitlines():
 ```
 
 For CLI use, export the variables in your shell:
+
 ```bash
 export WANDB_API_KEY=$(grep WANDB_API_KEY .env | cut -d= -f2)
 ```
@@ -41,7 +43,7 @@ Add W&B project and entity to your recipe YAML:
 # ml/cloud-detection/recipes/cloud_v1.yml
 name: cloud_v1
 wandb_project: panoseti-cloud-detection
-wandb_entity: your_username   # optional; defaults to WANDB_ENTITY env var
+wandb_entity: your_username # optional; defaults to WANDB_ENTITY env var
 # ... rest of hyperparameters
 ```
 
@@ -61,6 +63,7 @@ pa-train-cloud → run_train_cloud() → TorchTrainer (Ray Train)
 ```
 
 The tracker logs metrics each epoch:
+
 - `train_loss`, `val_loss`
 - `train_accuracy`, `val_accuracy`
 - `learning_rate`
