@@ -1,0 +1,1249 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="PANOSETI data-reduction pipeline — PFF → Zarr ingest, calibration, ML">
+      
+      
+      
+      
+        <link rel="prev" href="../wandb/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Contributing - PANOSETI Analysis</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#panosetianalysis-contributing-guidelines" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="PANOSETI Analysis" class="md-header__button md-logo" aria-label="PANOSETI Analysis" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PANOSETI Analysis
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Contributing
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/panoseti/panoseti_analysis" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="PANOSETI Analysis" class="md-nav__button md-logo" aria-label="PANOSETI Analysis" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    PANOSETI Analysis
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/panoseti/panoseti_analysis" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../storage_spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ML
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ML
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ml_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../streaming_ral/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Streaming (RAL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../training_ral/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training (RAL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wandb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    W&B Tracking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#general-contribution-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        General contribution guidelines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="General contribution guidelines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-time-dev-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One-time dev setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contribution-quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contribution quick start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lint-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lint tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipeline-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#patch-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Patch release
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipeline-contribution-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline contribution conventions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pipeline contribution conventions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#add-a-new-pipeline-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Add a new pipeline step
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#channel-naming-schemes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channel naming schemes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-parameter-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default parameter values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-processes-resource-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default processes resource requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nextflow-version-bumping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nextflow version bumping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#images-and-figures-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Images and figures guidelines
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-specific-contribution-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline specific contribution guidelines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pipeline specific contribution guidelines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#editing-and-previewing-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Editing and Previewing Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation-hosting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation Hosting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#general-contribution-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        General contribution guidelines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="General contribution guidelines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-time-dev-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One-time dev setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contribution-quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contribution quick start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lint-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lint tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipeline-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#patch-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Patch release
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pipeline-contribution-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline contribution conventions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pipeline contribution conventions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#add-a-new-pipeline-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Add a new pipeline step
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#channel-naming-schemes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channel naming schemes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-parameter-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default parameter values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-processes-resource-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default processes resource requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nextflow-version-bumping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nextflow version bumping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#images-and-figures-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Images and figures guidelines
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-specific-contribution-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline specific contribution guidelines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pipeline specific contribution guidelines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#editing-and-previewing-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Editing and Previewing Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation-hosting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation Hosting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="panosetianalysis-contributing-guidelines"><code>panoseti/analysis</code>: Contributing guidelines</h1>
+<p>Hi there!
+Thanks for taking an interest in improving panoseti/analysis.</p>
+<p>This page describes the recommended nf-core way to contribute to both panoseti/analysis and nf-core pipelines in general, including:</p>
+<ul>
+<li><a href="#general-contribution-guidelines">General contribution guidelines</a>: common procedures or guides across all nf-core pipelines.</li>
+<li><a href="#pipeline-specific-contribution-guidelines">Pipeline-specific contribution guidelines</a>: procedures or guides specific to the development conventions of panoseti/analysis.</li>
+</ul>
+<h2 id="general-contribution-guidelines">General contribution guidelines</h2>
+<h3 id="one-time-dev-setup">One-time dev setup</h3>
+<p>After cloning, run these once to configure local git hooks:</p>
+<pre><code class="language-bash">uv sync                         # install all deps including dev group
+uv run nbstripout --install     # auto-strip Jupyter outputs on git add
+</code></pre>
+<p>The <code>nbstripout</code> filter is registered in <code>.gitattributes</code> for <code>ml/**/*.ipynb</code> and
+<code>notebooks/**/*.ipynb</code>. Without running <code>--install</code> once per clone, cell outputs
+will not be stripped automatically and large PNG blobs may end up in commits.</p>
+<h3 id="contribution-quick-start">Contribution quick start</h3>
+<p>To contribute code to any nf-core pipeline:</p>
+<ul>
+<li>[ ] Ensure you have Nextflow, nf-core tools, and nf-test installed. See the <a href="https://github.com/nf-core/tools">nf-core/tools repository</a> for instructions.</li>
+<li>[ ] Check whether a GitHub <a href="https://github.com/panoseti/analysis/issues">issue</a> about your idea already exists. If an issue does not exist, create one so that others are aware you are working on it.</li>
+<li>[ ] <a href="https://help.github.com/en/github/getting-started-with-github/fork-a-repo">Fork</a> the <a href="https://github.com/panoseti/analysis">panoseti/analysis repository</a> to your GitHub account.</li>
+<li>[ ] Create a branch on your forked repository and make your changes following <a href="#pipeline-contribution-conventions">pipeline conventions</a> (if applicable).</li>
+<li>[ ] To fix major bugs, name your branch <code>patch</code> and follow the <a href="#patch-release">patch release</a> process.</li>
+<li>[ ] Update relevant documentation within the <code>docs/</code> folder, use nf-core/tools to update <code>nextflow_schema.json</code>, and update <code>CITATIONS.md</code>.</li>
+<li>[ ] Run and/or update tests. See <a href="#testing">Testing</a> for more information.</li>
+<li>[ ] <a href="#lint-tests">Lint</a> your code with nf-core/tools.</li>
+<li>[ ] Submit a pull request (PR) against the <code>dev</code> branch and request a review.</li>
+</ul>
+<p>If you are not used to this workflow with Git, see the <a href="https://help.github.com/en/github/collaborating-with-issues-and-pull-requests">GitHub documentation</a> or <a href="https://try.github.io/">Git resources</a> for more information.</p>
+<h3 id="testing">Testing</h3>
+<p>Once you have made your changes, run the pipeline with nf-test to test them locally.
+For additional information, use the <code>--verbose</code> flag to view the Nextflow console log output.</p>
+<pre><code class="language-bash">nf-test test --tag test --profile +docker --verbose
+</code></pre>
+<p>If you have added new functionality, ensure you update the test assertions in the <code>.nf.test</code> files in the <code>tests/</code> directory.
+Update the snapshots with the following command:</p>
+<pre><code class="language-bash">nf-test test --tag test --profile +docker --verbose --update-snapshots
+</code></pre>
+<p>When you create a pull request with changes, GitHub Actions will run automatic tests.
+Pull requests are typically reviewed when these tests are passing.</p>
+<p>Two types of tests are typically run:</p>
+<h4 id="lint-tests">Lint tests</h4>
+<p>nf-core has a <a href="https://nf-co.re/docs/specifications/overview">set of guidelines</a> which all pipelines must follow.
+To enforce these, run linting with nf-core/tools:</p>
+<pre><code class="language-bash">nf-core pipelines lint &lt;pipeline_directory&gt;
+</code></pre>
+<p>If you encounter failures or warnings, follow the linked documentation printed to screen.
+For more information about linting tests, see <a href="https://nf-co.re/docs/nf-core-tools/api_reference/latest/pipeline_lint_tests/actions_awsfulltest">nf-core/tools API documentation</a>.</p>
+<h4 id="pipeline-tests">Pipeline tests</h4>
+<p>Each nf-core pipeline should be set up with a minimal set of test data.
+GitHub Actions runs the pipeline on this data to ensure it runs through and exits successfully.
+If there are any failures then the automated tests fail.
+These tests are run with the latest available version of Nextflow and the minimum required version specified in the pipeline code.</p>
+<h3 id="patch-release">Patch release</h3>
+<blockquote>
+<p>[!WARNING]
+Only in the unlikely event of a release that contains a critical bug.</p>
+</blockquote>
+<ul>
+<li>[ ] Create a new branch <code>patch</code> on your fork based on <code>upstream/main</code> or <code>upstream/master</code>.</li>
+<li>[ ] Fix the bug and use nf-core/tools to bump the version to the next semantic version, for example, <code>1.2.3</code> → <code>1.2.4</code>.</li>
+<li>[ ] Open a Pull Request from <code>patch</code> directly to <code>main</code>/<code>master</code> with the changes.</li>
+</ul>
+<h3 id="pipeline-contribution-conventions">Pipeline contribution conventions</h3>
+<p>nf-core semi-standardises how you write code and other contributions to make the panoseti/analysis code and processing logic more understandable for new contributors and to ensure quality.</p>
+<h4 id="add-a-new-pipeline-step">Add a new pipeline step</h4>
+<p>To contribute a new step to the pipeline, follow the general nf-core coding procedure.
+Please also refer to the <a href="#pipeline-specific-contribution-guidelines">pipeline-specific contribution guidelines</a>:</p>
+<ul>
+<li>[ ] Define the corresponding <a href="#channel-naming-schemes">input channel</a> into your new process from the expected previous process channel.</li>
+<li>[ ] Install a module with nf-core/tools, or write a local module (see <a href="#default-processes-resource-requirements">default processes resource requirements</a>), and add it to the target <code>&lt;workflow&gt;.nf</code>.</li>
+<li>[ ] Define the output channel if needed. Mix the version output channel into <code>ch_versions</code> and relevant files into <code>ch_multiqc</code>.</li>
+<li>[ ] Add new or updated parameters to <code>nextflow.config</code> with a <a href="#default-parameter-values">default value</a>.</li>
+<li>[ ] Add new or updated parameters and relevant help text to <code>nextflow_schema.json</code> with <a href="#default-parameter-values">nf-core/tools</a>.</li>
+<li>[ ] Add validation for relevant parameters to the pipeline utilisation section of <code>utils_nfcore_\_pipeline/main.nf</code> subworkflow.</li>
+<li>[ ] Perform local tests to validate that the new code works as expected.</li>
+<li>[ ] If applicable, add a new test in the <code>tests</code> directory.</li>
+<li>[ ] Update <code>usage.md</code>, <code>output.md</code>, and <code>citation.md</code> as appropriate.</li>
+<li>[ ] <a href="#lint-tests">Lint</a> the code with nf-core/tools.</li>
+<li>[ ] Update any diagrams or pipeline images as necessary.</li>
+</ul>
+<p>To update the minimum required Nextflow version, see the <a href="#nextflow-version-bumping">Nextflow version bumping</a> section below. For more information about pipeline contributions, see <a href="#pipeline-specific-contribution-guidelines">pipeline-specific contribution guidelines</a>.</p>
+<h4 id="channel-naming-schemes">Channel naming schemes</h4>
+<p>Use the following naming schemes for channels to make the channel flow easier to understand:</p>
+<ul>
+<li>Initial process channel: <code>ch_output_from_&lt;process&gt;</code></li>
+<li>Intermediate and terminal channels: <code>ch_&lt;previousprocess&gt;_for_&lt;nextprocess&gt;</code></li>
+</ul>
+<h4 id="default-parameter-values">Default parameter values</h4>
+<p>Parameters should be initialised and defined with default values within the <code>params</code> scope in <code>nextflow.config</code>.
+They should also be documented in the pipeline JSON schema.</p>
+<p>To update <code>nextflow_schema.json</code>, run:</p>
+<pre><code class="language-bash">nf-core pipelines schema build
+</code></pre>
+<p>The schema builder interface that loads in your browser should automatically update the defaults in the parameter documentation.</p>
+<h4 id="default-processes-resource-requirements">Default processes resource requirements</h4>
+<p>If you write a local module, specify a default set of resource requirements for the process.</p>
+<p>Sensible defaults for process resource requirements (CPUs, memory, time) should be defined in <code>conf/base.config</code>.
+Specify these with generic <code>withLabel:</code> selectors, so they can be shared across multiple processes and steps of the pipeline.</p>
+<p>nf-core provides a set of standard labels that you should follow where possible, as seen in the <a href="https://github.com/nf-core/tools/blob/main/nf_core/pipeline-template/conf/base.config">nf-core pipeline template</a>.
+These labels define resource defaults for single-core processes, modules that require a GPU, and different levels of multi-core configurations with increasing memory requirements.</p>
+<p>Values assigned within these labels can be dynamically passed to a tool using the the <code>${task.cpus}</code> and <code>${task.memory}</code> Nextflow variables in the <code>script:</code> block of a module (see an example in the <a href="https://github.com/nf-core/modules/blob/bd1b6a40f55933d94b8c9ca94ec8c1ea0eaf4b82/modules/nf-core/samtools/bam2fq/main.nf#L30">modules repository</a>).</p>
+<h4 id="nextflow-version-bumping">Nextflow version bumping</h4>
+<p>If you use a new feature from core Nextflow, bump the minimum required Nextflow version in the pipeline with:</p>
+<pre><code class="language-bash">nf-core pipelines bump-version --nextflow . &lt;min_nf_version&gt;
+</code></pre>
+<h4 id="images-and-figures-guidelines">Images and figures guidelines</h4>
+<p>If you update images or graphics, follow the nf-core <a href="https://nf-co.re/docs/community/brand/workflow-schematics">style guidelines</a>.</p>
+<h2 id="pipeline-specific-contribution-guidelines">Pipeline specific contribution guidelines</h2>
+<h3 id="editing-and-previewing-documentation">Editing and Previewing Documentation</h3>
+<p>The documentation for this pipeline is built using <a href="https://www.mkdocs.org/">MkDocs</a> with the <a href="https://squidfunk.github.io/mkdocs-material/">Material for MkDocs</a> theme. The configuration is managed in <code>mkdocs.yml</code> at the root of the repository.</p>
+<p>To preview the documentation locally while making edits, simply install the <code>mkdocs-material</code> theme and run the built-in development server:</p>
+<pre><code class="language-bash"># Install the MkDocs Material theme using uv
+uv pip install mkdocs-material
+
+# Start the live-reloading local server
+uv run mkdocs serve
+</code></pre>
+<p>This will host the documentation at <code>http://127.0.0.1:8000/</code>. The page will automatically refresh as you edit files in the <code>docs/</code> directory.</p>
+<h3 id="documentation-hosting">Documentation Hosting</h3>
+<p>The documentation is automatically published to GitHub Pages using a GitHub Actions workflow (<code>.github/workflows/docs.yml</code>). Every time a change is merged into the <code>main</code> or <code>master</code> branch, the workflow will build the MkDocs site and push the static HTML files to the <code>gh-pages</code> branch, which updates the live website automatically. No manual deployment is necessary!</p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

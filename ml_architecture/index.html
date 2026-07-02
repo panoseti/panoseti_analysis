@@ -1,0 +1,1680 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="PANOSETI data-reduction pipeline — PFF → Zarr ingest, calibration, ML">
+      
+      
+      
+      
+        <link rel="prev" href="../provenance/">
+      
+      
+        <link rel="next" href="../streaming_ral/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Architecture - PANOSETI Analysis</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#machine-learning-architecture-pipelines" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="PANOSETI Analysis" class="md-header__button md-logo" aria-label="PANOSETI Analysis" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PANOSETI Analysis
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/panoseti/panoseti_analysis" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="PANOSETI Analysis" class="md-nav__button md-logo" aria-label="PANOSETI Analysis" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    PANOSETI Analysis
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/panoseti/panoseti_analysis" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../storage_spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ML
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ML
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow-inference-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow &amp; Inference Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Flow &amp; Inference Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#feature-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-models-nextflow-ray" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution Models: Nextflow + Ray
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution Models: Nextflow + Ray">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-cpu-fallback-pa-classify-cloud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. CPU Fallback (pa-classify-cloud)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-distributed-ray-pa-ray-classify-cloud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Distributed Ray (pa-ray-classify-cloud)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#training-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Training System
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Training System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#three-mode-ray-launcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three-Mode Ray Launcher
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-flow-l1-features-training-bundle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow: L1 → Features → Training → Bundle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ssd-staging-1-gbe-mitigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SSD Staging (1 GbE Mitigation)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gpu-targeting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPU Targeting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#checkpointing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checkpointing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#experiment-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experiment Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recipes-vs-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recipes vs Profiles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-bundle-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Bundle Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cloud-detector-retrain-pa-train-cloud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cloud Detector Retrain (pa-train-cloud)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ph-betavae-pa-train-vae" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PH BetaVAE (pa-train-vae)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hyperparameter-tuning-ray-tune" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hyperparameter Tuning (Ray Tune)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#real-time-streaming-pipeline-chunk-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-Time Streaming Pipeline (Chunk 4)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Real-Time Streaming Pipeline (Chunk 4)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#progressive-calibration-cold-start-behaviour" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progressive calibration (cold-start behaviour)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gpu-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPU placement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-the-streaming-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running the streaming pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ml-grpc-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ML gRPC service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#streaming-provenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streaming provenance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#future-c-hitl-seam" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future (c) HITL seam
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../streaming_ral/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Streaming (RAL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../training_ral/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training (RAL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wandb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    W&B Tracking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTRIBUTING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow-inference-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow &amp; Inference Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Flow &amp; Inference Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#feature-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-models-nextflow-ray" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution Models: Nextflow + Ray
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution Models: Nextflow + Ray">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-cpu-fallback-pa-classify-cloud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. CPU Fallback (pa-classify-cloud)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-distributed-ray-pa-ray-classify-cloud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Distributed Ray (pa-ray-classify-cloud)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#training-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Training System
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Training System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#three-mode-ray-launcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three-Mode Ray Launcher
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-flow-l1-features-training-bundle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow: L1 → Features → Training → Bundle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ssd-staging-1-gbe-mitigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SSD Staging (1 GbE Mitigation)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gpu-targeting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPU Targeting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#checkpointing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checkpointing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#experiment-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experiment Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recipes-vs-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recipes vs Profiles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-bundle-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Bundle Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cloud-detector-retrain-pa-train-cloud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cloud Detector Retrain (pa-train-cloud)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ph-betavae-pa-train-vae" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PH BetaVAE (pa-train-vae)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hyperparameter-tuning-ray-tune" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hyperparameter Tuning (Ray Tune)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#real-time-streaming-pipeline-chunk-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-Time Streaming Pipeline (Chunk 4)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Real-Time Streaming Pipeline (Chunk 4)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#progressive-calibration-cold-start-behaviour" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progressive calibration (cold-start behaviour)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gpu-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPU placement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-the-streaming-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running the streaming pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ml-grpc-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ML gRPC service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#streaming-provenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streaming provenance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#future-c-hitl-seam" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future (c) HITL seam
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="machine-learning-architecture-pipelines">Machine Learning Architecture &amp; Pipelines</h1>
+<p>This document outlines the architecture of the Machine Learning workloads in <code>panoseti_analysis</code>, focusing primarily on the Cloud Detection inference pipeline, the Nextflow-to-Ray substrate, and future extensions.</p>
+<p><strong>Model cards:</strong> <a href="https://github.com/panoseti/panoseti_analysis/blob/main/ml/cloud-detection/README.md">Cloud Detector</a> · <a href="https://github.com/panoseti/panoseti_analysis/blob/main/ml/anomaly-detection/README.md">β-VAE Anomaly Detector</a><br />
+<strong>Operational guides:</strong> <a href="../streaming_ral/">Real-time Streaming (RAL)</a> · <a href="../training_ral/">Training on RAL</a></p>
+<h2 id="data-flow-inference-pipeline">Data Flow &amp; Inference Pipeline</h2>
+<p>The ML pipeline is architected around "Pure Kernels" (Layer A) that operate independently of any transport or orchestration framework, wrapped by thin CLI adapters (Layer B) that handle data loading and distribution.</p>
+<pre><code class="language-mermaid">graph TD
+    A[L1 Movie-Mode Zarr Store] --&gt;|xarray| B(Feature Extraction Kernel)
+    B --&gt;|Sliding 60s window| C[Feature: raw-fft]
+    B --&gt;|Sliding 60s window| D[Feature: raw-derivative-fft.-60]
+    C --&gt; E[PyTorch CNN]
+    D --&gt; E
+    E --&gt; F[Cloud Score 0-1]
+    F --&gt; G[L2 Zarr Store]
+    F --&gt; H[L2_quicklooks PNG]
+</code></pre>
+<h3 id="feature-extraction">Feature Extraction</h3>
+<p>The feature extraction logic accurately reproduces the pipeline originally defined in the <code>panoseti-software/cloud-detection</code> repository:</p>
+<ol>
+<li><strong>Cadence &amp; Windowing</strong>: Instead of rigid chunking, the pipeline uses a <em>rolling window</em> parametrized by <code>cadence_s</code>. For any target time $T$, it looks back 60 seconds.</li>
+<li><strong>Preprocessing</strong>:</li>
+<li>Uses a 2D Hann window (<code>np.hanning(32)</code>).</li>
+<li>Computes <code>np.fft.fftn</code> and <code>np.fft.fftshift</code>.</li>
+<li>Scales the FFT magnitude with <code>np.log()</code>.</li>
+<li><strong>Integration</strong>: The model expects input frames integrated over $1\text{ms}$. Since Panoseti <code>img</code> natively records at $100\mu\text{s}$, the kernel sums $10$ consecutive frames to produce the final <code>curr_img</code> and <code>prev_img</code> arrays before taking differences and FFTs.</li>
+</ol>
+<h2 id="execution-models-nextflow-ray">Execution Models: Nextflow + Ray</h2>
+<p>Because Python data-science libraries (like PyTorch and xarray) are notoriously difficult to parallelize cleanly via Nextflow alone (due to high initialization overhead and memory fragmentation), we support a dual-execution strategy: <strong>CPU Fallback</strong> and <strong>Distributed Ray</strong>.</p>
+<pre><code class="language-mermaid">graph LR
+    subgraph Nextflow Orchestration
+        A[main.nf] --&gt; B[ml.nf]
+        B --&gt; C{classify_cloud.nf}
+    end
+
+    C --&gt;|--use_ray false| D[CPU Fallback]
+    C --&gt;|--use_ray true| E[Ray Distributed]
+
+    subgraph CPU Fan-out
+        D --&gt;|1 process per store| F[pa-classify-cloud]
+    end
+
+    subgraph Ray on SLURM
+        E --&gt;|srun ray symmetric-run| G[pa-ray-classify-cloud]
+        G --&gt; H[Ray Head]
+        G --&gt; I[Ray Worker 1]
+        G --&gt; J[Ray Worker 2]
+    end
+</code></pre>
+<h3 id="1-cpu-fallback-pa-classify-cloud">1. CPU Fallback (<code>pa-classify-cloud</code>)</h3>
+<ul>
+<li><strong>How it works</strong>: Nextflow fans out <code>L1</code> stores, spawning one independent SLURM/local job per store. Each job boots a Python interpreter, loads the model, and runs inference.</li>
+<li><strong>Tradeoffs</strong>: Extremely reliable and container-native, but suffers from high "cold-start" latency (loading PyTorch and model weights over the network for every single 1-minute data file).</li>
+</ul>
+<h3 id="2-distributed-ray-pa-ray-classify-cloud">2. Distributed Ray (<code>pa-ray-classify-cloud</code>)</h3>
+<ul>
+<li><strong>How it works</strong>: Nextflow groups all stores belonging to a single observation run and submits a <em>single</em> <code>srun</code> job requesting multiple nodes. The <code>ray symmetric-run</code> wrapper bootstraps a transient Ray cluster across the SLURM allocation.</li>
+<li><strong>Tradeoffs</strong>: The PyTorch model is loaded <em>once</em> and cached in Ray's object store. Inference tasks are dispatched to workers continuously with near-zero overhead. This is the optimal route for large-scale "movie-mode" processing.</li>
+</ul>
+<h2 id="training-system">Training System</h2>
+<h3 id="overview">Overview</h3>
+<p>Training is <strong>separate from Nextflow</strong> — a multi-hour <code>TorchTrainer</code> loop fits Ray Train's checkpoint/restore model better than Nextflow's per-process resume. On RAL: <code>pa-train-cloud --launcher attach …</code> against the user's running cluster. Training produces a versioned model bundle that the Chunk 2 inference path consumes unchanged via <code>load_classifier</code>.</p>
+<h3 id="three-mode-ray-launcher">Three-Mode Ray Launcher</h3>
+<p><code>adapters/ray/launcher.py::init_ray(launcher)</code> selects the cluster strategy:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th><code>ray.init(...)</code></th>
+<th>Cluster lifetime</th>
+<th>Use case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>attach</code></td>
+<td><code>address=$RAY_ADDRESS or "auto"</code></td>
+<td><strong>Persistent, user-owned</strong></td>
+<td>RAL (default)</td>
+</tr>
+<tr>
+<td><code>slurm</code></td>
+<td><code>address="auto"</code> inside allocation</td>
+<td>== SLURM allocation (transient)</td>
+<td>Expanse</td>
+</tr>
+<tr>
+<td><code>standalone</code></td>
+<td>local, real multi-process</td>
+<td>== the process</td>
+<td>CI / laptop</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>transient-cluster invariant is SLURM-only.</strong> On RAL the cluster outlives any job; on <code>standalone</code> it is process-local.</p>
+<h3 id="data-flow-l1-features-training-bundle">Data Flow: L1 → Features → Training → Bundle</h3>
+<pre><code>Nextflow ingest:  PFF → L0 → L1 (processing_history: [convert, calibrate])
+                                 ↓
+pa-features-cloud / pa-prep-ph:  L1 → features.&lt;recipe_hash&gt;.zarr  (BeeGFS)
+                                          ↓ stage_to_local (SSD)
+pa-train-cloud / pa-train-vae:          train on SSD ──→ model bundle (BeeGFS models/)
+                                                                ↓
+Nextflow --steps ml:                    L1 → L2 (load_classifier reads bundle)
+</code></pre>
+<h3 id="ssd-staging-1-gbe-mitigation">SSD Staging (1 GbE Mitigation)</h3>
+<p><code>adapters/ray/_staging.py::stage_to_local(source, local_cache_dir)</code> copies the compact feature cache from BeeGFS to each GPU node's local SSD before training begins. Idempotent: skips if <code>checksum_store(dest) == checksum_store(source)</code>. GPU nodes (<code>a6k</code>, <code>gf</code>) each have 1 TB SSD; the labeled-subset feature cache fits comfortably.</p>
+<h3 id="gpu-targeting">GPU Targeting</h3>
+<p><code>ScalingConfig(use_gpu=True, accelerator_type="A6000")</code> routes training to the A6000 nodes by default. Both GPU nodes carry this label, so <code>num_workers: 1</code> lands on one node and <code>num_workers: 2</code> (with <code>allow_multinode: true</code>) runs 2-node DDP over the 400G RDMA fabric.</p>
+<h3 id="checkpointing">Checkpointing</h3>
+<p><code>RunConfig(storage_path=&lt;beegfs_path&gt;/ray_results, failure_config=FailureConfig(max_failures=3))</code>. Checkpoints land on BeeGFS shared FS so Ray can restore from the last checkpoint after a worker failure. The Ray v2 architecture reliability model: shared FS survives worker death; Ray restores automatically.</p>
+<h3 id="experiment-tracking">Experiment Tracking</h3>
+<p><code>adapters/ray/_tracking.py</code> exposes a thin <code>Tracker</code> interface (<code>.log(metrics)</code>, <code>.finish()</code>) implemented by <code>_WandbTracker</code> (online; <code>WANDB_MODE=offline</code> fallback for air-gapped nodes), <code>_TensorBoardTracker</code> (always-available local fallback), and <code>_NoOpTracker</code>. Tracking lives in Layer B adapters, never in Layer A kernels.</p>
+<h3 id="recipes-vs-profiles">Recipes vs Profiles</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Recipes (<code>recipes/*.yml</code>)</th>
+<th>Profiles (<code>-profile</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WHAT</td>
+<td>Science params (feature params, split ratios, hyperparams, scaling, model_out)</td>
+<td>WHERE/HOW (executor, container, resource limits)</td>
+</tr>
+<tr>
+<td>Version-controlled</td>
+<td>Yes — <code>load_recipe(path) -&gt; (params, name, recipe_hash)</code></td>
+<td>Yes — Nextflow profiles</td>
+</tr>
+<tr>
+<td>Stamped in provenance</td>
+<td>Yes — <code>recipe_name</code> + <code>recipe_hash</code> in every <code>ProcessingStep</code></td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<h3 id="model-bundle-format">Model Bundle Format</h3>
+<p><code>save_classifier(model, bundle, training_provenance, out_dir)</code> writes:</p>
+<ul>
+<li><code>&lt;name&gt;.pt</code> — PyTorch state dict</li>
+<li><code>&lt;name&gt;.ClassifierBundle.json</code> — <code>load_classifier</code>-compatible sidecar with sha256 checksum</li>
+<li><code>&lt;name&gt;_provenance.json</code> — <code>TrainingProvenance</code> block (recipe, hyperparams, metrics, git_sha, wandb_run_id)</li>
+</ul>
+<p>The Chunk 2 inference path (<code>load_classifier</code>) consumes these bundles <strong>unchanged</strong>.</p>
+<h3 id="cloud-detector-retrain-pa-train-cloud">Cloud Detector Retrain (<code>pa-train-cloud</code>)</h3>
+<p>Uses <strong>2-channel features</strong> (<code>raw_fft</code> + <code>deriv_fft</code>, matching inference) and the <strong>temporal boundary-gap split</strong> (<code>algorithms/splits.py::data_split</code>, seed=35) — fixes the original notebook's shuffled <code>train_test_split</code> which leaked near-duplicate adjacent frames. Default hyperparameters: lr 1e-3, Adam + wd 1e-5, batch 128, ExponentialLR γ=0.9 + ReduceLROnPlateau.</p>
+<h3 id="ph-betavae-pa-train-vae">PH BetaVAE (<code>pa-train-vae</code>)</h3>
+<p><code>algorithms/ph_vae.py::BetaVAE(latent_dim=32, hidden_dim=64)</code> — pure PyTorch, input <code>(N, 1, 16, 16)</code>. Loss: <code>MSE(mean) + beta·KL(sum) + sparsity·L1(mu)</code>. Preprocessing (<code>pa-prep-ph</code>): L1 <code>pedestal_subtracted</code> → log-norm to unit range. Split seed=1984.</p>
+<h3 id="hyperparameter-tuning-ray-tune">Hyperparameter Tuning (Ray Tune)</h3>
+<p><code>pa-tune-cloud</code> wraps <code>TorchTrainer</code> in a <code>Tuner</code> with ASHA scheduler. The recipe <code>tune:</code>
+block defines the search space (<code>uniform</code>, <code>loguniform</code>, <code>choice</code>, <code>grid</code>, <code>randint</code>). See
+<a href="../training_ral/#hyperparameter-sweep-ray-tune">Training on RAL</a> for usage.</p>
+<hr />
+<h2 id="real-time-streaming-pipeline-chunk-4">Real-Time Streaming Pipeline (Chunk 4)</h2>
+<p>The streaming path runs alongside or independently of the batch pipeline, producing
+<strong>per-minute cloud scores in real time</strong> from the live DAQ stream without round-tripping
+data through Zarr on disk.</p>
+<h3 id="architecture">Architecture</h3>
+<pre><code>simulate.py / Hashpipe (UDS)
+        │ PFF frames
+        ▼
+panoseti_grpc DaqData server ── StreamImages ──► StreamConsumer (async grpc client)
+                                                        │ (module_id, dp, frame[32,32], unix_t_ns)
+                                                        ▼
+                                              FrameAccumulator (Ray actor, per module+dp)
+                                                        │ rolling buffer + progressive calibrate_img
+                                                        │ emit when ≥60s span, every cadence_s
+                                                        ▼ xr.Dataset {median_subtracted, unix_t_ns}
+                                              CloudInferDeployment (Ray Serve, A6000 GPU)
+                                                        │ predict_cloud_score (Layer A kernel)
+                                                   ┌────┴─────────────┐
+                                                   ▼                  ▼
+                                          MLInference gRPC        Telemetry → Redis
+                                          (EmitPrediction)        (log_flexible → Grafana)
+                                                   │
+                                        flagged windows-of-interest
+                                                   ▼
+                                          L2 Zarr archive (write_store + processing_history)
+</code></pre>
+<h3 id="key-components">Key components</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>adapters/stream/consumer.py</code></td>
+<td>Async <code>StreamImages</code> consumer; extracts per-frame ns timestamp from header Struct (16×16/32×32 both handled); routes frames to <code>FrameAccumulator</code> actors</td>
+</tr>
+<tr>
+<td><code>adapters/stream/accumulator.py</code></td>
+<td><code>@ray.remote FrameAccumulator</code>; rolling buffer + progressive rolling-median calibration; calls <code>calibrate_img</code> + <code>predict_cloud_score</code>; emits via gRPC + telemetry</td>
+</tr>
+<tr>
+<td><code>adapters/stream/serve_app.py</code></td>
+<td><code>@serve.deployment CloudInferDeployment</code>; loads model bundle once; uses <code>accelerator_type:A6000</code> (pin to digilab-transmit via <code>--gpu-node-ip 10.0.1.34</code> to reserve head for training)</td>
+</tr>
+<tr>
+<td><code>adapters/stream/cli.py</code></td>
+<td><code>pa-stream-cloud</code> typer CLI; init_ray(attach) + deploy Serve + run consumer</td>
+</tr>
+<tr>
+<td><code>grpc/src/panoseti_grpc/ml_inference/</code></td>
+<td>Thin gRPC pub-sub broker (no ML logic); <code>EmitPrediction</code> fans predictions out to <code>StreamPredictions</code> / <code>SubscribeAlerts</code> subscribers</td>
+</tr>
+</tbody>
+</table>
+<h3 id="progressive-calibration-cold-start-behaviour">Progressive calibration (cold-start behaviour)</h3>
+<p>The accumulator uses <code>calibrate_img</code> over the rolling buffer as a progressive pedestal
+estimate (rolling median). Early in the night this underestimates the real pedestal.
+Each <code>Prediction</code> carries a <code>calibration_maturity</code> field (0=cold, 1=warm) so downstream
+consumers can discount early-night windows. <strong>End-to-end streaming scores will not
+byte-match batch L2</strong> — by design. The equivalence keystone
+(<code>tests/adapters/test_stream_consumer.py::TestEquivalenceKeystone</code>) proves that:</p>
+<ol>
+<li><strong>Kernel outputs are bit-identical</strong> across CLI / Ray task / gRPC-Serve paths given the
+   <em>same</em> Dataset (transport-independence).</li>
+<li><strong>Calibration drift is small but non-zero</strong> (measured MAE ≈ 0.0002 for a 300-frame half-window
+   vs full-batch median).</li>
+</ol>
+<h3 id="gpu-placement">GPU placement</h3>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Resource tag</th>
+<th>GPU</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>digilab-receiver</code> (<code>10.0.1.14</code>)</td>
+<td><code>accelerator_type:A6000</code></td>
+<td>1× RTX A6000 48GB</td>
+<td>Training (head node)</td>
+</tr>
+<tr>
+<td><code>digilab-transmit</code> (<code>10.0.1.34</code>)</td>
+<td><code>accelerator_type:A6000</code></td>
+<td>1× RTX A6000 48GB</td>
+<td>Serving; 2-node DDP partner (400G RDMA)</td>
+</tr>
+<tr>
+<td><code>panoseti-dfs{0,1,2}</code></td>
+<td>none</td>
+<td>none</td>
+<td>CPU fan-out, data pipeline</td>
+</tr>
+</tbody>
+</table>
+<p>Both GPU nodes share the same <code>accelerator_type:A6000</code> label. Serving (<code>CloudInferDeployment</code>)
+uses <code>ray_actor_options={"num_gpus": 1, "resources": {"accelerator_type:A6000": 0.001}}</code> by
+default; pass <code>--gpu-node-ip 10.0.1.34</code> to pin to digilab-transmit specifically.
+Labels are set explicitly by <code>cluster/ral_up.sh</code> (not Ray auto-detection).
+The nodes are interconnected by a 400G RDMA fabric (<code>mlx5_0</code>, RoCE v2); <code>ral_up.sh</code> injects
+NCCL env vars (<code>NCCL_IB_HCA=mlx5_0</code>, <code>NCCL_IB_GID_INDEX=3</code>) into every Raylet at start.</p>
+<h3 id="running-the-streaming-pipeline">Running the streaming pipeline</h3>
+<pre><code class="language-bash"># 1. Start the panoseti_grpc unified server with MLInference enabled.
+#    Edit server.toml: services.ml_inference = true  (or use a custom config)
+pseti-grpc server --config /path/to/server.toml
+
+# 2. (Optional) Start a simulate.py replay for testing with archived PFF data:
+#    (done internally by panoseti_grpc when daq_data.simulate_daq_cfg is set)
+
+# 3. Run the streaming pipeline (A6000 GPU; add --gpu-node-ip 10.0.1.34 to pin to digilab-transmit):
+pa-stream-cloud \
+    --model-path assets/models/cloud_detector_v1.pt \
+    --recipe recipes/ml/stream_cloud_v1.yml \
+    --grpc-host localhost \
+    --archive-dir /mnt/beegfs/streams/
+
+# 4. (Optional) Subscribe to live predictions from another terminal:
+python -c &quot;
+from panoseti_grpc.ml_inference.client import MLInferenceClient
+with MLInferenceClient() as c:
+    for p in c.stream_predictions():
+        print(p.module_id, p.cloud_score, p.cloud_label)
+&quot;
+</code></pre>
+<h3 id="ml-grpc-service">ML gRPC service</h3>
+<p>New proto: <code>grpc/protos/ml_inference.proto</code> (package <code>panoseti.ml</code>, branch <code>feat/ml-inference-service</code>).</p>
+<table>
+<thead>
+<tr>
+<th>RPC</th>
+<th>Direction</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EmitPrediction</code></td>
+<td>accumulator → servicer</td>
+<td>Push one scored window</td>
+</tr>
+<tr>
+<td><code>StreamPredictions</code></td>
+<td>client ← servicer</td>
+<td>Live stream of all scores (filterable by module/model)</td>
+</tr>
+<tr>
+<td><code>SubscribeAlerts</code></td>
+<td>client ← servicer</td>
+<td>Only cloud-detected events (score ≥ alert_threshold)</td>
+</tr>
+</tbody>
+</table>
+<p>Seams (commented, unimplemented): <code>TriggerCapture</code>, <code>MLInterrupt</code>, <code>MountControl</code>.</p>
+<p>Enable in the unified server: <code>services.ml_inference = true</code> in <code>server.toml</code>.</p>
+<h3 id="streaming-provenance">Streaming provenance</h3>
+<ul>
+<li><strong>Lightweight in-memory tags</strong> on every <code>Prediction</code> proto: <code>model_name</code>, <code>model_version</code>,
+  model <code>checksum</code>, <code>recipe_hash</code>, <code>git_sha</code>, <code>calibration_maturity</code>.</li>
+<li><strong>Full <code>processing_history</code> on archived windows-of-interest</strong> (cloud-flagged windows):
+  <code>write_store(ds_l2, archive_dir/..., processing_history=[ProcessingStep(...)])</code> writes the
+  full chain (step_name="stream_cloud_infer", model provenance, recipe_hash, software) into
+  Zarr root attrs, then the store is PACK'd to ZipStore for the archive hop.</li>
+</ul>
+<h3 id="future-c-hitl-seam">Future (c) HITL seam</h3>
+<p>The streaming consumer is designed to work equally against a real Hashpipe DAQ system.
+Replace <code>simulate.py</code> replay with real hardware:</p>
+<ol>
+<li>Boot the Beelink head node / Quabo stack (see <code>control/TEST-HW-SW.md</code> to be authored).</li>
+<li>Start <code>pseti-grpc server --profile daq_node</code> on the DAQ node.</li>
+<li>Port-forward port 50051 (<code>HEADNODE_IP:HEADNODE_GRPC_PORT</code>).</li>
+<li>Run <code>pa-stream-cloud --grpc-host &lt;daq-node-ip&gt;</code> — no other code changes required.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

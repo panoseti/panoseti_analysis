@@ -1,0 +1,1180 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="PANOSETI data-reduction pipeline — PFF → Zarr ingest, calibration, ML">
+      
+      
+      
+      
+        <link rel="prev" href="../output/">
+      
+      
+        <link rel="next" href="../provenance/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Storage - PANOSETI Analysis</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#panoseti-analysis-storage-spec" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="PANOSETI Analysis" class="md-header__button md-logo" aria-label="PANOSETI Analysis" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PANOSETI Analysis
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Storage
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/panoseti/panoseti_analysis" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="PANOSETI Analysis" class="md-nav__button md-logo" aria-label="PANOSETI Analysis" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    PANOSETI Analysis
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/panoseti/panoseti_analysis" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §0 Versioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-directory-layout-level-major" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1 Directory layout (level-major)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-per-store-arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §2 Per-store arrays
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§2 Per-store arrays">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sharding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sharding
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-root-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §3 Root attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-timestamp_qc-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §4 timestamp_qc schema
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-hk-store-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §5 HK store spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-ancillary-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §6 Ancillary split
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-manifestjson-per-run-per-level-with-lineage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §7 manifest.json (per-run, per-level, with lineage)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-pack-formats-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §8 PACK formats (transfer)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ML
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ML
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ml_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../streaming_ral/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Streaming (RAL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../training_ral/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training (RAL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wandb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    W&B Tracking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTRIBUTING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §0 Versioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-directory-layout-level-major" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §1 Directory layout (level-major)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-per-store-arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §2 Per-store arrays
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="§2 Per-store arrays">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sharding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sharding
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-root-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §3 Root attributes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-timestamp_qc-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §4 timestamp_qc schema
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-hk-store-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §5 HK store spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-ancillary-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §6 Ancillary split
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-manifestjson-per-run-per-level-with-lineage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §7 manifest.json (per-run, per-level, with lineage)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-pack-formats-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        §8 PACK formats (transfer)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="panoseti-analysis-storage-spec">PANOSETI Analysis Storage Spec</h1>
+<p>Storage conventions for <code>panoseti_analysis</code>. Complements pypff's L0 array spec
+(<a href="https://github.com/panoseti/panoseti_analysis/blob/main/pypff/docs/zarr_v3_spec.md"><code>pypff/docs/zarr_v3_spec.md</code></a>), which this builds on.</p>
+<h2 id="0-versioning">§0 Versioning</h2>
+<p>Two independent version namespaces, both stored as Zarr root attributes:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Owner</th>
+<th>Governs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>panoseti_pff_zarr_version</code></td>
+<td>pypff</td>
+<td>L0 array layout (<code>images</code>, <code>unix_t_ns</code>, header arrays)</td>
+</tr>
+<tr>
+<td><code>panoseti_analysis_storage_version</code></td>
+<td>this repo</td>
+<td>level structure, manifest schema, HK store, <code>timestamp_qc</code>, PACK</td>
+</tr>
+</tbody>
+</table>
+<p><code>panoseti_analysis_storage_version = "2.0"</code> (<code>MANIFEST_SCHEMA_VERSION = "2.0"</code> in tandem).
+Bumped from 1.0 when <code>processing_history: list[ProcessingStep]</code> was added to <code>StoreLineage</code>
+(breaking change — older manifests without the field still parse, defaulting to <code>[]</code>).
+<code>PROVENANCE_SCHEMA_VERSION = "1.0"</code> governs the <code>ProcessingStep</code>/<code>TrainingProvenance</code> schema
+separately. No backward-compat constraints yet — <strong>bump aggressively</strong>.
+Constants live in <code>src/panoseti_analysis/config/versions.py</code>.</p>
+<h2 id="1-directory-layout-level-major">§1 Directory layout (level-major)</h2>
+<pre><code>&lt;run&gt;/
+  L0/   &lt;run&gt;.dp_&lt;p&gt;.module_&lt;m&gt;.zarr/ …   hk.&lt;hashset&gt;.zarr/   manifest.json   .panoseti-meta/
+  L1/   &lt;run&gt;.dp_&lt;p&gt;.module_&lt;m&gt;.zarr/ …                        manifest.json   .panoseti-meta/
+  L2/   &lt;run&gt;.cloud.module_&lt;m&gt;.zarr/ …                         manifest.json   .panoseti-meta/
+</code></pre>
+<ul>
+<li><strong>One store per <code>(data_product, module)</code></strong> — the smallest unit with a coherent shared time
+  axis. Never consolidate modules/products (PH is event-based; movie products differ in
+  cadence). Cross-module science (SETI multiplicity, gamma stereo) is a <strong>temporal join</strong> over
+  the sorted int64 <code>unix_t_ns</code> indices via the coincidence-finder kernel — not physical
+  consolidation.</li>
+<li>Levels are produced by <strong>publishing</strong> (<code>output {}</code> block), not by the converter.</li>
+</ul>
+<h2 id="2-per-store-arrays">§2 Per-store arrays</h2>
+<p><strong>L0 (from pypff):</strong> required <code>images (T,H,W)</code>, <code>unix_t_ns (T,) int64</code>; optional header arrays
+(single-level <code>pkt_num</code>/<code>pkt_tai</code>/<code>pkt_nsec</code>/<code>tv_sec</code>/<code>tv_usec</code>/<code>quabo_num</code>; module-level
+<code>quabo_&lt;i&gt;_*</code>). Chunking per pypff (~8 MB pre-compression image chunks).</p>
+<p><strong>L1 (calibrated):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Product family</th>
+<th>Required arrays</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ph (<code>ph256</code>,<code>ph1024</code>)</td>
+<td><code>pedestal_subtracted</code> float32 <code>(T,H,W)</code>; <code>hot_pixel_mask</code>,<code>dead_pixel_mask</code> uint8 <code>(H,W)</code></td>
+</tr>
+<tr>
+<td>img (<code>img8</code>,<code>img16</code>)</td>
+<td><code>median_subtracted</code> float32 <code>(T,H,W)</code>; <code>hot_pixel_mask</code>,<code>dead_pixel_mask</code> uint8 <code>(H,W)</code></td>
+</tr>
+</tbody>
+</table>
+<p>L1 carries forward all L0 header/timing arrays (incl. <code>pkt_num</code>). <code>unix_t_ns</code> is
+monotonic-non-decreasing (§4). Time-like dims are rechunked uniformly on write. With <code>shard_factor=0</code> (default), the
+physical zarr chunk is ≤16384 frames. With <code>shard_factor=N</code>, each physical shard file
+packs N×16384 frames — reducing file counts ~N× on BeeGFS/Expanse without changing read
+semantics (all zarr-python ≥3.0 readers handle sharded stores transparently).</p>
+<p><strong>L2 (Derived Products):</strong></p>
+<ul>
+<li><strong>Cloud Detector</strong> (<code>cloud</code>): One store per <code>(model, module)</code>. Time dimension <code>T_l2</code>
+  (window-centers, monotonic-non-decreasing <code>int64</code>). Arrays:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Array</th>
+<th>Dtype</th>
+<th>Dims</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cloud_score</code></td>
+<td>float32</td>
+<td><code>(T_l2,)</code></td>
+<td>P(not-clear); range 0.0–1.0</td>
+</tr>
+<tr>
+<td><code>cloud_label</code></td>
+<td>uint8</td>
+<td><code>(T_l2,)</code></td>
+<td>0=clear, 1=cloudy (≥ threshold)</td>
+</tr>
+<tr>
+<td><code>feature_raw_fft</code></td>
+<td>float32</td>
+<td><code>(T_l2, H, W)</code></td>
+<td>log-magnitude FFT of stacked frame</td>
+</tr>
+<tr>
+<td><code>feature_deriv_fft</code></td>
+<td>float32</td>
+<td><code>(T_l2, H, W)</code></td>
+<td>log-magnitude FFT of 60 s diff</td>
+</tr>
+<tr>
+<td><code>unix_t_ns</code></td>
+<td>int64</td>
+<td><code>(T_l2,)</code></td>
+<td>Window-center timestamps; monotonic</td>
+</tr>
+</tbody>
+</table>
+<p>Root attrs (in addition to inherited L1 attrs):
+  - <code>data_level = "L2"</code>
+  - <code>panoseti_analysis_storage_version</code> (from <code>config/versions.py</code>)
+  - <code>inference_params = {"cadence_s": float, "threshold": float}</code>
+  - <code>model = {"model_name": str, "model_version": str, "checksum": "sha256:&lt;hex&gt;"}</code></p>
+<p>L2 manifest lineage entry per store: <code>StoreLineage</code> (see <code>config/models.py</code>) with fields
+  <code>dp</code>, <code>module</code>, <code>level="L2"</code>, <code>kind="cloud"</code>, <code>store</code>, <code>n_frames</code>, <code>source_store</code>,
+  <code>model</code>, <code>inference_params</code>.</p>
+<h3 id="sharding">Sharding</h3>
+<p>Sharding (<code>ShardingCodec</code>, Zarr v3) packs multiple inner chunks into one physical file,
+dramatically reducing inode counts on parallel filesystems.</p>
+<p><strong>Recommended shard factors by platform:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th><code>shard_factor_l0</code></th>
+<th><code>shard_factor_l1</code></th>
+<th>L0 files (img16, 13.6M frames)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Laptop / test</td>
+<td>0</td>
+<td>0</td>
+<td>~38K</td>
+</tr>
+<tr>
+<td>RAL (BeeGFS)</td>
+<td>16</td>
+<td>8</td>
+<td>~468</td>
+</tr>
+<tr>
+<td>Expanse (SDSC)</td>
+<td>16</td>
+<td>8</td>
+<td>~468 (required: 2M inode quota)</td>
+</tr>
+</tbody>
+</table>
+<p>Sharding is transparent to readers: <code>xr.open_zarr</code>, <code>zarr.open_group</code>, and all zarr-python
+≥3.0 readers access sharded and unsharded stores identically. Feature caches (produced by
+<code>pa-features-cloud</code>) use a single monolithic chunk per variable — sharding is not applied
+there.</p>
+<h2 id="3-root-attributes">§3 Root attributes</h2>
+<p><code>data_level</code> (string validated against the extensible registry in <code>config/levels.py</code> — <strong>not</strong>
+a hardcoded enum; L0/L1 defined, L2+ open and biased toward future gammapy DL3 compatibility),
+plus pypff's <code>data_product</code>/<code>module</code>/<code>bytes_per_pixel</code>/<code>total_frames</code>/<code>frame_config</code>/
+<code>source_pff_files</code>/<code>run_configs</code>, both <code>panoseti_*_version</code> keys, and on L1:
+<code>calibration = {kind, …params}</code> and <code>timestamp_qc = {…}</code> (§4).
+All levels carry <code>processing_history: list[ProcessingStep]</code> (see <code>docs/provenance.md</code>) — an
+ordered record of every reduction step that produced this store, stamped by <code>io/stores.py::write_store</code>
+or <code>io/stores.py::stamp_history</code> (for pypff-written L0 stores).</p>
+<h2 id="4-timestamp_qc-schema">§4 <code>timestamp_qc</code> schema</h2>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;clean|repaired|flagged|suspect&quot;,
+  &quot;monotonic&quot;: true,
+  &quot;n_frames&quot;: 0,
+  &quot;n_nonmonotonic&quot;: 0,
+  &quot;n_duplicates&quot;: 0,
+  &quot;max_gap_ns&quot;: 0,
+  &quot;n_gaps_over_threshold&quot;: 0,
+  &quot;gap_threshold_ns&quot;: 0,
+  &quot;t_start_ns&quot;: 0,
+  &quot;t_end_ns&quot;: 0
+}
+</code></pre>
+<ul>
+<li><strong>L0</strong> is a faithful native-order PFF mirror; it only <em>records</em> QC (status ∈ clean/flagged/
+  suspect — never "repaired").</li>
+<li><strong>L1+ guarantees monotonic-non-decreasing <code>unix_t_ns</code></strong> — a downstream contract the
+  coincidence-finder's binary search depends on. L0→L1 stable-sorts by <code>unix_t_ns</code> to repair
+  benign non-monotonicity (DAQ real-time buffering), <strong>never drops frames</strong> (duplicates flagged,
+  not removed), and sets status <code>repaired</code> when reordering occurred, else <code>flagged</code>/<code>clean</code>.</li>
+<li><strong>Reversibility:</strong> L1's <code>pkt_num</code> array preserves the original acquisition order;
+  <code>np.argsort(L1.pkt_num)</code> reconstructs the pre-sort frame ordering.</li>
+<li>Gap threshold is data-product-aware: <code>gap_factor×cadence_ns</code> for img; <code>median+10·MAD</code> of
+  inter-arrival intervals for event-based ph.</li>
+<li><code>suspect</code> = a single backward jump exceeds a corruption-grade displacement (img: 1000×
+  cadence; ph: 1 s — tunable, calibrate on real data). <code>pa-calibrate --fail-on-suspect</code>
+  (default true) aborts on <code>suspect</code>.</li>
+</ul>
+<h2 id="5-hk-store-spec">§5 HK store spec</h2>
+<p>Per-run, <strong>per-hashset</strong> flat-root <code>hk.&lt;hashset&gt;.zarr</code> (e.g. <code>hk.quabo.zarr</code>, <code>hk.weather.zarr</code>,
+<code>hk.mount.zarr</code>). <code>hk.pff</code> is a single observatory-wide head-node redis-snapshot file, so HK is
+<strong>not</strong> per-module (weather/mount aren't module-scoped). Each hashset has a fixed within-run
+schema → a clean typed table on its own <code>hk_t_ns (N,) int64</code> ~1 Hz axis (no cross-device union).
+Quabo hashsets carry <code>module</code>/<code>quabo</code> as a coordinate. Emitted under <code>L0/</code>; raw <code>hk.pff</code>
+retained in <code>.panoseti-meta/</code>.</p>
+<h2 id="6-ancillary-split">§6 Ancillary split</h2>
+<ul>
+<li>(a) array-like telemetry → HK stores (§5).</li>
+<li>(b) small scalar configs (daq/obs/network/quabo) → root <code>run_configs</code> <strong>and</strong> raw in sidecar.</li>
+<li>(c) logs / manifests / version files (<code>sw_info</code>) / sentinels (<code>run_complete</code>,
+  <code>recording_ended</code>) / calibration coeffs (<code>quabo_ph_baseline</code>) → <code>.panoseti-meta/</code>,
+  <strong>propagated to every level</strong> (each level is a self-describing snapshot).</li>
+</ul>
+<h2 id="7-manifestjson-per-run-per-level-with-lineage">§7 <code>manifest.json</code> (per-run, per-level, with lineage)</h2>
+<pre><code class="language-json">{ &quot;panoseti_analysis_storage_version&quot;: &quot;2.0&quot;, &quot;manifest_schema_version&quot;: &quot;2.0&quot;,
+  &quot;run_id&quot;: &quot;obs_…&quot;, &quot;level&quot;: &quot;L1&quot;, &quot;created_utc&quot;: &quot;…&quot;, &quot;seed_manifest_version&quot;: &quot;1.0&quot;,
+  &quot;stores&quot;: [
+    { &quot;dp&quot;: &quot;ph256&quot;, &quot;module&quot;: &quot;1&quot;, &quot;level&quot;: &quot;L1&quot;, &quot;kind&quot;: &quot;ph&quot;,
+      &quot;store&quot;: &quot;obs_….dp_ph256.module_1.L1.zarr&quot;, &quot;n_frames&quot;: 16487,
+      &quot;time_range&quot;: [t0_ns, t1_ns], &quot;checksum&quot;: &quot;sha256:…&quot;,
+      &quot;source_store&quot;: &quot;obs_….dp_ph256…zarr&quot;,
+      &quot;calibration_params&quot;: {&quot;kind&quot;:&quot;ph&quot;,&quot;sigma_threshold&quot;:5.0,&quot;baseline_offset&quot;:800,&quot;frame_stride&quot;:200},
+      &quot;timestamp_qc&quot;: { &quot;...&quot;: &quot;...&quot; }, &quot;cadence_ns&quot;: null } ] }
+</code></pre>
+<p>L0 manifest = pypff store enumeration augmented with <code>n_frames</code>/<code>time_range</code>/<code>checksum</code>. L1
+manifest adds <code>source_store</code> + <code>calibration_params</code> lineage. L2 manifest adds <code>model</code> (name, version, checksum)
+and <code>inference_params</code>. Built by <code>pa-manifest</code>: the
+adapter does the I/O (reads store attrs, computes checksums); the pure <code>build_level_manifest</code>
+kernel merges/validates. Manifests are grouped by <code>run_id</code> so a multi-run samplesheet yields
+one manifest per run per level. Each <code>StoreLineage</code> entry echoes the store's <code>processing_history</code>; see <code>docs/provenance.md</code> for the full spec.</p>
+<h2 id="8-pack-formats-transfer">§8 PACK formats (transfer)</h2>
+<p>One packed file per <code>(dp,module,level)</code> + HK; never Globus raw chunk directories.</p>
+<ul>
+<li><strong>tar</strong> — compute hop (UCSD→Expanse): fast unpack to Lustre directory stores.</li>
+<li><strong>Zarr ZipStore</strong> — archive hop (Expanse→Cylon): readable in place
+  (<code>xr.open_zarr("zip://…")</code> / <code>zarr.storage.ZipStore</code>). Uses <code>ZIP_STORED</code> (chunks are already
+  zstd — no double compression) and ZIP64 (a whole store can exceed 4 GB).</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
