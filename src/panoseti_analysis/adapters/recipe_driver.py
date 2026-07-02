@@ -22,6 +22,7 @@ from panoseti_analysis.adapters.convert import run_convert
 from panoseti_analysis.adapters.hk import run_hk
 from panoseti_analysis.adapters.manifest import run_manifest
 from panoseti_analysis.adapters.nextflow.classify_cloud import run_classify
+from panoseti_analysis.adapters.quicklook import main as run_l1_quicklook
 from panoseti_analysis.config.levels import infer_kind
 from panoseti_analysis.config.models import Manifest, StoreLineage
 from panoseti_analysis.io.pff import read_pff_run
@@ -148,6 +149,13 @@ def run_pipeline(
             )
             outputs.l1_stores.append(l1_rec)
             l1_lineage_files.append(lineage_file)
+
+            l1_quicklooks_dir = out_dir / "L1_quicklooks"
+            l1_quicklooks_dir.mkdir(parents=True, exist_ok=True)
+            quicklook_name = l1_name.replace(".L1.zarr", ".quicklook.png")
+            l1_ql_path = l1_quicklooks_dir / quicklook_name
+            run_l1_quicklook(l0_path, l1_path, l1_ql_path)
+
             if not run_id:
                 ds = open_store(l0_path)
                 run_id = str(ds.attrs.get("run_id", obs_dir.name))
@@ -186,11 +194,17 @@ def run_pipeline(
             l2_name = rec.store.replace(".L1.zarr", ".L2.zarr")
             l2_path = l2_dir / l2_name
             lineage_file = l2_dir / l2_name.replace(".zarr", ".lineage.json")
+
+            l2_quicklooks_dir = out_dir / "L2_quicklooks"
+            l2_quicklooks_dir.mkdir(parents=True, exist_ok=True)
+            l2_ql_path = l2_quicklooks_dir / l2_name.replace(".zarr", ".quicklook.png")
+
             l2_rec = run_classify(
                 l1_store=l1_path,
                 l2_store=l2_path,
                 model_path=model_path,
                 lineage_out=lineage_file,
+                quicklook_out=l2_ql_path,
                 codec=codec,
                 level=level,
             )
