@@ -1,10 +1,10 @@
-name: "propagate_meta"
-description: propagate_meta module for PANOSETI analysis
+name: "l1_quicklook"
+description: l1_quicklook module for PANOSETI analysis
 keywords:
   - panoseti
 tools:
-  - propagate_meta:
-      description: propagate_meta module
+  - l1_quicklook:
+      description: l1_quicklook module
       homepage: https://github.com/panoseti/analysis
       documentation: https://github.com/panoseti/analysis
       tool_dev_url: https://github.com/panoseti/analysis
@@ -17,26 +17,28 @@ input:
         description: |
           Groovy Map containing sample information
           e.g. `[ id:'test', single_end:false ]`
-    - l0_dir:
+    - l0_store:
         type: file
         description: |
-          Input l0_dir
+          Input l0_store
         pattern: "*"
-    - level:
-        type: value
+    - l1_store:
+        type: file
         description: |
-          Input level
+          Input l1_store
+        pattern: "*"
 output:
-  - meta:
-      - level:
-          type: value
+  - quicklook:
+      - meta:
+          type: map
           description: |
-            Output level
-      - \"*/.panoseti-meta\":
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.png":
           type: file
           description: |
-            Output */.panoseti-meta
-          pattern: "*/.panoseti-meta"
+            Output *.png
+          pattern: "*.png"
   - versions:
       - versions.yml:
           type: file

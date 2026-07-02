@@ -8,6 +8,7 @@ include { CALIBRATE_PH }                         from '../../../modules/local/ca
 include { CALIBRATE_IMG }                        from '../../../modules/local/calibrate_img/main'
 include { BUILD_MANIFEST as BUILD_MANIFEST_L0 }  from '../../../modules/local/build_manifest/main'
 include { BUILD_MANIFEST as BUILD_MANIFEST_L1 }  from '../../../modules/local/build_manifest/main'
+include { L1_QUICKLOOK }                         from '../../../modules/local/l1_quicklook/main'
 
 workflow INGEST {
 
@@ -38,6 +39,13 @@ workflow INGEST {
     ch_l1_store   = CALIBRATE_PH.out.store.mix(CALIBRATE_IMG.out.store)
     ch_l1_lineage = CALIBRATE_PH.out.lineage.mix(CALIBRATE_IMG.out.lineage)
 
+    // Pair L0 and L1 stores to generate quicklooks.
+    // They share the exact same `meta` except `meta.level`.
+    // Wait, `CALIBRATE_PH/IMG` pass `meta` unmodified. We can just join them!
+    // Nextflow join matches on the exact first tuple element (meta).
+    ch_l0_and_l1 = ch_l0_stores.join(ch_l1_store)
+    L1_QUICKLOOK(ch_l0_and_l1)
+
     // L0 manifest: one array lineage file per run.
     BUILD_MANIFEST_L0(
         PFF_TO_ZARR.out.l0.map { meta, _stores, lineage -> tuple(meta.run_id, lineage, 'L0') }
@@ -52,11 +60,12 @@ workflow INGEST {
     )
 
     emit:
-    l0_stores   = ch_l0_stores
-    l1_stores   = ch_l1_store
-    hk_stores   = BUILD_HK.out.stores
+    l0_stores     = ch_l0_stores
+    l1_stores     = ch_l1_store
+    l1_quicklooks = L1_QUICKLOOK.out.quicklook
+    hk_stores     = BUILD_HK.out.stores
                       .map { meta, stores -> tuple(meta, stores instanceof List ? stores : [stores]) }
                       .transpose()
-    l0_manifest = BUILD_MANIFEST_L0.out.manifest.map { _level, m -> m }
-    l1_manifest = BUILD_MANIFEST_L1.out.manifest.map { _level, m -> m }
+    l0_manifest   = BUILD_MANIFEST_L0.out.manifest.map { _level, m -> m }
+    l1_manifest   = BUILD_MANIFEST_L1.out.manifest.map { _level, m -> m }
 }

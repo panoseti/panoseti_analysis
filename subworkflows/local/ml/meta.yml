@@ -3,6 +3,7 @@ description: Local subworkflow ml for panoseti_analysis
 keywords:
   - panoseti
   - analysis
+  - pipeline
 components:
   - ml
 

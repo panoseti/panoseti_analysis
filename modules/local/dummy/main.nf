@@ -20,8 +20,16 @@ process DUMMY {
     task.ext.when == null || task.ext.when
 
     script:
+    def args = task.ext.args ?: ''
+    def args2 = task.ext.args2 ?: ''
     """
+    ${args} ${args2}
 
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        panoseti_analysis: \$(pa-run --version 2>&1 | sed 's/pa-run version //')
+    END_VERSIONS
     """
 
     stub:

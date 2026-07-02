@@ -42,6 +42,7 @@ workflow PANOSETI_ANALYSIS {
     hk_stores     = ANALYSIS.out.hk_stores.map   { _meta, s -> s }
     l0_manifest   = ANALYSIS.out.l0_manifest
     l1_manifest   = ANALYSIS.out.l1_manifest
+    l1_quicklooks = ANALYSIS.out.l1_quicklooks.map { _meta, s -> s }
     l2_stores     = ANALYSIS.out.l2_stores.map   { _meta, s -> s }
     l2_manifest   = ANALYSIS.out.l2_manifest
     l2_quicklooks = ANALYSIS.out.l2_quicklooks.map { _meta, s -> s }
@@ -90,6 +91,7 @@ workflow {
     hk_stores     = PANOSETI_ANALYSIS.out.hk_stores
     l0_manifest   = PANOSETI_ANALYSIS.out.l0_manifest
     l1_manifest   = PANOSETI_ANALYSIS.out.l1_manifest
+    l1_quicklooks = PANOSETI_ANALYSIS.out.l1_quicklooks
     l2_stores     = PANOSETI_ANALYSIS.out.l2_stores
     l2_manifest   = PANOSETI_ANALYSIS.out.l2_manifest
     l2_quicklooks = PANOSETI_ANALYSIS.out.l2_quicklooks
@@ -103,6 +105,7 @@ output {
     hk_stores     { path 'L0' }
     l0_manifest   { path 'L0' }
     l1_manifest   { path 'L1' }
+    l1_quicklooks { path 'L1_quicklooks' }
     l2_stores     { path 'L2' }
     l2_manifest   { path 'L2' }
     l2_quicklooks { path 'L2_quicklooks' }

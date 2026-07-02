@@ -1,32 +1,64 @@
-name: classify_cloud_ray
-description: Local module classify_cloud_ray for panoseti_analysis
+name: "classify_cloud_ray"
+description: classify_cloud_ray module for PANOSETI analysis
 keywords:
   - panoseti
 tools:
   - classify_cloud_ray:
-      description: classify_cloud_ray component
-      homepage: None
-      documentation: None
-      tool_dev_url: None
+      description: classify_cloud_ray module
+      homepage: https://github.com/panoseti/analysis
+      documentation: https://github.com/panoseti/analysis
+      tool_dev_url: https://github.com/panoseti/analysis
       doi: ""
       licence: "['MIT']"
+      identifier: ""
 input:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - - run_id:
+        type: value
+        description: |
+          Input run_id
+    - l1_stores:
+        type: file
+        description: |
+          Input l1_stores
+        pattern: "*"
+  - - model_file:
+        type: file
+        description: |
+          Input model_file
+        pattern: "*"
+  - - model_json:
+        type: file
+        description: |
+          Input model_json
+        pattern: "*"
 output:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - stores:
+      - "*.zarr":
+          type: file
+          description: |
+            Output *.zarr
+          pattern: "*.zarr"
+  - lineage:
+      - run_id:
+          type: value
+          description: |
+            Output run_id
+      - lineage.json:
+          type: file
+          description: |
+            Output lineage.json
+          pattern: "lineage.json"
+  - quicklook:
+      - "*.png":
+          type: file
+          description: |
+            Output *.png
+          pattern: "*.png"
   - versions:
-      type: file
-      description: File containing software versions
-      pattern: "versions.yml"
+      - versions.yml:
+          type: file
+          description: |
+            Output versions.yml
+          pattern: "versions.yml"
 authors:
-  - "@nraultwang"
-maintainers:
-  - "@nraultwang"
+  - "@nicolas"

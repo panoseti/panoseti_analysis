@@ -1,32 +1,48 @@
-name: pack
-description: Local module pack for panoseti_analysis
+name: "pack"
+description: pack module for PANOSETI analysis
 keywords:
   - panoseti
 tools:
   - pack:
-      description: pack component
-      homepage: None
-      documentation: None
-      tool_dev_url: None
+      description: pack module
+      homepage: https://github.com/panoseti/analysis
+      documentation: https://github.com/panoseti/analysis
+      tool_dev_url: https://github.com/panoseti/analysis
       doi: ""
       licence: "['MIT']"
+      identifier: ""
 input:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'test', single_end:false ]`
+    - store:
+        type: file
+        description: |
+          Input store
+        pattern: "*"
+    - fmt:
+        type: value
+        description: |
+          Input fmt
 output:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - packed:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.*":
+          type: file
+          description: |
+            Output *.*
+          pattern: "*.*"
   - versions:
-      type: file
-      description: File containing software versions
-      pattern: "versions.yml"
+      - versions.yml:
+          type: file
+          description: |
+            Output versions.yml
+          pattern: "versions.yml"
 authors:
-  - "@nraultwang"
-maintainers:
-  - "@nraultwang"
+  - "@nicolas"

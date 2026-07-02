@@ -1,32 +1,76 @@
-name: classify_cloud_cpu
-description: Local module classify_cloud_cpu for panoseti_analysis
+name: "classify_cloud_cpu"
+description: classify_cloud_cpu module for PANOSETI analysis
 keywords:
   - panoseti
 tools:
   - classify_cloud_cpu:
-      description: classify_cloud_cpu component
-      homepage: None
-      documentation: None
-      tool_dev_url: None
+      description: classify_cloud_cpu module
+      homepage: https://github.com/panoseti/analysis
+      documentation: https://github.com/panoseti/analysis
+      tool_dev_url: https://github.com/panoseti/analysis
       doi: ""
       licence: "['MIT']"
+      identifier: ""
 input:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'test', single_end:false ]`
+    - l1_store:
+        type: file
+        description: |
+          Input l1_store
+        pattern: "*"
+  - - model_file:
+        type: file
+        description: |
+          Input model_file
+        pattern: "*"
+  - - model_json:
+        type: file
+        description: |
+          Input model_json
+        pattern: "*"
 output:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - store:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.zarr":
+          type: file
+          description: |
+            Output *.zarr
+          pattern: "*.zarr"
+  - lineage:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.json":
+          type: file
+          description: |
+            Output *.json
+          pattern: "*.json"
+  - quicklook:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.png":
+          type: file
+          description: |
+            Output *.png
+          pattern: "*.png"
   - versions:
-      type: file
-      description: File containing software versions
-      pattern: "versions.yml"
+      - versions.yml:
+          type: file
+          description: |
+            Output versions.yml
+          pattern: "versions.yml"
 authors:
-  - "@nraultwang"
-maintainers:
-  - "@nraultwang"
+  - "@nicolas"

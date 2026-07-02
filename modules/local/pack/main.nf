@@ -7,10 +7,19 @@ process PACK {
 
     output:
     tuple val(meta), path("${store.name}.${fmt == 'tar' ? 'tar' : 'zarr.zip'}"), emit: packed
+    path "versions.yml", emit: versions
 
     script:
-    def ext = fmt == 'tar' ? 'tar' : 'zarr.zip'
+    def args = task.ext.args ?: ''
+    def args2 = task.ext.args2 ?: ''
+    ext = fmt == 'tar' ? 'tar' : 'zarr.zip'
     """
-    pa-pack ${store} ${store.name}.${ext} --format ${fmt}
+    ${args} ${args2}
+pa-pack ${store} ${store.name}.${ext} --format ${fmt}
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        panoseti_analysis: \$(pa-run --version 2>&1 | sed 's/pa-run version //')
+    END_VERSIONS
     """
 }

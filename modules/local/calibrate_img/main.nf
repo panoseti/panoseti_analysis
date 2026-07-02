@@ -8,12 +8,16 @@ process CALIBRATE_IMG {
     output:
     tuple val(meta), path("${meta.run_id}.dp_${meta.dp}.module_${meta.module}.L1.zarr"), emit: store
     tuple val(meta), path("${meta.run_id}.dp_${meta.dp}.module_${meta.module}.L1.lineage.json"), emit: lineage
+    path "versions.yml", emit: versions
 
     script:
-    def out_store = "${meta.run_id}.dp_${meta.dp}.module_${meta.module}.L1.zarr"
+    def args = task.ext.args ?: ''
+    def args2 = task.ext.args2 ?: ''
+    out_store = "${meta.run_id}.dp_${meta.dp}.module_${meta.module}.L1.zarr"
     def out_lineage = "${meta.run_id}.dp_${meta.dp}.module_${meta.module}.L1.lineage.json"
     """
-    pa-calibrate ${l0_store} ${out_store} \\
+    ${args} ${args2}
+pa-calibrate ${l0_store} ${out_store} \\
         --kind img \\
         --img-stride ${params.img_stride} \\
         --block ${params.img_block} \\
@@ -22,5 +26,10 @@ process CALIBRATE_IMG {
         --level ${params.level} \\
         --shard-factor ${params.shard_factor_l1} \\
         --lineage-out ${out_lineage}
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        panoseti_analysis: \$(pa-run --version 2>&1 | sed 's/pa-run version //')
+    END_VERSIONS
     """
 }

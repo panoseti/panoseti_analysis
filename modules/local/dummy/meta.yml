@@ -1,65 +1,51 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
 name: "dummy"
-description: write your description here
+description: dummy module for PANOSETI analysis
 keywords:
-  - sort
-  - example
-  - genomics
+  - panoseti
 tools:
-  - "dummy":
-      description: ""
-      homepage: ""
-      documentation: ""
-      tool_dev_url: ""
+  - dummy:
+      description: dummy module
+      homepage: https://github.com/panoseti/analysis
+      documentation: https://github.com/panoseti/analysis
+      tool_dev_url: https://github.com/panoseti/analysis
       doi: ""
-      licence: null
-      identifier: null
-
+      licence: "['MIT']"
+      identifier: ""
 input:
   - - meta:
         type: map
-        description: Groovy Map containing sample information. e.g. `[
-          id:'sample1' ]`
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'test', single_end:false ]`
     - input:
         type: file
-        description: ""
-        pattern: ""
-        ontologies:
-          - edam: ""
+        description: |
+          Input input
+        pattern: "*"
 output:
-  output:
-    - - meta:
+  - output:
+      - meta:
           type: map
-          description: Groovy Map containing sample information. e.g. `[
-            id:'sample1' ]`
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
       - "*":
           type: file
-          description: ""
-          pattern: ""
-          ontologies:
-            - edam: ""
-  versions_dummy:
-    - - ${task.process}:
-          type: string
-          description: The name of the process
+          description: |
+            Output *
+          pattern: "*"
+  - versions_dummy:
+      - ${task.process}:
+          type: value
+          description: |
+            Output *
       - dummy:
-          type: string
-          description: The name of the tool
+          type: value
+          description: |
+            Output dummy
       - dummy --version:
-          type: eval
-          description: The expression to obtain the version of the tool
-topics:
-  versions:
-    - - ${task.process}:
-          type: string
-          description: The name of the process
-      - dummy:
-          type: string
-          description: The name of the tool
-      - dummy --version:
-          type: eval
-          description: The expression to obtain the version of the tool
+          type: value
+          description: |
+            Output dummy --version
 authors:
-  - "@nraultwang"
-maintainers:
-  - "@nraultwang"
+  - "@nicolas"

@@ -3,11 +3,12 @@ repository_type: pipeline
 nf_core_version: 4.0.2
 
 lint:
-  meta_yml_exists: false
+  check_local_copy: false
+  meta_yml_exists: true
   subworkflow_include: false
   main_nf_include_used: false
-  subworkflow_version: false
-  local_component_structure: false
+  subworkflow_version: true
+  local_component_structure: true
   template_strings:
     - docs/plans/nextflow-modernization.md
   files_unchanged:

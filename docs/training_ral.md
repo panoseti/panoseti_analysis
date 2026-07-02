@@ -38,7 +38,7 @@ cd cluster/monitoring && docker compose up -d   # prometheus/grafana (if not run
 # Dashboard: http://digilab-receiver:8265   Grafana: http://digilab-receiver:3000
 ```
 
-Edit node IPs / GPU counts / env names / labels in [`cluster/ral_nodes.conf`](../cluster/ral_nodes.conf)
+Edit node IPs / GPU counts / env names / labels in [`cluster/ral_nodes.conf`](https://github.com/panoseti/panoseti_analysis/blob/main/cluster/ral_nodes.conf)
 — never in the scripts. `ral_up.sh` also runs a payload guard that aborts if a large file
 (> 50 MB) would be rsynced to the workers (override with `--allow-large`).
 
@@ -92,7 +92,7 @@ pa-tune-cloud --launcher attach --recipe recipes/ml/cloud_v1.yml \
 ```
 
 Add a `tune:` block to the recipe to define the search space. See
-[`recipes/ml/my_model_v1_template.yml`](../recipes/ml/my_model_v1_template.yml) for the
+[`recipes/ml/my_model_v1_template.yml`](https://github.com/panoseti/panoseti_analysis/blob/main/recipes/ml/my_model_v1_template.yml) for the
 format (`uniform`, `loguniform`, `choice`, `grid`, `randint`).
 
 ## Environment notes

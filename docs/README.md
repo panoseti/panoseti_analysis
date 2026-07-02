@@ -1,3 +1,3 @@
-# panoseti_analysis Documentation
+# docs
 
-This directory contains the documentation for the panoseti_analysis Nextflow pipeline.
+See index.md

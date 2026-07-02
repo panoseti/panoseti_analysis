@@ -111,7 +111,7 @@ Please also refer to the [pipeline-specific contribution guidelines](#pipeline-s
 - [ ] Perform local tests to validate that the new code works as expected.
   - [ ] If applicable, add a new test in the `tests` directory.
 - [ ] Update `usage.md`, `output.md`, and `citation.md` as appropriate.
-- [ ] [Lint](lint) the code with nf-core/tools.
+- [ ] [Lint](#lint-tests) the code with nf-core/tools.
 - [ ] Update any diagrams or pipeline images as necessary.
 
 To update the minimum required Nextflow version, see the [Nextflow version bumping](#nextflow-version-bumping) section below. For more information about pipeline contributions, see [pipeline-specific contribution guidelines](#pipeline-specific-contribution-guidelines).
@@ -162,4 +162,22 @@ If you update images or graphics, follow the nf-core [style guidelines](https://
 
 ## Pipeline specific contribution guidelines
 
-<!-- TODO nf-core: Add any pipeline specific contribution guidelines here, such as coding styles, procedures, checklists etc. -->
+### Editing and Previewing Documentation
+
+The documentation for this pipeline is built using [MkDocs](https://www.mkdocs.org/) with the [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme. The configuration is managed in `mkdocs.yml` at the root of the repository.
+
+To preview the documentation locally while making edits, simply install the `mkdocs-material` theme and run the built-in development server:
+
+```bash
+# Install the MkDocs Material theme using uv
+uv pip install mkdocs-material
+
+# Start the live-reloading local server
+uv run mkdocs serve
+```
+
+This will host the documentation at `http://127.0.0.1:8000/`. The page will automatically refresh as you edit files in the `docs/` directory.
+
+### Documentation Hosting
+
+The documentation is automatically published to GitHub Pages using a GitHub Actions workflow (`.github/workflows/docs.yml`). Every time a change is merged into the `main` or `master` branch, the workflow will build the MkDocs site and push the static HTML files to the `gh-pages` branch, which updates the live website automatically. No manual deployment is necessary!

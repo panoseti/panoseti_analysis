@@ -1,32 +1,46 @@
-name: build_manifest
-description: Local module build_manifest for panoseti_analysis
+name: "build_manifest"
+description: build_manifest module for PANOSETI analysis
 keywords:
   - panoseti
 tools:
   - build_manifest:
-      description: build_manifest component
-      homepage: None
-      documentation: None
-      tool_dev_url: None
+      description: build_manifest module
+      homepage: https://github.com/panoseti/analysis
+      documentation: https://github.com/panoseti/analysis
+      tool_dev_url: https://github.com/panoseti/analysis
       doi: ""
       licence: "['MIT']"
+      identifier: ""
 input:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - - run_id:
+        type: value
+        description: |
+          Input run_id
+    - lineage:
+        type: file
+        description: |
+          Input lineage
+        pattern: "*"
+    - level:
+        type: value
+        description: |
+          Input level
 output:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - manifest:
+      - level:
+          type: value
+          description: |
+            Output level
+      - manifest.json:
+          type: file
+          description: |
+            Output manifest.json
+          pattern: "manifest.json"
   - versions:
-      type: file
-      description: File containing software versions
-      pattern: "versions.yml"
+      - versions.yml:
+          type: file
+          description: |
+            Output versions.yml
+          pattern: "versions.yml"
 authors:
-  - "@nraultwang"
-maintainers:
-  - "@nraultwang"
+  - "@nicolas"

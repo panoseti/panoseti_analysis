@@ -2,7 +2,7 @@
 
 This document outlines the architecture of the Machine Learning workloads in `panoseti_analysis`, focusing primarily on the Cloud Detection inference pipeline, the Nextflow-to-Ray substrate, and future extensions.
 
-**Model cards:** [Cloud Detector](../ml/cloud-detection/README.md) · [β-VAE Anomaly Detector](../ml/anomaly-detection/README.md)  
+**Model cards:** [Cloud Detector](https://github.com/panoseti/panoseti_analysis/blob/main/ml/cloud-detection/README.md) · [β-VAE Anomaly Detector](https://github.com/panoseti/panoseti_analysis/blob/main/ml/anomaly-detection/README.md)  
 **Operational guides:** [Real-time Streaming (RAL)](streaming_ral.md) · [Training on RAL](training_ral.md)
 
 ## Data Flow & Inference Pipeline

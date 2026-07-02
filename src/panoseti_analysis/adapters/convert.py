@@ -50,8 +50,6 @@ def run_convert(
         level=level,
         time_chunk=time_chunk or None,
         shard_factor=shard_factor,
-        use_tensorstore=use_tensorstore,
-        max_workers=max_workers,
     )
     duration_s = time.perf_counter() - _t0
 

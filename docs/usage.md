@@ -73,7 +73,7 @@ nextflow run . -profile hpc_slurm \
 ```
 
 Or use the launcher: `bash scripts/launchers/expanse.sh <obs.pffd> <results_dir>`.
-Build the container per [`../containers/README.md`](../containers/README.md) and pin it via
+Build the container per [`../containers/README.md`](https://github.com/panoseti/panoseti_analysis/blob/main/containers/README.md) and pin it via
 `--container` / `conf/hpc_slurm.config`.
 
 ## Key parameters

@@ -1,32 +1,44 @@
-name: build_hk
-description: Local module build_hk for panoseti_analysis
+name: "build_hk"
+description: build_hk module for PANOSETI analysis
 keywords:
   - panoseti
 tools:
   - build_hk:
-      description: build_hk component
-      homepage: None
-      documentation: None
-      tool_dev_url: None
+      description: build_hk module
+      homepage: https://github.com/panoseti/analysis
+      documentation: https://github.com/panoseti/analysis
+      tool_dev_url: https://github.com/panoseti/analysis
       doi: ""
       licence: "['MIT']"
+      identifier: ""
 input:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'test', single_end:false ]`
+    - obs_dir:
+        type: file
+        description: |
+          Input obs_dir
+        pattern: "*"
 output:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - stores:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - hk/hk.*.zarr:
+          type: file
+          description: |
+            Output hk/hk.*.zarr
+          pattern: "hk/hk.*.zarr"
   - versions:
-      type: file
-      description: File containing software versions
-      pattern: "versions.yml"
+      - versions.yml:
+          type: file
+          description: |
+            Output versions.yml
+          pattern: "versions.yml"
 authors:
-  - "@nraultwang"
-maintainers:
-  - "@nraultwang"
+  - "@nicolas"
