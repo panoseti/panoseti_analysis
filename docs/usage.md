@@ -51,7 +51,7 @@ Because this repository uses the nf-core framework, you can use the interactive 
 pip install nf-core
 
 # Launch interactively (will open a web browser to build your config)
-nf-core pipelines launch . -profile laptop
+nf-core pipelines launch .
 ```
 
 ### Using standard CLI
