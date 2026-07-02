@@ -42,6 +42,20 @@ nextflow run . -profile laptop --input_obs_dir /path/to/obs.pffd --outdir <OUTDI
 
 ## Running the pipeline
 
+### Using `nf-core pipelines launch` (Recommended for GUI/Interactive)
+
+Because this repository uses the nf-core framework, you can use the interactive `nf-core pipelines launch` tool. This reads the `nextflow_schema.json` file and provides either a web-based GUI or an interactive command-line prompt to configure all pipeline parameters, preventing typos and validating inputs before execution.
+
+```bash
+# Install nf-core tools if you haven't already
+pip install nf-core
+
+# Launch interactively (will open a web browser to build your config)
+nf-core pipelines launch . -profile laptop
+```
+
+### Using standard CLI
+
 ```bash
 # bundled truncated test data (CI smoke):
 nextflow run . -profile test,laptop --outdir results_smoke
