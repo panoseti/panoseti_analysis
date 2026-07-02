@@ -1,0 +1,32 @@
+name: classify_cloud_ray
+description: Local module classify_cloud_ray for panoseti_analysis
+keywords:
+  - panoseti
+tools:
+  - classify_cloud_ray:
+      description: classify_cloud_ray component
+      homepage: None
+      documentation: None
+      tool_dev_url: None
+      doi: ""
+      licence: "['MIT']"
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'test', single_end:false ]
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'test', single_end:false ]
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@nraultwang"
+maintainers:
+  - "@nraultwang"

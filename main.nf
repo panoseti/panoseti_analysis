@@ -14,8 +14,8 @@
 */
 
 include { ANALYSIS  } from './workflows/analysis'
-include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_analysis_pipeline'
-include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_analysis_pipeline'
+include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_analysis_pipeline/main'
+include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_analysis_pipeline/main'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     NAMED WORKFLOWS FOR PIPELINE

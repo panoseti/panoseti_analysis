@@ -1,0 +1,32 @@
+name: propagate_meta
+description: Local module propagate_meta for panoseti_analysis
+keywords:
+  - panoseti
+tools:
+  - propagate_meta:
+      description: propagate_meta component
+      homepage: None
+      documentation: None
+      tool_dev_url: None
+      doi: ""
+      licence: "['MIT']"
+input:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'test', single_end:false ]
+output:
+  - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. [ id:'test', single_end:false ]
+  - versions:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+authors:
+  - "@nraultwang"
+maintainers:
+  - "@nraultwang"

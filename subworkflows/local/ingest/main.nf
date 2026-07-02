@@ -2,12 +2,12 @@
 // INGEST: PFF -> L0 Zarr -> L1 calibrated, per-(dp,module) fan-out + HK + manifests.
 //
 
-include { PFF_TO_ZARR }                          from '../../modules/local/pff_to_zarr'
-include { BUILD_HK }                             from '../../modules/local/build_hk'
-include { CALIBRATE_PH }                         from '../../modules/local/calibrate_ph'
-include { CALIBRATE_IMG }                        from '../../modules/local/calibrate_img'
-include { BUILD_MANIFEST as BUILD_MANIFEST_L0 }  from '../../modules/local/build_manifest'
-include { BUILD_MANIFEST as BUILD_MANIFEST_L1 }  from '../../modules/local/build_manifest'
+include { PFF_TO_ZARR }                          from '../../../modules/local/pff_to_zarr/main'
+include { BUILD_HK }                             from '../../../modules/local/build_hk/main'
+include { CALIBRATE_PH }                         from '../../../modules/local/calibrate_ph/main'
+include { CALIBRATE_IMG }                        from '../../../modules/local/calibrate_img/main'
+include { BUILD_MANIFEST as BUILD_MANIFEST_L0 }  from '../../../modules/local/build_manifest/main'
+include { BUILD_MANIFEST as BUILD_MANIFEST_L1 }  from '../../../modules/local/build_manifest/main'
 
 workflow INGEST {
 

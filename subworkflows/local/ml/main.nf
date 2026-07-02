@@ -2,8 +2,8 @@
 // ML — High-level ML subworkflow that composes specific models.
 //
 
-include { CLASSIFY_CLOUD } from './classify_cloud'
-include { BUILD_MANIFEST as BUILD_MANIFEST_L2 } from '../../modules/local/build_manifest'
+include { CLASSIFY_CLOUD } from '../classify_cloud/main'
+include { BUILD_MANIFEST as BUILD_MANIFEST_L2 } from '../../../modules/local/build_manifest/main'
 
 workflow ML {
 

@@ -1,0 +1,12 @@
+name: ml
+description: Local subworkflow ml for panoseti_analysis
+keywords:
+  - panoseti
+  - analysis
+components:
+  - ml
+
+authors:
+  - "@nraultwang"
+
+output: []

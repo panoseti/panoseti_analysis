@@ -4,9 +4,9 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { INGEST }      from '../subworkflows/local/ingest'
-include { RECONSTRUCT } from '../subworkflows/local/reconstruct'
-include { ML }          from '../subworkflows/local/ml'
+include { INGEST }      from '../subworkflows/local/ingest/main'
+include { RECONSTRUCT } from '../subworkflows/local/reconstruct/main'
+include { ML }          from '../subworkflows/local/ml/main'
 
 workflow ANALYSIS {
 

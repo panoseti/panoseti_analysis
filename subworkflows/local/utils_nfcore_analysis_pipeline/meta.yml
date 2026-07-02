@@ -1,0 +1,12 @@
+name: utils_nfcore_analysis_pipeline
+description: Pipeline-specific utilities
+keywords:
+  - panoseti
+  - analysis
+components:
+  - utils_nfcore_analysis_pipeline
+
+authors:
+  - "@nraultwang"
+
+output: []

@@ -1,0 +1,12 @@
+name: classify_cloud
+description: Local subworkflow classify_cloud for panoseti_analysis
+keywords:
+  - panoseti
+  - analysis
+components:
+  - classify_cloud
+
+authors:
+  - "@nraultwang"
+
+output: []

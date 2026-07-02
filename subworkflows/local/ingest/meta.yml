@@ -1,0 +1,12 @@
+name: ingest
+description: Local subworkflow ingest for panoseti_analysis
+keywords:
+  - panoseti
+  - analysis
+components:
+  - ingest
+
+authors:
+  - "@nraultwang"
+
+output: []
