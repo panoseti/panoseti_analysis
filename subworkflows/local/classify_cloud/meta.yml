@@ -3,6 +3,7 @@ description: Local subworkflow classify_cloud for panoseti_analysis
 keywords:
   - panoseti
   - analysis
+  - pipeline
 components:
   - classify_cloud
 

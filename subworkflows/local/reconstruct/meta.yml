@@ -3,6 +3,7 @@ description: Local subworkflow reconstruct for panoseti_analysis
 keywords:
   - panoseti
   - analysis
+  - pipeline
 components:
   - reconstruct
 

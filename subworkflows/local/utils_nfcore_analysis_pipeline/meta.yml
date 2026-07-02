@@ -3,6 +3,7 @@ description: Pipeline-specific utilities
 keywords:
   - panoseti
   - analysis
+  - pipeline
 components:
   - utils_nfcore_analysis_pipeline
 

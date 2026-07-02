@@ -1,0 +1,3 @@
+# docs
+
+See index.md
