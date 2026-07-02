@@ -21,7 +21,7 @@ workflow INGEST {
     // Fan out per (dp, module): pair each emitted store with its lineage record by name.
     ch_l0_stores = PFF_TO_ZARR.out.l0.flatMap { meta, stores, lineage ->
         def stores_list = stores instanceof List ? stores : [stores]
-        def by_name = stores_list.collectEntries { [(it.name): it] }
+        def by_name = stores_list.collectEntries { it -> [(it.name): it] }
         def records = new groovy.json.JsonSlurper().parse(lineage.toFile())
         records.collect { rec ->
             def m = meta + [dp: rec.dp, module: rec.module, kind: rec.kind, level: 'L0', cadence_ns: rec.cadence_ns]

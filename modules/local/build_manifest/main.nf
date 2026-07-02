@@ -9,7 +9,7 @@ process BUILD_MANIFEST {
     tuple val(level), path("manifest.json"), emit: manifest
 
     script:
-    def lins = (lineage instanceof List ? lineage : [lineage]).collect { "--lineage ${it}" }.join(' ')
+    def lins = (lineage instanceof List ? lineage : [lineage]).collect { it -> "--lineage ${it}" }.join(' ')
     """
     pa-manifest manifest.json --level ${level} --run-id ${run_id} ${lins}
     """

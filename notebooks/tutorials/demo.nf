@@ -21,25 +21,26 @@ process INGEST_L0 {
 process CALIBRATE_L1 {
     input:
     path l0_zarr
+    path demo_script
 
     output:
     path "L1.zarr"
 
     script:
     """
-    python3 ${projectDir}/demo_l0_to_l1.py $l0_zarr L1.zarr
+    python3 $demo_script $l0_zarr L1.zarr
     """
 }
 
 // STUDENTS: Add L2_QUICKLOOK process here
 
 workflow {
-    ch_runs = Channel.of('run_1', 'run_2')
+    ch_runs = channel.of('run_1', 'run_2')
 
     l0_out = INGEST_L0(ch_runs)
-    l1_out = CALIBRATE_L1(l0_out)
+    l1_out = CALIBRATE_L1(l0_out, file("${projectDir}/demo_l0_to_l1.py"))
 
-    l1_out.view { "Produced calibrated store: $it" }
+    l1_out.view { it -> "Produced calibrated store: $it" }
 
     // STUDENTS: Add conditional execution for L2_QUICKLOOK here
 }

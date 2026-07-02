@@ -12,7 +12,7 @@ workflow ANALYSIS {
 
     take:
     ch_samplesheet // channel: [ meta(run), obs_dir ]
-    outdir
+    _outdir
 
     main:
     def steps = (params.steps ?: 'ingest').tokenize(',')
