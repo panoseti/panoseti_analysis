@@ -3,7 +3,7 @@
 This directory contains the documentation for `panoseti_analysis` — the PANOSETI
 data-reduction pipeline (PFF → Zarr ingest, calibration, ML inference, real-time streaming).
 
-For a quick orientation and the router table, see the [top-level README](../README.md).
+For a quick orientation and the router table, see the [top-level README](https://github.com/panoseti/panoseti_analysis/blob/main/README.md).
 
 ## Documentation Index
 
@@ -21,6 +21,6 @@ For a quick orientation and the router table, see the [top-level README](../READ
 
 ## Related documentation
 
-- [`ml/README.md`](../ml/README.md) — ML projects index (cloud detection, anomaly detection)
-- [`grpc/README.md`](../grpc/README.md) — gRPC services (DAQ, ML inference)
-- [`pypff/docs/zarr_v3_spec.md`](../pypff/docs/zarr_v3_spec.md) — L0 Zarr array layout spec (pypff submodule)
+- [`ml/README.md`](https://github.com/panoseti/panoseti_analysis/blob/main/ml/README.md) — ML projects index (cloud detection, anomaly detection)
+- [`grpc/README.md`](https://github.com/panoseti/panoseti_analysis/blob/main/grpc/README.md) — gRPC services (DAQ, ML inference)
+- [`pypff/docs/zarr_v3_spec.md`](https://github.com/panoseti/panoseti_analysis/blob/main/pypff/docs/zarr_v3_spec.md) — L0 Zarr array layout spec (pypff submodule)
