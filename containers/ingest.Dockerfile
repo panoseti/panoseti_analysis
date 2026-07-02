@@ -16,6 +16,7 @@ COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY pypff/ ./pypff/
 COPY src/ ./src/
 COPY bin/ ./bin/
+COPY grpc/ ./grpc/
 
 # Install the workspace (panoseti_analysis + pypff[zarr] + deps) into /app/.venv.
 RUN uv sync --no-dev --frozen && chmod +x bin/*

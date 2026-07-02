@@ -96,6 +96,16 @@
                 "show_hidden": {
                     "type": "boolean",
                     "description": "Display hidden parameters in the help message (only works when --help or --help_full are provided)."
+                },
+                "config_profile_name": {
+                    "type": "string",
+                    "description": "Name of the config profile being used.",
+                    "hidden": true
+                },
+                "config_profile_description": {
+                    "type": "string",
+                    "description": "Description of the config profile being used.",
+                    "hidden": true
                 }
             }
         },
