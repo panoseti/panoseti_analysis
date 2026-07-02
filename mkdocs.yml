@@ -14,6 +14,7 @@ nav:
       - Streaming (RAL): streaming_ral.md
       - Training (RAL): training_ral.md
       - W&B Tracking: wandb.md
+  - HITL Remote Observatory: hitl_remote_observatory.md
   - Contributing: CONTRIBUTING.md
 
 # Theme requires:  pip install mkdocs-material
