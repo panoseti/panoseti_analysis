@@ -10,9 +10,12 @@ process CLASSIFY_CLOUD_RAY {
     path("*.zarr")                          , emit: stores
     tuple val(run_id), path("lineage.json") , emit: lineage
     path("*.png")                           , emit: quicklook
+    path "versions.yml", emit: versions
 
     script:
-    def stores_arg = l1_stores instanceof List
+    def args = task.ext.args ?: ''
+    def args2 = task.ext.args2 ?: ''
+    stores_arg = l1_stores instanceof List
         ? l1_stores.collect { it -> it.toString() }.join(' ')
         : l1_stores.toString()
 
@@ -20,7 +23,8 @@ process CLASSIFY_CLOUD_RAY {
         // Expanse / SLURM: bring up a transient Ray cluster with ray symmetric-run,
         // then dispatch inference tasks across the allocation.
         """
-        export RAY_TMPDIR=\${TMPDIR:-/tmp}
+    ${args} ${args2}
+export RAY_TMPDIR=\${TMPDIR:-/tmp}
         for store in ${stores_arg}; do
             echo "\$store" >> stores.list
         done
@@ -41,7 +45,12 @@ process CLASSIFY_CLOUD_RAY {
                 --launcher slurm \\
                 --lineage-out lineage.json \\
                 --quicklook-dir .
-        """
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        panoseti_analysis: \$(pa-run --version 2>&1 | sed 's/pa-run version //')
+    END_VERSIONS
+    """
     } else {
         // attach (RAL bare-metal) or standalone (CI/laptop): run the CLI directly.
         // init_ray() inside pa-ray-classify-cloud handles cluster attach vs. local spin-up.

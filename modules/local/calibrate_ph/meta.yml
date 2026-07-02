@@ -1,32 +1,52 @@
-name: calibrate_ph
-description: Local module calibrate_ph for panoseti_analysis
+name: "calibrate_ph"
+description: calibrate_ph module for PANOSETI analysis
 keywords:
   - panoseti
 tools:
   - calibrate_ph:
-      description: calibrate_ph component
-      homepage: None
-      documentation: None
-      tool_dev_url: None
+      description: calibrate_ph module
+      homepage: https://github.com/panoseti/analysis
+      documentation: https://github.com/panoseti/analysis
+      tool_dev_url: https://github.com/panoseti/analysis
       doi: ""
       licence: "['MIT']"
+      identifier: ""
 input:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information\n          e.g. `[ id:'test', single_end:false ]`
+    - l0_store:
+        type: file
+        description: |
+          Input l0_store
+        pattern: "*"
 output:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - store:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information\n            e.g. `[ id:'test', single_end:false ]`
+      - *.dp_*.module_*.L1.zarr:
+          type: file
+          description: |
+            Output *.dp_*.module_*.L1.zarr
+          pattern: "*.dp_*.module_*.L1.zarr"
+  - lineage:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information\n            e.g. `[ id:'test', single_end:false ]`
+      - *.dp_*.module_*.L1.lineage.json:
+          type: file
+          description: |
+            Output *.dp_*.module_*.L1.lineage.json
+          pattern: "*.dp_*.module_*.L1.lineage.json"
   - versions:
-      type: file
-      description: File containing software versions
-      pattern: "versions.yml"
+      - versions.yml:
+          type: file
+          description: |
+            Output versions.yml
+          pattern: "versions.yml"
 authors:
-  - "@nraultwang"
-maintainers:
-  - "@nraultwang"
+  - "@nicolas"

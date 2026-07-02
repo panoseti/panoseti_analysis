@@ -7,10 +7,19 @@ process BUILD_MANIFEST {
 
     output:
     tuple val(level), path("manifest.json"), emit: manifest
+    path "versions.yml", emit: versions
 
     script:
-    def lins = (lineage instanceof List ? lineage : [lineage]).collect { it -> "--lineage ${it}" }.join(' ')
+    def args = task.ext.args ?: ''
+    def args2 = task.ext.args2 ?: ''
+    lins = (lineage instanceof List ? lineage : [lineage]).collect { it -> "--lineage ${it}" }.join(' ')
     """
-    pa-manifest manifest.json --level ${level} --run-id ${run_id} ${lins}
+    ${args} ${args2}
+pa-manifest manifest.json --level ${level} --run-id ${run_id} ${lins}
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        panoseti_analysis: \$(pa-run --version 2>&1 | sed 's/pa-run version //')
+    END_VERSIONS
     """
 }

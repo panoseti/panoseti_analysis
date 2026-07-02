@@ -48,6 +48,7 @@ pa-prep-cloud-legacy = "panoseti_analysis.adapters.cloud.prep_legacy:app"
 pa-prep-cloud-labels = "panoseti_analysis.adapters.cloud.prep_labels:app"
 pa-run = "panoseti_analysis.adapters.recipe_driver:app"
 pa-slice = "panoseti_analysis.adapters.slice_driver:app"
+pa-l1-quicklook = "panoseti_analysis.adapters.quicklook:app"
 
 # ── uv workspace ──────────────────────────────────────────────────────────────
 # The repo root is both the workspace root and the `panoseti_analysis` package.

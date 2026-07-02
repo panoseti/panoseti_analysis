@@ -25,14 +25,16 @@ workflow ANALYSIS {
     ch_l2_stores     = channel.empty()
     ch_l2_manifest   = channel.empty()
     ch_l2_quicklooks = channel.empty()
+    ch_l1_quicklooks = channel.empty()
 
     if ('ingest' in steps) {
         INGEST(ch_samplesheet)
-        ch_l0_stores   = INGEST.out.l0_stores
-        ch_l1_stores   = INGEST.out.l1_stores
-        ch_hk_stores   = INGEST.out.hk_stores
-        ch_l0_manifest = INGEST.out.l0_manifest
-        ch_l1_manifest = INGEST.out.l1_manifest
+        ch_l0_stores     = INGEST.out.l0_stores
+        ch_l1_stores     = INGEST.out.l1_stores
+        ch_hk_stores     = INGEST.out.hk_stores
+        ch_l0_manifest   = INGEST.out.l0_manifest
+        ch_l1_manifest   = INGEST.out.l1_manifest
+        ch_l1_quicklooks = INGEST.out.l1_quicklooks
     }
 
     if ('reconstruct' in steps) {
@@ -51,6 +53,7 @@ workflow ANALYSIS {
     hk_stores     = ch_hk_stores
     l0_manifest   = ch_l0_manifest
     l1_manifest   = ch_l1_manifest
+    l1_quicklooks = ch_l1_quicklooks
     l2_stores     = ch_l2_stores
     l2_manifest   = ch_l2_manifest
     l2_quicklooks = ch_l2_quicklooks

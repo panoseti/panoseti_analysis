@@ -17,6 +17,7 @@ def calibrate_img(ds: xr.Dataset, params: ImgCalibParams) -> xr.Dataset:
     """Calibrate one movie-mode store; return a new L1 Dataset (no I/O)."""
     images = ds["images"].astype("int32")
     height, width = images.shape[1], images.shape[2]
+    print("hello")
 
     subset = images[:: params.frame_stride]
     # xarray's Coarsen reduction methods are generated dynamically (absent from stubs).

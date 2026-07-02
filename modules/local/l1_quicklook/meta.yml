@@ -1,10 +1,10 @@
-name: "build_hk"
-description: build_hk module for PANOSETI analysis
+name: "l1_quicklook"
+description: l1_quicklook module for PANOSETI analysis
 keywords:
   - panoseti
 tools:
-  - build_hk:
-      description: build_hk module
+  - l1_quicklook:
+      description: l1_quicklook module
       homepage: https://github.com/panoseti/analysis
       documentation: https://github.com/panoseti/analysis
       tool_dev_url: https://github.com/panoseti/analysis
@@ -16,22 +16,27 @@ input:
         type: map
         description: |
           Groovy Map containing sample information\n          e.g. `[ id:'test', single_end:false ]`
-    - obs_dir:
+    - l0_store:
         type: file
         description: |
-          Input obs_dir
+          Input l0_store
+        pattern: "*"
+    - l1_store:
+        type: file
+        description: |
+          Input l1_store
         pattern: "*"
 output:
-  - stores:
+  - quicklook:
       - meta:
           type: map
           description: |
             Groovy Map containing sample information\n            e.g. `[ id:'test', single_end:false ]`
-      - hk/hk.*.zarr:
+      - *.png:
           type: file
           description: |
-            Output hk/hk.*.zarr
-          pattern: "hk/hk.*.zarr"
+            Output *.png
+          pattern: "*.png"
   - versions:
       - versions.yml:
           type: file

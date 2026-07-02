@@ -1,32 +1,46 @@
-name: propagate_meta
-description: Local module propagate_meta for panoseti_analysis
+name: "propagate_meta"
+description: propagate_meta module for PANOSETI analysis
 keywords:
   - panoseti
 tools:
   - propagate_meta:
-      description: propagate_meta component
-      homepage: None
-      documentation: None
-      tool_dev_url: None
+      description: propagate_meta module
+      homepage: https://github.com/panoseti/analysis
+      documentation: https://github.com/panoseti/analysis
+      tool_dev_url: https://github.com/panoseti/analysis
       doi: ""
       licence: "['MIT']"
+      identifier: ""
 input:
-  - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information\n          e.g. `[ id:'test', single_end:false ]`
+    - l0_dir:
+        type: file
+        description: |
+          Input l0_dir
+        pattern: "*"
+    - level:
+        type: value
+        description: |
+          Input level
 output:
   - meta:
-      type: map
-      description: |
-        Groovy Map containing sample information
-        e.g. [ id:'test', single_end:false ]
+      - level:
+          type: value
+          description: |
+            Output level
+      - */.panoseti-meta:
+          type: file
+          description: |
+            Output */.panoseti-meta
+          pattern: "*/.panoseti-meta"
   - versions:
-      type: file
-      description: File containing software versions
-      pattern: "versions.yml"
+      - versions.yml:
+          type: file
+          description: |
+            Output versions.yml
+          pattern: "versions.yml"
 authors:
-  - "@nraultwang"
-maintainers:
-  - "@nraultwang"
+  - "@nicolas"
