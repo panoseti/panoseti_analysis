@@ -276,3 +276,10 @@ assets/models/cloud-detection-training/*.tar.gz
 
 # data dirs
 **/data/**
+
+# output dirs
+out
+result*
+
+# Backup files
+*.bak

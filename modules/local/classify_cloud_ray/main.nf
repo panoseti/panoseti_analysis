@@ -13,7 +13,7 @@ process CLASSIFY_CLOUD_RAY {
 
     script:
     def stores_arg = l1_stores instanceof List
-        ? l1_stores.collect { it.toString() }.join(' ')
+        ? l1_stores.collect { it -> it.toString() }.join(' ')
         : l1_stores.toString()
 
     if (params.ray_launcher == "slurm") {

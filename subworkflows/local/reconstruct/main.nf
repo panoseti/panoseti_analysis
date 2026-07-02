@@ -5,13 +5,11 @@
 
 workflow RECONSTRUCT {
 
+
     take:
     ch_l1   // channel: [ meta, l1_store ]
 
-    main:
-    // TODO(chunk>=2): reconstruction stages here (Layer B adapters over Layer A kernels).
-    products = ch_l1.map { meta, _store -> meta }.filter { false }
-
     emit:
-    products
+    // TODO(chunk>=2): reconstruction stages here (Layer B adapters over Layer A kernels).
+    ch_l1.map { meta, _store -> meta }.filter { false }
 }

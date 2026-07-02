@@ -2,8 +2,8 @@
 // CLASSIFY_CLOUD: Routes L1 stores to either CPU fanout or Ray execution
 //
 
-include { CLASSIFY_CLOUD_CPU } from '../../modules/local/classify_cloud_cpu'
-include { CLASSIFY_CLOUD_RAY } from '../../modules/local/classify_cloud_ray'
+include { CLASSIFY_CLOUD_CPU } from '../../../modules/local/classify_cloud_cpu/main'
+include { CLASSIFY_CLOUD_RAY } from '../../../modules/local/classify_cloud_ray/main'
 
 workflow CLASSIFY_CLOUD {
 

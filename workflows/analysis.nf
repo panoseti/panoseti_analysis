@@ -4,15 +4,15 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { INGEST }      from '../subworkflows/local/ingest'
-include { RECONSTRUCT } from '../subworkflows/local/reconstruct'
-include { ML }          from '../subworkflows/local/ml'
+include { INGEST }      from '../subworkflows/local/ingest/main'
+include { RECONSTRUCT } from '../subworkflows/local/reconstruct/main'
+include { ML }          from '../subworkflows/local/ml/main'
 
 workflow ANALYSIS {
 
     take:
     ch_samplesheet // channel: [ meta(run), obs_dir ]
-    outdir
+    _outdir
 
     main:
     def steps = (params.steps ?: 'ingest').tokenize(',')

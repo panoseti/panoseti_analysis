@@ -1,0 +1,12 @@
+name: reconstruct
+description: Local subworkflow reconstruct for panoseti_analysis
+keywords:
+  - panoseti
+  - analysis
+components:
+  - reconstruct
+
+authors:
+  - "@nraultwang"
+
+output: []
