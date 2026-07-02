@@ -49,11 +49,64 @@ docs/           storage_spec.md, ml_architecture.md, provenance.md, wandb.md
 uv sync                                              # workspace venv (incl. pypff submodule)
 uv run pytest                                        # 57 tests: kernels, io, adapters
 uv run ruff check src tests && uv run mypy src/panoseti_analysis
-
-# Ingest pipeline on bundled test data (PFF -> L0 -> L1, level-major output):
-nextflow run . -profile test,laptop --outdir results_smoke
-ls results_smoke/L0 results_smoke/L1                 # per-(dp,module) .zarr + manifest.json
 ```
+
+## Demos (Pipeline Execution Paths)
+
+The pipeline supports multiple execution paths tailored for different environments. Below are demonstrations for the five primary use cases:
+
+### 1. In-memory pure Python (Algorithm dev loop)
+
+For fast iteration without orchestration overhead. Uses pure `xarray` and avoids Nextflow/Ray entirely.
+
+```bash
+uv run python src/panoseti_analysis/adapters/recipe_driver.py tests/data/obs_TEST.pffd results_recipe_driver
+```
+
+_Produces L0 and L1 `.zarr` stores, manifests, and `.png` quicklooks sequentially in-memory._
+
+### 2. Local laptop / RAL GPU server (Nextflow CPU fallback)
+
+The standard smoke test running via Nextflow on a laptop (no containers) or a single node. Includes ML L2 classification using a bundled PyTorch model.
+
+```bash
+nextflow run . -profile test,laptop --outdir results_smoke
+ls results_smoke/L0 results_smoke/L1 results_smoke/L2
+```
+
+_For RAL, you can also connect to the persistent Ray cluster natively for distributed tasks using the `--ray_launcher attach` parameter._
+
+### 3. HPC / SLURM Cluster (Offline processing)
+
+For large-scale offline processing (e.g., SDSC Expanse). Nextflow translates tasks into individual `sbatch` jobs and uses Apptainer containers.
+
+```bash
+nextflow run . -profile hpc_slurm --steps ingest,ml --input_obs_dir <OBS_DIR> --outdir <OUT_DIR>
+```
+
+_To avoid PyTorch cold starts during ML inference, enable Ray distribution over SLURM via `--use_ray true --ray_launcher slurm`, which dynamically boots a transient cluster using `srun ray symmetric-run`._
+
+### 4. Real-time streaming (Ray Serve + gRPC)
+
+Run the pipeline in real-time on live DAQ data without writing intermediate Zarr files to disk.
+
+```bash
+# Start the gRPC broker and Serve deployment (e.g., on digilab-transmit GPU node)
+pa-stream-cloud --model-path assets/models/cloud_detector_v1.pt --grpc-host localhost
+```
+
+_Produces live per-minute cloud scores via a gRPC stream._
+
+### 5. ML training & tuning loops (Ray Train)
+
+Train models directly on BeeGFS data staged to local SSDs, logging seamlessly to Weights & Biases or TensorBoard.
+
+```bash
+# Train on the RAL persistent cluster
+pa-train-cloud --launcher attach --recipe recipes/ml/cloud_v1.yml --out-dir models/
+```
+
+_On an HPC, you can run this via SLURM to utilize the transient Ray cluster approach._
 
 ## Pipeline
 

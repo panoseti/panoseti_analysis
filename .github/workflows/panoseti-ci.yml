@@ -81,8 +81,17 @@ jobs:
         run: |
           test -f results_ci/L0/manifest.json
           test -f results_ci/L1/manifest.json
+          test -f results_ci/L2/manifest.json
           ls results_ci/L0/*.zarr >/dev/null
           ls results_ci/L1/*.L1.zarr >/dev/null
+          ls results_ci/L2/*.zarr >/dev/null
+      - name: Upload quicklook artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: quicklooks
+          path: |
+            results_ci/L1_quicklooks/*.png
+            results_ci/L2_quicklooks/*.png
 
 # NOTE: the pypff submodule URL in .gitmodules is SSH (git@github.com:panoseti/pypff).
 # For CI submodule checkout, either make pypff public + switch the URL to HTTPS, or add a
