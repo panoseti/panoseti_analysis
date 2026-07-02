@@ -15,7 +15,8 @@ input:
   - - meta:
         type: map
         description: |
-          Groovy Map containing sample information\n          e.g. `[ id:'test', single_end:false ]`
+          Groovy Map containing sample information
+          e.g. `[ id:'test', single_end:false ]`
     - l0_dir:
         type: file
         description: |
@@ -31,7 +32,7 @@ output:
           type: value
           description: |
             Output level
-      - */.panoseti-meta:
+      - \"*/.panoseti-meta\":
           type: file
           description: |
             Output */.panoseti-meta

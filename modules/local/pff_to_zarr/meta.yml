@@ -15,7 +15,8 @@ input:
   - - meta:
         type: map
         description: |
-          Groovy Map containing sample information\n          e.g. `[ id:'test', single_end:false ]`
+          Groovy Map containing sample information
+          e.g. `[ id:'test', single_end:false ]`
     - obs_dir:
         type: file
         description: |
@@ -26,8 +27,9 @@ output:
       - meta:
           type: map
           description: |
-            Groovy Map containing sample information\n            e.g. `[ id:'test', single_end:false ]`
-      - *.zarr:
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.zarr":
           type: file
           description: |
             Output *.zarr

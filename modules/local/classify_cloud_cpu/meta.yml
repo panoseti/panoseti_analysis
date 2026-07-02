@@ -15,7 +15,8 @@ input:
   - - meta:
         type: map
         description: |
-          Groovy Map containing sample information\n          e.g. `[ id:'test', single_end:false ]`
+          Groovy Map containing sample information
+          e.g. `[ id:'test', single_end:false ]`
     - l1_store:
         type: file
         description: |
@@ -36,8 +37,9 @@ output:
       - meta:
           type: map
           description: |
-            Groovy Map containing sample information\n            e.g. `[ id:'test', single_end:false ]`
-      - *.zarr:
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.zarr":
           type: file
           description: |
             Output *.zarr
@@ -46,8 +48,9 @@ output:
       - meta:
           type: map
           description: |
-            Groovy Map containing sample information\n            e.g. `[ id:'test', single_end:false ]`
-      - *.json:
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.json":
           type: file
           description: |
             Output *.json
@@ -56,8 +59,9 @@ output:
       - meta:
           type: map
           description: |
-            Groovy Map containing sample information\n            e.g. `[ id:'test', single_end:false ]`
-      - *.png:
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.png":
           type: file
           description: |
             Output *.png

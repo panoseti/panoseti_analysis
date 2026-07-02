@@ -15,7 +15,8 @@ input:
   - - meta:
         type: map
         description: |
-          Groovy Map containing sample information\n          e.g. `[ id:'test', single_end:false ]`
+          Groovy Map containing sample information
+          e.g. `[ id:'test', single_end:false ]`
     - l0_store:
         type: file
         description: |
@@ -31,8 +32,9 @@ output:
       - meta:
           type: map
           description: |
-            Groovy Map containing sample information\n            e.g. `[ id:'test', single_end:false ]`
-      - *.png:
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.png":
           type: file
           description: |
             Output *.png

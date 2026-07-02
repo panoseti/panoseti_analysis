@@ -15,7 +15,8 @@ input:
   - - meta:
         type: map
         description: |
-          Groovy Map containing sample information\n          e.g. `[ id:'test', single_end:false ]`
+          Groovy Map containing sample information
+          e.g. `[ id:'test', single_end:false ]`
     - store:
         type: file
         description: |
@@ -30,8 +31,9 @@ output:
       - meta:
           type: map
           description: |
-            Groovy Map containing sample information\n            e.g. `[ id:'test', single_end:false ]`
-      - *.*:
+            Groovy Map containing sample information
+            e.g. `[ id:'test', single_end:false ]`
+      - "*.*":
           type: file
           description: |
             Output *.*

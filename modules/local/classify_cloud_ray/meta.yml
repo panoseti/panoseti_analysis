@@ -33,7 +33,7 @@ input:
         pattern: "*"
 output:
   - stores:
-      - *.zarr:
+      - "*.zarr":
           type: file
           description: |
             Output *.zarr
@@ -49,7 +49,7 @@ output:
             Output lineage.json
           pattern: "lineage.json"
   - quicklook:
-      - *.png:
+      - "*.png":
           type: file
           description: |
             Output *.png
