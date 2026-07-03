@@ -21,6 +21,6 @@ For a quick orientation and the router table, see the [top-level README](https:/
 
 ## Related documentation
 
-- [`ml/README.md`](https://github.com/panoseti/panoseti_analysis/blob/main/ml/README.md) — ML projects index (cloud detection, anomaly detection)
-- [`grpc/README.md`](https://github.com/panoseti/panoseti_analysis/blob/main/grpc/README.md) — gRPC services (DAQ, ML inference)
-- [`pypff/docs/zarr_v3_spec.md`](https://github.com/panoseti/panoseti_analysis/blob/main/pypff/docs/zarr_v3_spec.md) — L0 Zarr array layout spec (pypff submodule)
+- [`ml/README.md`](https://github.com/panoseti/panoseti_analysis/blob/develop/ml/README.md) — ML projects index (cloud detection, anomaly detection)
+- [`grpc/README.md`](https://github.com/panoseti/panoseti_grpc/blob/main/README.md) — gRPC services (DAQ, ML inference)
+- [`pypff/docs/zarr_v3_spec.md`](https://github.com/panoseti/pypff/blob/main/docs/zarr_v3_spec.md) — L0 Zarr array layout spec (pypff submodule)
