@@ -2,6 +2,8 @@ site_name: PANOSETI Analysis
 site_description: PANOSETI data-reduction pipeline — PFF → Zarr ingest, calibration, ML
 repo_url: https://github.com/panoseti/panoseti_analysis
 docs_dir: docs
+exclude_docs: |
+  README.md
 
 nav:
   - Home: index.md

@@ -5,7 +5,10 @@ keywords:
   - analysis
   - pipeline
 components:
-  - utils_nfcore_analysis_pipeline
+  - completionsummary
+  - utils_nextflow_pipeline
+  - utils_nfcore_pipeline
+  - utils_nfschema_plugin
 
 authors:
   - "@nraultwang"

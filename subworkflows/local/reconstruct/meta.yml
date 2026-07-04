@@ -5,7 +5,7 @@ keywords:
   - analysis
   - pipeline
 components:
-  - reconstruct
+  - dummy
 
 authors:
   - "@nraultwang"

@@ -5,7 +5,8 @@ keywords:
   - analysis
   - pipeline
 components:
-  - classify_cloud
+  - classify/cloud/cpu
+  - classify/cloud/ray
 
 authors:
   - "@nraultwang"
