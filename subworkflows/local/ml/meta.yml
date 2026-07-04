@@ -5,7 +5,8 @@ keywords:
   - analysis
   - pipeline
 components:
-  - ml
+  - classify_cloud
+  - build/manifest
 
 authors:
   - "@nraultwang"

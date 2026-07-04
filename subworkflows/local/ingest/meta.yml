@@ -5,7 +5,12 @@ keywords:
   - analysis
   - pipeline
 components:
-  - ingest
+  - pff/to/zarr
+  - build/hk
+  - calibrate/ph
+  - calibrate/img
+  - build/manifest
+  - l1/quicklook
 
 authors:
   - "@nraultwang"

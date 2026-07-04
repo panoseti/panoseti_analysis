@@ -1,0 +1,17 @@
+Changes in component 'nf-core/utils_nfschema_plugin'
+'subworkflows/nf-core/utils_nfschema_plugin/meta.yml' is unchanged
+Changes in 'utils_nfschema_plugin/main.nf':
+--- subworkflows/nf-core/utils_nfschema_plugin/main.nf
++++ subworkflows/nf-core/utils_nfschema_plugin/main.nf
+@@ -73,5 +73,5 @@
+     }
+ 
+     emit:
+-    dummy_emit = true
++    true
+ }
+
+'subworkflows/nf-core/utils_nfschema_plugin/tests/nextflow.config' is unchanged
+'subworkflows/nf-core/utils_nfschema_plugin/tests/main.nf.test' is unchanged
+'subworkflows/nf-core/utils_nfschema_plugin/tests/nextflow_schema.json' is unchanged
+************************************************************
