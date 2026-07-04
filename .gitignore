@@ -283,3 +283,6 @@ result*
 
 # Backup files
 *.bak
+
+# testing
+*.diff
