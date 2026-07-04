@@ -92,7 +92,8 @@ def _process_chunk(
     reopened lazily on first access).
     """
     from pypff.io2 import PFFSequence
-    from pypff.zarr import sequence_to_dataset
+
+    from panoseti_analysis.io.zarr_compat import sequence_to_dataset
 
     seq = PFFSequence(spec["file_paths"])
 

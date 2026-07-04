@@ -137,7 +137,7 @@ def test_skip_l0_materialize_with_mock(make_img, tmp_path: Path) -> None:
             "panoseti_analysis.adapters.recipe_driver.read_pff_run",
             return_value=_MockRun(),
         ),
-        patch("pypff.zarr.sequence_to_dataset", return_value=ds_l0),
+        patch("panoseti_analysis.io.zarr_compat.sequence_to_dataset", return_value=ds_l0),
     ):
         outputs = run_pipeline(
             tmp_path / "fake.pffd",
