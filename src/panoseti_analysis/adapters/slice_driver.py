@@ -63,7 +63,7 @@ def slice_to_l1(
 
     Chains: sequence_to_dataset → repair_timestamps → calibrate_img/calibrate_ph.
 
-    Frame selection priority (same as ``sequence_to_dataset`` from ``zarr_compat``):
+    Frame selection priority (same as ``sequence_to_dataset``):
     1. ``time_range=(start_ns, stop_ns)`` — time-based, stop_ns is exclusive.
     2. ``frame_range=(start, stop)`` — index-based (Python-slice semantics).
     3. If both are None: the full sequence.
@@ -92,7 +92,7 @@ def slice_to_l1(
         In-memory L1 ``xr.Dataset`` (calibrated, timestamps repaired).
     """
     # Local import keeps Layer B import-time cost low (pypff.zarr is heavy).
-    from panoseti_analysis.io.zarr_compat import sequence_to_dataset
+    from pypff.zarr import sequence_to_dataset
 
     # Resolve frame-index and time-range args.
     start: int | None = None

@@ -76,7 +76,7 @@ def test_slice_to_l1_img_produces_median_subtracted() -> None:
     ds_l0 = _make_synthetic_l0_img(n=60)
     seq = _mock_seq(ds_l0)
 
-    with patch("panoseti_analysis.io.zarr_compat.sequence_to_dataset", return_value=ds_l0):
+    with patch("pypff.zarr.sequence_to_dataset", return_value=ds_l0):
         out = slice_to_l1(seq, img_stride=5, block=8)
 
     assert "median_subtracted" in out.data_vars
@@ -88,7 +88,7 @@ def test_slice_to_l1_ph_produces_pedestal_subtracted() -> None:
     ds_l0 = _make_synthetic_l0_ph(n=60)
     seq = _mock_seq(ds_l0)
 
-    with patch("panoseti_analysis.io.zarr_compat.sequence_to_dataset", return_value=ds_l0):
+    with patch("pypff.zarr.sequence_to_dataset", return_value=ds_l0):
         out = slice_to_l1(seq, ph_stride=5)
 
     assert "pedestal_subtracted" in out.data_vars
@@ -107,9 +107,7 @@ def test_slice_to_l1_decimation_shape() -> None:
     # Simulate the decimated L0 returned by sequence_to_dataset (10 frames)
     seq = _mock_seq(ds_l0)
 
-    with patch(
-        "panoseti_analysis.io.zarr_compat.sequence_to_dataset", return_value=ds_l0
-    ) as mock_s2d:
+    with patch("pypff.zarr.sequence_to_dataset", return_value=ds_l0) as mock_s2d:
         out = slice_to_l1(seq, decimate=decimate, img_stride=2, block=8)
         # Verify sequence_to_dataset was called with step=decimate
         mock_s2d.assert_called_once()
@@ -134,7 +132,7 @@ def test_slice_to_l1_fail_on_suspect_false_default_does_not_raise() -> None:
 
     seq = _mock_seq(ds_l0)
 
-    with patch("panoseti_analysis.io.zarr_compat.sequence_to_dataset", return_value=ds_l0):
+    with patch("pypff.zarr.sequence_to_dataset", return_value=ds_l0):
         # Must not raise — default fail_on_suspect=False
         out = slice_to_l1(seq, img_stride=5, block=8, fail_on_suspect=False)
 
@@ -152,7 +150,7 @@ def test_slice_to_l1_fail_on_suspect_true_raises() -> None:
     seq = _mock_seq(ds_l0)
 
     with (
-        patch("panoseti_analysis.io.zarr_compat.sequence_to_dataset", return_value=ds_l0),
+        patch("pypff.zarr.sequence_to_dataset", return_value=ds_l0),
         pytest.raises(SuspectTimestamps),
     ):
         slice_to_l1(seq, img_stride=5, block=8, fail_on_suspect=True)
@@ -168,7 +166,7 @@ def test_slice_to_l2_cloud_raises_for_ph_kind() -> None:
     model = MagicMock(name="CloudModel")
 
     with (
-        patch("panoseti_analysis.io.zarr_compat.sequence_to_dataset", return_value=ds_l0_ph),
+        patch("pypff.zarr.sequence_to_dataset", return_value=ds_l0_ph),
         pytest.raises(ValueError, match="img"),
     ):
         slice_to_l2_cloud(seq, model, ph_stride=5)
@@ -182,9 +180,7 @@ def test_slice_to_l1_frame_range_forwarded() -> None:
     ds_l0 = _make_synthetic_l0_img(n=20)
     seq = _mock_seq(ds_l0)
 
-    with patch(
-        "panoseti_analysis.io.zarr_compat.sequence_to_dataset", return_value=ds_l0
-    ) as mock_s2d:
+    with patch("pypff.zarr.sequence_to_dataset", return_value=ds_l0) as mock_s2d:
         slice_to_l1(seq, frame_range=(5, 15), img_stride=5, block=8)
         _, kwargs = mock_s2d.call_args
         assert kwargs["start"] == 5
@@ -198,9 +194,7 @@ def test_slice_to_l1_time_range_forwarded() -> None:
     start_ns = _EPOCH_NS + 100_000
     stop_ns = _EPOCH_NS + 200_000
 
-    with patch(
-        "panoseti_analysis.io.zarr_compat.sequence_to_dataset", return_value=ds_l0
-    ) as mock_s2d:
+    with patch("pypff.zarr.sequence_to_dataset", return_value=ds_l0) as mock_s2d:
         slice_to_l1(seq, time_range=(start_ns, stop_ns), img_stride=5, block=8)
         _, kwargs = mock_s2d.call_args
         assert kwargs["start_ns"] == start_ns

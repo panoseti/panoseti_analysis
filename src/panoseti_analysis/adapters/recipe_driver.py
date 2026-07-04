@@ -97,7 +97,7 @@ def run_pipeline(
     if skip_l0_materialize:
         # ── In-memory path: PFF → in-memory L0 Dataset → L1 ─────────────────
         # Local import keeps import-time cost low (pypff.zarr is heavy).
-        from panoseti_analysis.io.zarr_compat import (
+        from pypff.zarr import (
             sequence_to_dataset,  # local import: keeps Layer B free of import-time pypff cost
         )
 
