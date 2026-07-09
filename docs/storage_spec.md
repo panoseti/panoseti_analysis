@@ -1,7 +1,7 @@
 # PANOSETI Analysis Storage Spec
 
 Storage conventions for `panoseti_analysis`. Complements pypff's L0 array spec
-([`pypff/docs/zarr_v3_spec.md`](https://github.com/panoseti/pypff/blob/main/docs/zarr_v3_spec.md)), which this builds on.
+([`pypff/docs/zarr_v3_spec.md`](https://github.com/panoseti/pypff/blob/dev/docs/zarr_v3_spec.md)), which this builds on.
 
 ## §0 Versioning
 
