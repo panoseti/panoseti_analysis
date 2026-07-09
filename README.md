@@ -108,7 +108,10 @@ pa-train-cloud --launcher attach --recipe recipes/ml/cloud_v1.yml --out-dir mode
 
 _On an HPC, you can run this via SLURM to utilize the transient Ray cluster approach._
 
-## Pipeline
+## Pipelines
+
+<img width="100%" height="auto" alt="3-layers-3-pipelines" src="https://github.com/user-attachments/assets/af119ba5-9ecc-4902-b747-b1ee6676fd38" />
+
 
 ```
 .pffd ──pa-convert──▶ L0/ (per-(dp,module) Zarr + lineage)
